@@ -121,13 +121,6 @@
             <span class="val" id="speedVal">6 m/s</span>
           </div>
         </div>
-        <div class="ctrl">
-          <label>Base friction</label>
-          <div class="toggle" id="frictionToggle">
-            <button data-fric="off" class="on">Off</button>
-            <button data-fric="on">On</button>
-          </div>
-        </div>
         <div class="spacer"></div>
         <button id="launchBtn" class="primary">Launch</button>
         <button id="resetBtn">Reset</button>
@@ -183,12 +176,13 @@ const BALL_R    = 0.28;
 let   FRICTION_DECEL = 2.5;   // deceleration under friction (m/s^2) — dev-tunable
 const BOOST_DV  = 2;          // speed boost (m/s)
 const FRIC_LEN  = 2;          // friction patch length (m)
-const MAX_TIME  = 60;
+const MAX_TIME  = 60;         // hard safety cap (s)
+const RUN_TIME_CAP = 16;      // keep the graph drawing out to here after the ball stops (s)
 const MASS      = 1;          // kg (KE = ½·m·v²)
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let v0 = 6, baseFriction = false, graphType = 'position';
-let running = false, done = false, t = 0;
+let v0 = 6, graphType = 'position';
+let running = false, ballStopped = false, t = 0;
 let v = 0, x = 0;             // live ball state during a run
 let thermal = 0;             // energy lost to friction + impact (J)
 let samples = [];            // [{t, x, v, d, ke, th}]
@@ -245,20 +239,20 @@ function nextWall(from, to) {        // first wall strictly ahead in [from, to]
 
 function step(dt) {
   const sub = 6, h = dt / sub;
-  for (let i = 0; i < sub && !done; i++) {
-    const decel = (baseFriction || onFrictionZone(x)) ? FRICTION_DECEL : 0;
+  for (let i = 0; i < sub && !ballStopped; i++) {
+    const decel = onFrictionZone(x) ? FRICTION_DECEL : 0;
     const vBefore = v;
     v = Math.max(0, v - decel * h);
     thermal += 0.5 * MASS * (vBefore * vBefore - v * v);   // friction work → heat
     const nx = x + v * h;
     // wall: stop dead where it is, dumping remaining KE to heat (impact)
     const wl = nextWall(x, nx);
-    if (wl) { x = wl.x; thermal += 0.5 * MASS * v * v; v = 0; done = true; break; }
+    if (wl) { x = wl.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; break; }
     // speed boosts: trigger when the ball crosses the pad moving right
     for (const b of boosts) if (!b.used && b.x > x && b.x <= nx) { v += BOOST_DV; b.used = true; }
     x = nx;
-    if (x >= TRACK_LEN) { x = TRACK_LEN; done = true; }
-    else if (v <= 1e-4) { done = true; }  // stopped (and nothing will restart it)
+    if (x >= TRACK_LEN) { x = TRACK_LEN; ballStopped = true; }
+    else if (v <= 1e-4) { ballStopped = true; }  // stopped (and nothing will restart it)
   }
 }
 
@@ -266,7 +260,7 @@ function step(dt) {
 function launch() {
   v0 = parseInt(speedEl.value, 10);
   boosts.forEach(b => b.used = false);
-  running = true; done = false; t = 0; x = 0; v = v0; thermal = 0;
+  running = true; ballStopped = false; t = 0; x = 0; v = v0; thermal = 0;
   samples = [{ t: 0, x: 0, v: v0, d: 0, ke: ke(), th: 0 }];
   energyMax = Math.max(1e-6, ke());
   lastFrame = performance.now();
@@ -275,27 +269,26 @@ function launch() {
 }
 
 function resetRun() {
-  running = false; done = false; t = 0; x = 0; v = 0; thermal = 0; samples = []; energyMax = 1;
+  running = false; ballStopped = false; t = 0; x = 0; v = 0; thermal = 0; samples = []; energyMax = 1;
   launchBtn.disabled = false;
   drawScene(); drawGraph(); drawEnergy(); updateNote();
 }
 
 // ─── Main loop ────────────────────────────────────────────────────────────────
 function frame(now) {
-  if (running && !done) {
+  if (running) {
     const dt = Math.min(0.05, (now - lastFrame) / 1000);
     lastFrame = now;
     t += dt;
-    step(dt);
+    if (!ballStopped) step(dt);           // ball halts at a wall/track-end, but time marches on
     const prev = samples[samples.length - 1];
     const d = prev.d + Math.abs(x - prev.x);
     samples.push({ t, x, v, d, ke: ke(), th: thermal });
     if (ke() + thermal > energyMax) energyMax = ke() + thermal;
-    if (t > MAX_TIME) done = true;
-    if (done) { running = false; launchBtn.disabled = false; }
+    if (ballStopped) launchBtn.disabled = false;   // free to relaunch once the ball is at rest
+    // keep drawing the flat tail until the graph is filled (or the safety cap)
+    if (t >= MAX_TIME || (ballStopped && t >= RUN_TIME_CAP)) { running = false; launchBtn.disabled = false; }
     drawScene(); drawGraph(); drawEnergy();
-  } else if (running && done) {
-    running = false; launchBtn.disabled = false;
   }
   requestAnimationFrame(frame);
 }
@@ -602,12 +595,6 @@ window.addEventListener('pointerup', e => {
 // ─── Wiring ───────────────────────────────────────────────────────────────────
 speedEl.addEventListener('input', () => {
   speedVal.textContent = parseInt(speedEl.value, 10) + ' m/s';
-  if (!running) resetRun();
-});
-document.getElementById('frictionToggle').addEventListener('click', e => {
-  const btn = e.target.closest('button'); if (!btn) return;
-  baseFriction = btn.dataset.fric === 'on';
-  [...e.currentTarget.children].forEach(b => b.classList.toggle('on', b === btn));
   if (!running) resetRun();
 });
 document.getElementById('graphTabs').addEventListener('click', e => {
