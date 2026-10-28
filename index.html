@@ -263,8 +263,8 @@ function step(dt) {
     // speed boosts: trigger when the ball crosses the pad moving right
     for (const b of boosts) if (!b.used && b.x > x && b.x <= nx) { v += BOOST_DV; b.used = true; }
     x = nx;
-    if (x >= TRACK_LEN) { x = TRACK_LEN; ballStopped = true; }
-    else if (v <= 1e-4) { ballStopped = true; }  // stopped (and nothing will restart it)
+    // the right edge is NOT a wall: let the ball coast offscreen and keep going
+    if (v <= 1e-4) ballStopped = true;  // stopped by friction (nothing will restart it)
   }
 }
 
@@ -292,14 +292,15 @@ function frame(now) {
     const dt = Math.min(0.05, (now - lastFrame) / 1000);
     lastFrame = now;
     t += dt;
-    if (!ballStopped) step(dt);           // ball halts at a wall/track-end, but time marches on
+    if (!ballStopped) step(dt);           // ball halts at a wall, but time marches on
     const prev = samples[samples.length - 1];
     const d = prev.d + Math.abs(x - prev.x);
     samples.push({ t, x, v, d, ke: ke(), th: thermal });
     if (ke() + thermal > energyMax) energyMax = ke() + thermal;
-    if (ballStopped) launchBtn.disabled = false;   // free to relaunch once the ball is at rest
-    // keep drawing the flat tail until the graph is filled (or the safety cap)
-    if (t >= MAX_TIME || (ballStopped && t >= RUN_TIME_CAP)) { running = false; launchBtn.disabled = false; }
+    // free to relaunch once the ball is at rest or has left the screen
+    if (ballStopped || x > TRACK_LEN) launchBtn.disabled = false;
+    // run ends when the graph's time axis is filled (safety cap otherwise)
+    if (t >= RUN_TIME_CAP || t >= MAX_TIME) { running = false; launchBtn.disabled = false; }
     drawScene(); drawGraph(); drawEnergy();
   }
   requestAnimationFrame(frame);
