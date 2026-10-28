@@ -19,6 +19,7 @@
     --boost: #4ade80;
     --fric: #e08a5a;
     --wall: #aab4c2;
+    --target: #b98cff;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -35,7 +36,10 @@
 
   #stage { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
   #main { flex: 1; min-width: 320px; }
-  #palette { width: 190px; flex-shrink: 0; padding: 13px; }
+  #sidebar { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+  #palette { padding: 13px; }
+  #energyPanel { padding: 13px; }
+  #energyPanel #energy { display: block; width: 100%; height: 200px; }
 
   /* Controls bar */
   #controls {
@@ -83,14 +87,10 @@
   .axZoom.on { color: var(--accent); border-color: var(--accent); }
   #zoomY { top: 2px; left: 2px; }
   #zoomX { bottom: 30px; right: 4px; }
-  #energyWrap { width: 132px; flex-shrink: 0; display: flex; flex-direction: column; }
-  #energyWrap .etitle { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-  #energy { display: block; width: 100%; flex: 1; height: 272px; }
-  #graphNote { color: var(--muted); font-size: 11.5px; margin-top: 8px; min-height: 16px; }
-  @media (max-width: 560px) { #graphRow { flex-direction: column; } #energyWrap { width: 100%; } #energy { height: 150px; } }
+  @media (max-width: 720px) { #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
-  /* Palette */
-  #palette .ptitle { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  /* Palette + energy panel */
+  .ptitle { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
   .chip {
     display: flex; align-items: center; gap: 10px;
     padding: 10px; margin-bottom: 10px;
@@ -102,6 +102,7 @@
   .chip.boost .ico { background: var(--boost); color: #063; }
   .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
   .chip.wall .ico { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
+  .chip.target .ico { background: var(--target); color: #231141; font-size: 16px; }
   .chip .ctxt { font-size: 12px; line-height: 1.25; }
   .chip .ctxt b { display: block; font-size: 12.5px; }
   .chip .ctxt span { color: var(--muted); font-size: 11px; }
@@ -114,6 +115,28 @@
     border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700;
     box-shadow: 0 6px 18px rgba(0,0,0,0.5);
   }
+
+  /* Target-speed editor popover */
+  #targetEditor {
+    position: fixed; z-index: 200; width: 212px;
+    background: var(--panel); border: 1px solid var(--target); border-radius: 10px;
+    padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  #targetEditor[hidden] { display: none; }
+  #targetEditor .te-title { font-size: 11px; color: var(--target); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+  #targetEditor .te-dir { width: 100%; }
+  #targetEditor .te-dir button { flex: 1; padding: 6px 4px; font-size: 12px; }
+  #targetEditor .te-dir button.on { background: var(--target); color: #231141; }
+  #targetEditor .te-mag { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #targetEditor .te-mag button { width: 34px; padding: 6px 0; text-align: center; font-size: 15px; }
+  #targetEditor .te-mag span { font-size: 13px; }
+  #targetEditor .te-mag b { font-size: 15px; }
+  #targetEditor .te-time { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  #targetEditor .te-time input[type=number] { width: 54px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font: inherit; }
+  #targetEditor .te-hint { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
+  #targetEditor .te-btns { display: flex; gap: 8px; }
+  #targetEditor .te-btns button { flex: 1; padding: 7px; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -152,32 +175,57 @@
             <button id="zoomY" class="axZoom" title="Double the vertical axis (always from zero)">Zoom out</button>
             <button id="zoomX" class="axZoom" title="Double the time axis (always from zero)">Zoom out</button>
           </div>
-          <div id="energyWrap">
-            <div class="etitle">Energy</div>
-            <canvas id="energy"></canvas>
-          </div>
         </div>
-        <div id="graphNote"></div>
       </div>
     </div>
 
-    <div id="palette" class="panel">
-      <div class="ptitle">Track pieces</div>
-      <div class="chip boost" data-piece="boost">
-        <div class="ico">+2</div>
-        <div class="ctxt"><b>Speed boost</b><span>instant +2 m/s</span></div>
+    <div id="sidebar">
+      <div id="palette" class="panel">
+        <div class="ptitle">Track pieces</div>
+        <div class="chip boost" data-piece="boost">
+          <div class="ico">+4</div>
+          <div class="ctxt"><b>Speed boost</b><span>instant +4 m/s</span></div>
+        </div>
+        <div class="chip target" data-piece="target">
+          <div class="ico">⇄</div>
+          <div class="ctxt"><b>Target speed</b><span>set speed · click to edit</span></div>
+        </div>
+        <div class="chip friction" data-piece="friction">
+          <div class="ico">▦</div>
+          <div class="ctxt"><b>Friction patch</b><span>2 m long</span></div>
+        </div>
+        <div class="chip wall" data-piece="wall">
+          <div class="ico">█</div>
+          <div class="ctxt"><b>Wall</b><span>stops the ball</span></div>
+        </div>
+        <div class="phint">Drag a piece onto the ground. Drag to move; drag off the track to remove. Click a target-speed gate to edit it.</div>
+        <button id="clearBtn">Clear track</button>
       </div>
-      <div class="chip friction" data-piece="friction">
-        <div class="ico">▦</div>
-        <div class="ctxt"><b>Friction patch</b><span>2 m long</span></div>
+
+      <div id="energyPanel" class="panel">
+        <div class="ptitle">Energy (J)</div>
+        <canvas id="energy"></canvas>
       </div>
-      <div class="chip wall" data-piece="wall">
-        <div class="ico">█</div>
-        <div class="ctxt"><b>Wall</b><span>stops the ball</span></div>
-      </div>
-      <div class="phint">Drag a piece onto the ground. Drag a placed piece to move it; drag it off the track to remove it.</div>
-      <button id="clearBtn">Clear track</button>
     </div>
+  </div>
+</div>
+
+<div id="targetEditor" hidden>
+  <div class="te-title">Target speed</div>
+  <div class="toggle te-dir">
+    <button data-dir="-1">◀ Left</button>
+    <button data-dir="1" class="on">Right ▶</button>
+  </div>
+  <div class="te-mag">
+    <button data-step="-2">−</button>
+    <span><b id="teMag">6</b> m/s</span>
+    <button data-step="2">+</button>
+  </div>
+  <label class="te-time"><input type="checkbox" id="teTimeOn"> trigger at <input type="number" id="teTimeVal" min="0" max="16" step="0.5" value="2" disabled> s</label>
+  <div class="te-hint">Before this time it acts as a wall, then launches the ball at the target speed.</div>
+  <div class="te-btns">
+    <button id="teRemove">Remove</button>
+    <button id="teDone" class="primary">Done</button>
   </div>
 </div>
 
@@ -186,8 +234,10 @@
 const TRACK_LEN = 20;
 const BALL_R    = 0.28;
 let   FRICTION_DECEL = 2.5;   // deceleration under friction (m/s^2) — dev-tunable
-const BOOST_DV  = 2;          // speed boost (m/s)
+const BOOST_DV  = 4;          // speed boost (m/s)
 const FRIC_LEN  = 2;          // friction patch length (m)
+const TARGET_STEP = 2;        // target-speed increment (m/s)
+const TARGET_MAX  = 12;       // max target-speed magnitude (m/s)
 const MAX_TIME  = 60;         // hard safety cap (s)
 const RUN_TIME_CAP = 16;      // keep the graph drawing out to here after the ball stops (s)
 const MASS      = 1;          // kg (KE = ½·m·v²)
@@ -215,7 +265,10 @@ let zoomX = false, zoomY = false;
 let boosts = [];             // {id, x, used}
 let fricZones = [];          // {id, x, len}
 let walls = [];              // {id, x}
+let targets = [];            // {id, x, mag, dir, time, used}  — target-speed gates
 let pieceId = 1;
+let heldGate = null;         // a timed target gate currently holding the ball
+let editingTarget = null;    // target element open in the editor
 
 // Drag state
 let drag = null;             // { kind:'new'|'move', piece, el?, ghost? }
@@ -230,7 +283,6 @@ const ex = energyC.getContext('2d');
 const speedEl = document.getElementById('speed');
 const speedVal = document.getElementById('speedVal');
 const launchBtn = document.getElementById('launchBtn');
-const graphNote = document.getElementById('graphNote');
 
 // ─── Scene geometry ───────────────────────────────────────────────────────────
 const PAD_L = 24, PAD_R = 24;
@@ -243,28 +295,50 @@ function clamp(a, lo, hi) { return Math.max(lo, Math.min(hi, a)); }
 // ─── Physics (numerical integration) ──────────────────────────────────────────
 function onFrictionZone(px) { return fricZones.some(z => px >= z.x && px <= z.x + z.len); }
 
-function nextWall(from, to) {        // first wall strictly ahead in [from, to]
+// A piece at px is crossed when the ball moves from a to b through it (either direction).
+function crossed(px, a, b) { return (px > a && px <= b) || (px < a && px >= b); }
+function firstCrossed(arr, a, b, activeOnly) {
   let hit = null;
-  for (const wl of walls) if (wl.x > from && wl.x <= to && (!hit || wl.x < hit.x)) hit = wl;
+  for (const p of arr) {
+    if (activeOnly && p.used) continue;
+    if (crossed(p.x, a, b) && (!hit || Math.abs(p.x - a) < Math.abs(hit.x - a))) hit = p;
+  }
   return hit;
 }
 
 function step(dt) {
   const sub = 6, h = dt / sub;
   for (let i = 0; i < sub && !ballStopped; i++) {
+    // friction opposes motion (works in either direction)
     const decel = onFrictionZone(x) ? FRICTION_DECEL : 0;
     const vBefore = v;
-    v = Math.max(0, v - decel * h);
+    if (decel > 0 && v !== 0) {
+      const s = Math.sign(v), nv = v - s * decel * h;
+      v = (Math.sign(nv) !== s) ? 0 : nv;
+    }
     thermal += 0.5 * MASS * (vBefore * vBefore - v * v);   // friction work → heat
+    if (Math.abs(v) <= 1e-4) { v = 0; ballStopped = true; break; }
     const nx = x + v * h;
-    // wall: stop dead where it is, dumping remaining KE to heat (impact)
-    const wl = nextWall(x, nx);
+    // wall: stop dead on impact (either direction), dumping remaining KE to heat
+    const wl = firstCrossed(walls, x, nx, false);
     if (wl) { x = wl.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; break; }
-    // speed boosts: trigger when the ball crosses the pad moving right
-    for (const b of boosts) if (!b.used && b.x > x && b.x <= nx) { v += BOOST_DV; b.used = true; }
+    // target-speed gate
+    const g = firstCrossed(targets, x, nx, true);
+    if (g) {
+      if (g.time != null && t < g.time) {       // too early → behaves as a wall, holds the ball
+        x = g.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; heldGate = g; break;
+      }
+      x = g.x;
+      const vNew = g.dir * g.mag;
+      thermal += Math.max(0, 0.5 * MASS * (v * v - vNew * vNew));  // only a slow-down adds heat
+      v = vNew; g.used = true;
+      continue;
+    }
+    // speed boost (+ΔV, rightward)
+    const b = firstCrossed(boosts, x, nx, true);
+    if (b) { x = b.x; v += BOOST_DV; b.used = true; continue; }
     x = nx;
-    // the right edge is NOT a wall: let the ball coast offscreen and keep going
-    if (v <= 1e-4) ballStopped = true;  // stopped by friction (nothing will restart it)
+    // the right/left edges are NOT walls: let the ball coast offscreen and keep going
   }
 }
 
@@ -272,18 +346,19 @@ function step(dt) {
 function launch() {
   v0 = parseInt(speedEl.value, 10);
   boosts.forEach(b => b.used = false);
+  targets.forEach(g => g.used = false);
+  heldGate = null;
   running = true; ballStopped = false; t = 0; x = 0; v = v0; thermal = 0;
   samples = [{ t: 0, x: 0, v: v0, d: 0, ke: ke(), th: 0 }];
   energyMax = Math.max(1e-6, ke());
   lastFrame = performance.now();
   launchBtn.disabled = true;
-  updateNote();
 }
 
 function resetRun() {
-  running = false; ballStopped = false; t = 0; x = 0; v = 0; thermal = 0; samples = []; energyMax = 1;
+  running = false; ballStopped = false; heldGate = null; t = 0; x = 0; v = 0; thermal = 0; samples = []; energyMax = 1;
   launchBtn.disabled = false;
-  drawScene(); drawGraph(); drawEnergy(); updateNote();
+  drawScene(); drawGraph(); drawEnergy();
 }
 
 // ─── Main loop ────────────────────────────────────────────────────────────────
@@ -292,6 +367,10 @@ function frame(now) {
     const dt = Math.min(0.05, (now - lastFrame) / 1000);
     lastFrame = now;
     t += dt;
+    // a timed gate releases the held ball at its trigger time, at the target speed
+    if (heldGate && t >= heldGate.time) {
+      v = heldGate.dir * heldGate.mag; heldGate.used = true; ballStopped = false; heldGate = null;
+    }
     if (!ballStopped) step(dt);           // ball halts at a wall, but time marches on
     const prev = samples[samples.length - 1];
     const d = prev.d + Math.abs(x - prev.x);
@@ -362,7 +441,29 @@ function drawScene() {
       sx.stroke();
     }
     sx.fillStyle = getCss('--boost'); sx.font = '700 10px -apple-system, sans-serif'; sx.textAlign = 'center';
-    sx.fillText('+2', bx + 3, gY - 20);
+    sx.fillText('+' + BOOST_DV, bx + 3, gY - 20);
+  }
+
+  // target-speed gates (posts with a direction + value tag)
+  for (const g of targets) {
+    const gx2 = mToPx(g.x), col = getCss('--target'), timed = g.time != null;
+    const pT = gY - 42;
+    sx.strokeStyle = col; sx.lineWidth = 2;
+    sx.setLineDash(timed ? [3, 3] : []);          // dashed post = timed (acts as a wall until its time)
+    sx.beginPath(); sx.moveTo(gx2, pT); sx.lineTo(gx2, gY); sx.stroke();
+    sx.setLineDash([]);
+    // tag
+    const label = (g.dir < 0 ? '◀ ' : '▶ ') + g.mag;
+    sx.font = '700 11px -apple-system, sans-serif'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+    const tw = sx.measureText(label).width + 14, th = 16, ty = pT - 2;
+    sx.fillStyle = col;
+    roundRect(sx, gx2 - tw / 2, ty - th, tw, th, 5); sx.fill();
+    sx.fillStyle = '#231141'; sx.fillText(label, gx2, ty - th / 2);
+    if (timed) {
+      sx.fillStyle = col; sx.font = '700 9px -apple-system, sans-serif';
+      sx.fillText('@' + g.time + 's', gx2, gY - 50);
+    }
+    sx.textBaseline = 'alphabetic';
   }
 
   // walls (vertical barriers on the ground)
@@ -477,26 +578,20 @@ function drawEnergy() {
     ex.fillStyle = getCss('--muted'); ex.font = '10px -apple-system, sans-serif';
     ex.fillText(b.sub, cx, baseY + 22);
   });
-
-  // unit caption
-  ex.fillStyle = getCss('--muted'); ex.font = '10px -apple-system, sans-serif';
-  ex.textAlign = 'left'; ex.textBaseline = 'top';
-  ex.fillText('J', 2, 0);
-}
-
-function updateNote() {
-  if (graphType === 'position' || graphType === 'distance')
-    graphNote.textContent = 'With purely horizontal motion the ball never reverses, so distance and position are identical. (They will differ once vertical motion is added.)';
-  else
-    graphNote.textContent = 'Velocity drops over friction patches and jumps up by 2 m/s at each boost.';
 }
 
 function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
 
 // ─── Drag & drop ──────────────────────────────────────────────────────────────
 function hitPiece(mx, my) {
   const gY = groundY();
-  if (my < gY - 48 || my > gY + 10) return null;
+  if (my < gY - 60 || my > gY + 10) return null;
+  for (const g of targets) if (Math.abs(mToPx(g.x) - mx) < 14) return { type: 'target', el: g };
   for (const wl of walls) if (Math.abs(mToPx(wl.x) - mx) < 9) return { type: 'wall', el: wl };
   if (my < gY - 24) return null;
   for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 12) return { type: 'boost', el: b };
@@ -511,8 +606,9 @@ function hitPiece(mx, my) {
 
 function makeGhost(piece) {
   const g = document.createElement('div'); g.id = 'dragGhost';
-  if (piece === 'boost') { g.textContent = '+2 m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
+  if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
+  else if (piece === 'target') { g.textContent = '▶ 6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
   else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
   document.body.appendChild(g); return g;
 }
@@ -522,6 +618,7 @@ const snap = m => Math.round(m);   // placement snaps to 1 m increments
 function placePiece(type, m) {
   if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), used: false });
   else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
+  else if (type === 'target') { const g = { id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
   else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
 }
 
@@ -549,7 +646,7 @@ sceneC.addEventListener('pointerdown', e => {
   sceneC.setPointerCapture(e.pointerId);
   // grabbing a friction patch's end → resize; its middle → move
   const kind = (hit.type === 'friction' && hit.edge) ? 'resize' : 'move';
-  drag = { kind, piece: hit.type, el: hit.el, edge: hit.edge };
+  drag = { kind, piece: hit.type, el: hit.el, edge: hit.edge, downX: e.clientX, downY: e.clientY, moved: false };
 });
 
 // Cursor hint when hovering placed pieces (resize vs grab)
@@ -565,9 +662,10 @@ window.addEventListener('pointermove', e => {
   if (drag.kind === 'new') {
     moveGhost(drag.ghost, e.clientX, e.clientY);
   } else if (drag.kind === 'move') {
+    if (Math.hypot(e.clientX - drag.downX, e.clientY - drag.downY) > 4) drag.moved = true;
     const r = sceneC.getBoundingClientRect();
     const m = pxToM(e.clientX - r.left);
-    if (drag.piece === 'boost' || drag.piece === 'wall') drag.el.x = clamp(snap(m), 0, TRACK_LEN);
+    if (drag.piece === 'boost' || drag.piece === 'wall' || drag.piece === 'target') drag.el.x = clamp(snap(m), 0, TRACK_LEN);
     else drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
     if (!running) { resetRun(); } else { drawScene(); }
   } else if (drag.kind === 'resize') {
@@ -594,12 +692,16 @@ window.addEventListener('pointerup', e => {
       if (!running) resetRun(); else drawScene();
     }
   } else if (drag.kind === 'move') {
-    // drop off the track → delete
     if (!overScene(e.clientX, e.clientY)) {
+      // drop off the track → delete
       if (drag.piece === 'boost') boosts = boosts.filter(b => b !== drag.el);
       else if (drag.piece === 'wall') walls = walls.filter(w => w !== drag.el);
+      else if (drag.piece === 'target') targets = targets.filter(g => g !== drag.el);
       else fricZones = fricZones.filter(z => z !== drag.el);
       if (!running) resetRun(); else drawScene();
+    } else if (drag.piece === 'target' && !drag.moved) {
+      // a click (no drag) on a target gate → open its editor
+      openTargetEditor(drag.el);
     }
   }
   drag = null;
@@ -614,7 +716,7 @@ document.getElementById('graphTabs').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   graphType = btn.dataset.g;
   [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === btn));
-  drawGraph(); updateNote();
+  drawGraph();
 });
 launchBtn.addEventListener('click', launch);
 document.getElementById('resetBtn').addEventListener('click', resetRun);
@@ -631,8 +733,73 @@ zoomYBtn.addEventListener('click', () => {
   zoomYBtn.classList.toggle('on', zoomY);
   drawGraph();
 });
-document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; if (!running) resetRun(); else drawScene(); });
-window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); });
+document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; closeTargetEditor(); if (!running) resetRun(); else drawScene(); });
+window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); if (editingTarget) positionTargetEditor(editingTarget); });
+
+// ─── Target-speed editor ──────────────────────────────────────────────────────
+const teEl = document.getElementById('targetEditor');
+const teMag = document.getElementById('teMag');
+const teTimeOn = document.getElementById('teTimeOn');
+const teTimeVal = document.getElementById('teTimeVal');
+
+function refreshTargetEditor() {
+  if (!editingTarget) return;
+  teMag.textContent = editingTarget.mag;
+  teEl.querySelectorAll('.te-dir button').forEach(b => b.classList.toggle('on', +b.dataset.dir === editingTarget.dir));
+  const timed = editingTarget.time != null;
+  teTimeOn.checked = timed;
+  teTimeVal.disabled = !timed;
+  if (timed) teTimeVal.value = editingTarget.time;
+}
+function positionTargetEditor(g) {
+  const r = sceneC.getBoundingClientRect();
+  let left = r.left + mToPx(g.x) + 16, top = r.top + 8;
+  left = Math.min(left, window.innerWidth - teEl.offsetWidth - 8);
+  left = Math.max(8, left);
+  teEl.style.left = left + 'px';
+  teEl.style.top = top + 'px';
+}
+function openTargetEditor(g) {
+  editingTarget = g;
+  teEl.hidden = false;
+  refreshTargetEditor();
+  positionTargetEditor(g);
+}
+function closeTargetEditor() { editingTarget = null; teEl.hidden = true; }
+function afterTargetEdit() { if (!running) resetRun(); else drawScene(); }
+
+teEl.querySelector('.te-dir').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !editingTarget) return;
+  editingTarget.dir = +b.dataset.dir; refreshTargetEditor(); afterTargetEdit();
+});
+teEl.querySelector('.te-mag').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !editingTarget) return;
+  editingTarget.mag = clamp(editingTarget.mag + (+b.dataset.step), TARGET_STEP, TARGET_MAX);
+  refreshTargetEditor(); afterTargetEdit();
+});
+teTimeOn.addEventListener('change', () => {
+  if (!editingTarget) return;
+  editingTarget.time = teTimeOn.checked ? clamp(parseFloat(teTimeVal.value) || 0, 0, RUN_TIME_CAP) : null;
+  refreshTargetEditor(); afterTargetEdit();
+});
+teTimeVal.addEventListener('input', () => {
+  if (!editingTarget || !teTimeOn.checked) return;
+  editingTarget.time = clamp(parseFloat(teTimeVal.value) || 0, 0, RUN_TIME_CAP);
+  afterTargetEdit();
+});
+document.getElementById('teRemove').addEventListener('click', () => {
+  if (!editingTarget) return;
+  targets = targets.filter(g => g !== editingTarget);
+  closeTargetEditor(); afterTargetEdit();
+});
+document.getElementById('teDone').addEventListener('click', closeTargetEditor);
+// click outside closes the editor
+window.addEventListener('pointerdown', e => {
+  if (!editingTarget || teEl.hidden) return;
+  if (teEl.contains(e.target)) return;
+  if (e.target === sceneC) return;   // scene handler decides (may reopen for another gate)
+  closeTargetEditor();
+}, true);
 
 // Hidden dev slider (type "dev") to tune friction deceleration.
 (function(){
