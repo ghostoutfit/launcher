@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Launcher</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #141a24;
+    --panel-2: #1b2330;
+    --ink: #e7edf5;
+    --muted: #8a97a8;
+    --line: #2a3442;
+    --accent: #3fb6ff;
+    --accent-2: #ffce4a;
+    --ball: #ff6b57;
+    --ground: #3a4656;
+    --boost: #4ade80;
+    --fric: #e08a5a;
+    --wall: #aab4c2;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #app { max-width: 1120px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.04em; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+
+  #stage { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  #main { flex: 1; min-width: 320px; }
+  #palette { width: 190px; flex-shrink: 0; padding: 13px; }
+
+  /* Controls bar */
+  #controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+    padding: 12px 16px; margin-bottom: 14px;
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 4px; }
+  .ctrl label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .ctrl .row { display: flex; align-items: center; gap: 10px; }
+  input[type=range] { width: 160px; accent-color: var(--accent); }
+  .val { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 58px; }
+  .spacer { flex: 1; }
+
+  button {
+    font: inherit; font-weight: 600; color: var(--ink);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 14px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #06121c; border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+
+  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .toggle button { border: none; border-radius: 0; background: transparent; padding: 7px 12px; color: var(--muted); }
+  .toggle button.on { background: var(--accent-2); color: #241c00; }
+
+  /* Scene */
+  #sceneWrap { padding: 0; margin-bottom: 14px; overflow: hidden; }
+  #scene { display: block; width: 100%; height: 180px; touch-action: none; }
+
+  /* Graph */
+  #graphCard { padding: 12px 14px 14px; }
+  #graphTabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  #graphTabs button { padding: 7px 12px; font-size: 13px; }
+  #graphTabs button.active { background: var(--accent); color: #06121c; border-color: var(--accent); }
+  #graphRow { display: flex; gap: 14px; align-items: stretch; }
+  #graph { display: block; flex: 1 1 auto; min-width: 0; height: 300px; }
+  #energyWrap { width: 132px; flex-shrink: 0; display: flex; flex-direction: column; }
+  #energyWrap .etitle { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  #energy { display: block; width: 100%; flex: 1; height: 272px; }
+  #graphNote { color: var(--muted); font-size: 11.5px; margin-top: 8px; min-height: 16px; }
+  @media (max-width: 560px) { #graphRow { flex-direction: column; } #energyWrap { width: 100%; } #energy { height: 150px; } }
+
+  /* Palette */
+  #palette .ptitle { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; margin-bottom: 10px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--panel-2); cursor: grab;
+  }
+  .chip:active { cursor: grabbing; }
+  .chip .ico { width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .chip.boost .ico { background: var(--boost); color: #063; }
+  .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
+  .chip.wall .ico { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
+  .chip .ctxt { font-size: 12px; line-height: 1.25; }
+  .chip .ctxt b { display: block; font-size: 12.5px; }
+  .chip .ctxt span { color: var(--muted); font-size: 11px; }
+  #palette .phint { color: var(--muted); font-size: 11px; line-height: 1.4; margin: 6px 0 12px; }
+  #clearBtn { width: 100%; }
+
+  #dragGhost {
+    position: fixed; z-index: 100; pointer-events: none;
+    transform: translate(-50%, -50%); opacity: 0.92;
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>LAUNCHER</h1>
+  <div class="sub">Launch a ball along flat ground, drop track pieces in its path, and watch the motion graph build live.</div>
+
+  <div id="stage">
+    <div id="main">
+      <div id="controls" class="panel">
+        <div class="ctrl">
+          <label>Launch speed</label>
+          <div class="row">
+            <input type="range" id="speed" min="1" max="12" step="1" value="6">
+            <span class="val" id="speedVal">6 m/s</span>
+          </div>
+        </div>
+        <div class="ctrl">
+          <label>Base friction</label>
+          <div class="toggle" id="frictionToggle">
+            <button data-fric="off" class="on">Off</button>
+            <button data-fric="on">On</button>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <button id="launchBtn" class="primary">Launch</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+
+      <div id="sceneWrap" class="panel">
+        <canvas id="scene"></canvas>
+      </div>
+
+      <div id="graphCard" class="panel">
+        <div id="graphTabs">
+          <button data-g="position" class="active">Position–time</button>
+          <button data-g="distance">Distance–time</button>
+          <button data-g="velocity">Velocity–time</button>
+          <span class="spacer"></span>
+          <button id="zoomBtn" title="Axes always start from zero">Zoom out</button>
+        </div>
+        <div id="graphRow">
+          <canvas id="graph"></canvas>
+          <div id="energyWrap">
+            <div class="etitle">Energy</div>
+            <canvas id="energy"></canvas>
+          </div>
+        </div>
+        <div id="graphNote"></div>
+      </div>
+    </div>
+
+    <div id="palette" class="panel">
+      <div class="ptitle">Track pieces</div>
+      <div class="chip boost" data-piece="boost">
+        <div class="ico">+2</div>
+        <div class="ctxt"><b>Speed boost</b><span>instant +2 m/s</span></div>
+      </div>
+      <div class="chip friction" data-piece="friction">
+        <div class="ico">▦</div>
+        <div class="ctxt"><b>Friction patch</b><span>2 m long</span></div>
+      </div>
+      <div class="chip wall" data-piece="wall">
+        <div class="ico">█</div>
+        <div class="ctxt"><b>Wall</b><span>stops the ball</span></div>
+      </div>
+      <div class="phint">Drag a piece onto the ground. Drag a placed piece to move it; drag it off the track to remove it.</div>
+      <button id="clearBtn">Clear track</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
+const TRACK_LEN = 20;
+const BALL_R    = 0.28;
+let   FRICTION_DECEL = 2.5;   // deceleration under friction (m/s^2) — dev-tunable
+const BOOST_DV  = 2;          // speed boost (m/s)
+const FRIC_LEN  = 2;          // friction patch length (m)
+const MAX_TIME  = 60;
+const MASS      = 1;          // kg (KE = ½·m·v²)
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let v0 = 6, baseFriction = false, graphType = 'position';
+let running = false, done = false, t = 0;
+let v = 0, x = 0;             // live ball state during a run
+let thermal = 0;             // energy lost to friction + impact (J)
+let samples = [];            // [{t, x, v, d, ke, th}]
+let energyMax = 1;           // y-scale for the energy chart (J)
+let lastFrame = 0;
+
+const ke = () => 0.5 * MASS * v * v;
+
+// Fixed graph axes (always from zero). Zoom out doubles both axes.
+const AXES = {
+  position: { t: 8, y: 20 },
+  distance: { t: 8, y: 20 },
+  velocity: { t: 8, y: 12 },
+};
+let zoomedOut = false;
+
+// Placed track pieces
+let boosts = [];             // {id, x, used}
+let fricZones = [];          // {id, x, len}
+let walls = [];              // {id, x}
+let pieceId = 1;
+
+// Drag state
+let drag = null;             // { kind:'new'|'move', piece, el?, ghost? }
+
+// ─── Elements ─────────────────────────────────────────────────────────────────
+const sceneC = document.getElementById('scene');
+const sx = sceneC.getContext('2d');
+const graphC = document.getElementById('graph');
+const gx = graphC.getContext('2d');
+const energyC = document.getElementById('energy');
+const ex = energyC.getContext('2d');
+const speedEl = document.getElementById('speed');
+const speedVal = document.getElementById('speedVal');
+const launchBtn = document.getElementById('launchBtn');
+const graphNote = document.getElementById('graphNote');
+
+// ─── Scene geometry ───────────────────────────────────────────────────────────
+const PAD_L = 24, PAD_R = 24;
+function sceneDims() { return { w: sceneC.clientWidth, h: sceneC.clientHeight }; }
+function groundY() { return sceneDims().h - 40; }
+function mToPx(m) { const { w } = sceneDims(); return PAD_L + (m / TRACK_LEN) * (w - PAD_L - PAD_R); }
+function pxToM(pxX) { const { w } = sceneDims(); return clamp(((pxX - PAD_L) / (w - PAD_L - PAD_R)) * TRACK_LEN, 0, TRACK_LEN); }
+function clamp(a, lo, hi) { return Math.max(lo, Math.min(hi, a)); }
+
+// ─── Physics (numerical integration) ──────────────────────────────────────────
+function onFrictionZone(px) { return fricZones.some(z => px >= z.x && px <= z.x + z.len); }
+
+function nextWall(from, to) {        // first wall strictly ahead in [from, to]
+  let hit = null;
+  for (const wl of walls) if (wl.x > from && wl.x <= to && (!hit || wl.x < hit.x)) hit = wl;
+  return hit;
+}
+
+function step(dt) {
+  const sub = 6, h = dt / sub;
+  for (let i = 0; i < sub && !done; i++) {
+    const decel = (baseFriction || onFrictionZone(x)) ? FRICTION_DECEL : 0;
+    const vBefore = v;
+    v = Math.max(0, v - decel * h);
+    thermal += 0.5 * MASS * (vBefore * vBefore - v * v);   // friction work → heat
+    const nx = x + v * h;
+    // wall: stop dead where it is, dumping remaining KE to heat (impact)
+    const wl = nextWall(x, nx);
+    if (wl) { x = wl.x; thermal += 0.5 * MASS * v * v; v = 0; done = true; break; }
+    // speed boosts: trigger when the ball crosses the pad moving right
+    for (const b of boosts) if (!b.used && b.x > x && b.x <= nx) { v += BOOST_DV; b.used = true; }
+    x = nx;
+    if (x >= TRACK_LEN) { x = TRACK_LEN; done = true; }
+    else if (v <= 1e-4) { done = true; }  // stopped (and nothing will restart it)
+  }
+}
+
+// ─── Run control ──────────────────────────────────────────────────────────────
+function launch() {
+  v0 = parseInt(speedEl.value, 10);
+  boosts.forEach(b => b.used = false);
+  running = true; done = false; t = 0; x = 0; v = v0; thermal = 0;
+  samples = [{ t: 0, x: 0, v: v0, d: 0, ke: ke(), th: 0 }];
+  energyMax = Math.max(1e-6, ke());
+  lastFrame = performance.now();
+  launchBtn.disabled = true;
+  updateNote();
+}
+
+function resetRun() {
+  running = false; done = false; t = 0; x = 0; v = 0; thermal = 0; samples = []; energyMax = 1;
+  launchBtn.disabled = false;
+  drawScene(); drawGraph(); drawEnergy(); updateNote();
+}
+
+// ─── Main loop ────────────────────────────────────────────────────────────────
+function frame(now) {
+  if (running && !done) {
+    const dt = Math.min(0.05, (now - lastFrame) / 1000);
+    lastFrame = now;
+    t += dt;
+    step(dt);
+    const prev = samples[samples.length - 1];
+    const d = prev.d + Math.abs(x - prev.x);
+    samples.push({ t, x, v, d, ke: ke(), th: thermal });
+    if (ke() + thermal > energyMax) energyMax = ke() + thermal;
+    if (t > MAX_TIME) done = true;
+    if (done) { running = false; launchBtn.disabled = false; }
+    drawScene(); drawGraph(); drawEnergy();
+  } else if (running && done) {
+    running = false; launchBtn.disabled = false;
+  }
+  requestAnimationFrame(frame);
+}
+
+// ─── Scene rendering ──────────────────────────────────────────────────────────
+function fit(c) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  return { w, h, dpr };
+}
+
+function drawScene() {
+  const { w, h, dpr } = fit(sceneC);
+  sx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sx.clearRect(0, 0, w, h);
+  const gY = groundY();
+
+  // friction patches (under the ground line)
+  for (const z of fricZones) {
+    const xa = mToPx(z.x), xb = mToPx(Math.min(TRACK_LEN, z.x + z.len));
+    sx.fillStyle = 'rgba(224,138,90,0.22)';
+    sx.fillRect(xa, gY - 10, xb - xa, 14);
+    // hatching
+    sx.save(); sx.beginPath(); sx.rect(xa, gY - 10, xb - xa, 14); sx.clip();
+    sx.strokeStyle = 'rgba(224,138,90,0.6)'; sx.lineWidth = 1;
+    for (let p = xa - 14; p < xb + 14; p += 6) { sx.beginPath(); sx.moveTo(p, gY + 6); sx.lineTo(p + 14, gY - 12); sx.stroke(); }
+    sx.restore();
+    sx.strokeStyle = 'rgba(224,138,90,0.8)'; sx.lineWidth = 1.5;
+    sx.strokeRect(xa, gY - 10, xb - xa, 14);
+  }
+
+  // ground
+  sx.strokeStyle = getCss('--ground'); sx.lineWidth = 3;
+  sx.beginPath(); sx.moveTo(PAD_L, gY); sx.lineTo(w - PAD_R, gY); sx.stroke();
+
+  // distance ticks
+  sx.fillStyle = getCss('--muted'); sx.font = '11px -apple-system, sans-serif'; sx.textAlign = 'center';
+  for (let m = 0; m <= TRACK_LEN; m += 5) {
+    const gxp = mToPx(m);
+    sx.strokeStyle = getCss('--line'); sx.lineWidth = 1;
+    sx.beginPath(); sx.moveTo(gxp, gY); sx.lineTo(gxp, gY + 6); sx.stroke();
+    sx.fillText(m + ' m', gxp, gY + 20);
+  }
+
+  // speed boosts (chevrons on the ground)
+  for (const b of boosts) {
+    const bx = mToPx(b.x);
+    sx.strokeStyle = getCss('--boost'); sx.lineWidth = 2.4; sx.lineCap = 'round';
+    for (let k = 0; k < 2; k++) {
+      const off = k * 7;
+      sx.beginPath();
+      sx.moveTo(bx - 6 + off, gY - 4); sx.lineTo(bx + off, gY - 14); sx.lineTo(bx + 6 + off, gY - 4);
+      sx.stroke();
+    }
+    sx.fillStyle = getCss('--boost'); sx.font = '700 10px -apple-system, sans-serif'; sx.textAlign = 'center';
+    sx.fillText('+2', bx + 3, gY - 20);
+  }
+
+  // walls (vertical barriers on the ground)
+  for (const wl of walls) {
+    const wx = mToPx(wl.x), wT = gY - 46, ww = 7;
+    sx.fillStyle = getCss('--wall');
+    sx.fillRect(wx - ww / 2, wT, ww, gY - wT);
+    sx.fillStyle = 'rgba(0,0,0,0.22)';
+    for (let yb = wT + 4; yb < gY - 2; yb += 8) sx.fillRect(wx - ww / 2, yb, ww, 2);
+    sx.strokeStyle = 'rgba(0,0,0,0.4)'; sx.lineWidth = 1; sx.strokeRect(wx - ww / 2, wT, ww, gY - wT);
+  }
+
+  // launch marker
+  sx.strokeStyle = 'rgba(255,255,255,0.16)'; sx.setLineDash([4, 4]); sx.lineWidth = 1;
+  sx.beginPath(); sx.moveTo(mToPx(0), gY - 70); sx.lineTo(mToPx(0), gY); sx.stroke();
+  sx.setLineDash([]);
+
+  // ball
+  const bx = mToPx(running || samples.length ? x : 0);
+  const r = Math.max(7, (BALL_R / TRACK_LEN) * (w - PAD_L - PAD_R));
+  sx.beginPath(); sx.arc(bx, gY - r, r, 0, Math.PI * 2);
+  sx.fillStyle = getCss('--ball'); sx.fill();
+  sx.strokeStyle = 'rgba(0,0,0,0.35)'; sx.lineWidth = 1; sx.stroke();
+}
+
+// ─── Graph rendering ──────────────────────────────────────────────────────────
+function graphSpec() {
+  if (graphType === 'position') return { key: 'x', label: 'Position', unit: 'm', color: '--accent' };
+  if (graphType === 'distance') return { key: 'd', label: 'Distance', unit: 'm', color: '--accent-2' };
+  return { key: 'v', label: 'Velocity', unit: 'm/s', color: '--ball' };
+}
+
+function drawGraph() {
+  const { w, h, dpr } = fit(graphC);
+  gx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  gx.clearRect(0, 0, w, h);
+  const spec = graphSpec();
+  const padL = 52, padR = 16, padT = 14, padB = 34;
+  const x0 = padL, x1 = w - padR, y0 = h - padB, y1 = padT;
+  const base = AXES[graphType], mult = zoomedOut ? 2 : 1;
+  const tMax = base.t * mult, yMax = base.y * mult;
+  const X = tt => x0 + (tt / tMax) * (x1 - x0);
+  const Y = vv => y0 + (vv / yMax) * (y1 - y0);
+
+  gx.font = '11px -apple-system, sans-serif'; gx.fillStyle = getCss('--muted');
+  gx.strokeStyle = getCss('--line'); gx.lineWidth = 1;
+  gx.textAlign = 'right'; gx.textBaseline = 'middle';
+  for (let i = 0; i <= 5; i++) {
+    const vv = (yMax * i) / 5, yy = Y(vv);
+    gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
+    gx.fillText(vv.toFixed(yMax < 4 ? 1 : 0), x0 - 8, yy);
+  }
+  gx.textAlign = 'center'; gx.textBaseline = 'top';
+  for (let i = 0; i <= 5; i++) {
+    const tt = (tMax * i) / 5, xx = X(tt);
+    gx.beginPath(); gx.moveTo(xx, y0); gx.lineTo(xx, y0 + 5); gx.stroke();
+    gx.fillText(tt.toFixed(1), xx, y0 + 8);
+  }
+  gx.fillStyle = getCss('--muted'); gx.textAlign = 'center'; gx.textBaseline = 'top';
+  gx.fillText('time (s)', (x0 + x1) / 2, h - 14);
+  gx.save(); gx.translate(14, (y0 + y1) / 2); gx.rotate(-Math.PI / 2); gx.textBaseline = 'bottom';
+  gx.fillText(spec.label + ' (' + spec.unit + ')', 0, 0); gx.restore();
+
+  if (samples.length > 1) {
+    gx.save();
+    gx.beginPath(); gx.rect(x0, y1, x1 - x0, y0 - y1); gx.clip();  // keep the trace inside the plot
+    gx.strokeStyle = getCss(spec.color); gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
+    gx.beginPath();
+    samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[spec.key]); i === 0 ? gx.moveTo(xx, yy) : gx.lineTo(xx, yy); });
+    gx.stroke();
+    const last = samples[samples.length - 1];
+    gx.fillStyle = getCss(spec.color);
+    gx.beginPath(); gx.arc(X(last.t), Y(last[spec.key]), 4.5, 0, Math.PI * 2); gx.fill();
+    gx.restore();
+  }
+}
+
+// ─── Energy bar charts (KE, TH) ─────────────────────────────────────────────
+function drawEnergy() {
+  const { w, h, dpr } = fit(energyC);
+  ex.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ex.clearRect(0, 0, w, h);
+
+  const last = samples.length ? samples[samples.length - 1] : { ke: 0, th: 0 };
+  const keV = last.ke, thV = last.th;
+  const eMax = Math.max(1e-6, energyMax);
+
+  const padT = 22, padB = 40, baseY = h - padB, topY = padT;
+  const plotH = baseY - topY;
+  const bars = [
+    { lab: 'KE', val: keV, col: getCss('--accent'), sub: 'kinetic' },
+    { lab: 'TH', val: thV, col: getCss('--fric'),   sub: 'thermal' },
+  ];
+  const n = bars.length, slot = w / n, bw = Math.min(42, slot * 0.56);
+
+  // gridlines
+  ex.strokeStyle = getCss('--line'); ex.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) { const yy = baseY - (plotH * i) / 4; ex.beginPath(); ex.moveTo(0, yy); ex.lineTo(w, yy); ex.stroke(); }
+
+  bars.forEach((b, i) => {
+    const cx = slot * (i + 0.5), bh = (clamp(b.val, 0, eMax) / eMax) * plotH;
+    const bx = cx - bw / 2, by = baseY - bh;
+    ex.fillStyle = b.col; ex.fillRect(bx, by, bw, bh);
+    ex.strokeStyle = 'rgba(0,0,0,0.3)'; ex.lineWidth = 1; ex.strokeRect(bx, by, bw, bh);
+    // value
+    ex.fillStyle = getCss('--ink'); ex.font = '700 11px -apple-system, sans-serif';
+    ex.textAlign = 'center'; ex.textBaseline = 'bottom';
+    ex.fillText(b.val.toFixed(1), cx, by - 3);
+    // labels
+    ex.fillStyle = b.col; ex.font = '700 12px -apple-system, sans-serif'; ex.textBaseline = 'top';
+    ex.fillText(b.lab, cx, baseY + 6);
+    ex.fillStyle = getCss('--muted'); ex.font = '10px -apple-system, sans-serif';
+    ex.fillText(b.sub, cx, baseY + 22);
+  });
+
+  // unit caption
+  ex.fillStyle = getCss('--muted'); ex.font = '10px -apple-system, sans-serif';
+  ex.textAlign = 'left'; ex.textBaseline = 'top';
+  ex.fillText('J', 2, 0);
+}
+
+function updateNote() {
+  if (graphType === 'position' || graphType === 'distance')
+    graphNote.textContent = 'With purely horizontal motion the ball never reverses, so distance and position are identical. (They will differ once vertical motion is added.)';
+  else
+    graphNote.textContent = 'Velocity drops over friction patches and jumps up by 2 m/s at each boost.';
+}
+
+function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+// ─── Drag & drop ──────────────────────────────────────────────────────────────
+function hitPiece(mx, my) {
+  const gY = groundY();
+  if (my < gY - 48 || my > gY + 10) return null;
+  for (const wl of walls) if (Math.abs(mToPx(wl.x) - mx) < 9) return { type: 'wall', el: wl };
+  if (my < gY - 24) return null;
+  for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 12) return { type: 'boost', el: b };
+  for (const z of fricZones) { const xa = mToPx(z.x), xb = mToPx(z.x + z.len); if (mx >= xa - 4 && mx <= xb + 4) return { type: 'friction', el: z }; }
+  return null;
+}
+
+function makeGhost(piece) {
+  const g = document.createElement('div'); g.id = 'dragGhost';
+  if (piece === 'boost') { g.textContent = '+2 m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
+  else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
+  else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
+  document.body.appendChild(g); return g;
+}
+function moveGhost(g, cx, cy) { g.style.left = cx + 'px'; g.style.top = cy + 'px'; }
+
+const snap = m => Math.round(m);   // placement snaps to 1 m increments
+function placePiece(type, m) {
+  if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), used: false });
+  else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
+  else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
+}
+
+function overScene(cx, cy) {
+  const r = sceneC.getBoundingClientRect();
+  return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
+}
+
+// Start a drag from a palette chip (create new piece)
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const piece = chip.dataset.piece;
+    drag = { kind: 'new', piece, ghost: makeGhost(piece) };
+    moveGhost(drag.ghost, e.clientX, e.clientY);
+  });
+});
+
+// Start a drag on an existing placed piece (move / remove)
+sceneC.addEventListener('pointerdown', e => {
+  const r = sceneC.getBoundingClientRect();
+  const hit = hitPiece(e.clientX - r.left, e.clientY - r.top);
+  if (!hit) return;
+  e.preventDefault();
+  sceneC.setPointerCapture(e.pointerId);
+  drag = { kind: 'move', piece: hit.type, el: hit.el };
+});
+
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (drag.kind === 'new') {
+    moveGhost(drag.ghost, e.clientX, e.clientY);
+  } else if (drag.kind === 'move') {
+    const r = sceneC.getBoundingClientRect();
+    const m = pxToM(e.clientX - r.left);
+    if (drag.piece === 'boost' || drag.piece === 'wall') drag.el.x = clamp(snap(m), 0, TRACK_LEN);
+    else drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
+    if (!running) { resetRun(); } else { drawScene(); }
+  }
+});
+
+window.addEventListener('pointerup', e => {
+  if (!drag) return;
+  if (drag.kind === 'new') {
+    drag.ghost.remove();
+    if (overScene(e.clientX, e.clientY)) {
+      const r = sceneC.getBoundingClientRect();
+      placePiece(drag.piece, pxToM(e.clientX - r.left));
+      if (!running) resetRun(); else drawScene();
+    }
+  } else if (drag.kind === 'move') {
+    // drop off the track → delete
+    if (!overScene(e.clientX, e.clientY)) {
+      if (drag.piece === 'boost') boosts = boosts.filter(b => b !== drag.el);
+      else if (drag.piece === 'wall') walls = walls.filter(w => w !== drag.el);
+      else fricZones = fricZones.filter(z => z !== drag.el);
+      if (!running) resetRun(); else drawScene();
+    }
+  }
+  drag = null;
+});
+
+// ─── Wiring ───────────────────────────────────────────────────────────────────
+speedEl.addEventListener('input', () => {
+  speedVal.textContent = parseInt(speedEl.value, 10) + ' m/s';
+  if (!running) resetRun();
+});
+document.getElementById('frictionToggle').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  baseFriction = btn.dataset.fric === 'on';
+  [...e.currentTarget.children].forEach(b => b.classList.toggle('on', b === btn));
+  if (!running) resetRun();
+});
+document.getElementById('graphTabs').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  graphType = btn.dataset.g;
+  [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === btn));
+  drawGraph(); updateNote();
+});
+launchBtn.addEventListener('click', launch);
+document.getElementById('resetBtn').addEventListener('click', resetRun);
+document.getElementById('zoomBtn').addEventListener('click', () => {
+  zoomedOut = !zoomedOut;
+  document.getElementById('zoomBtn').textContent = zoomedOut ? 'Zoom in' : 'Zoom out';
+  drawGraph();
+});
+document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; if (!running) resetRun(); else drawScene(); });
+window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); });
+
+// Hidden dev slider (type "dev") to tune friction deceleration.
+(function(){
+  let seq = '';
+  window.addEventListener('keydown', e => {
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    seq = (seq + e.key.toLowerCase()).slice(-3);
+    if (seq === 'dev') {
+      let box = document.getElementById('devBox');
+      if (box) { box.remove(); return; }
+      box = document.createElement('div'); box.id = 'devBox';
+      box.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:50;background:#141a24;border:1px solid #2a3442;border-radius:8px;padding:8px 10px;font:12px sans-serif;color:#8a97a8;display:flex;gap:8px;align-items:center';
+      box.innerHTML = 'friction a <input type="range" id="devFric" min="0.5" max="8" step="0.1" value="'+FRICTION_DECEL+'"><span id="devFricV">'+FRICTION_DECEL.toFixed(1)+'</span> m/s²';
+      document.body.appendChild(box);
+      const s = box.querySelector('#devFric'), vlab = box.querySelector('#devFricV');
+      s.addEventListener('input', () => { FRICTION_DECEL = parseFloat(s.value); vlab.textContent = FRICTION_DECEL.toFixed(1); if (!running) resetRun(); });
+    }
+  });
+})();
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+resetRun();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
