@@ -326,6 +326,10 @@ function drawScene() {
     sx.restore();
     sx.strokeStyle = 'rgba(224,138,90,0.8)'; sx.lineWidth = 1.5;
     sx.strokeRect(xa, gY - 10, xb - xa, 14);
+    // drag handles at each end (resize by 1 m)
+    sx.fillStyle = 'rgba(224,138,90,0.95)';
+    sx.fillRect(xa - 1.5, gY - 13, 3, 20);
+    sx.fillRect(xb - 1.5, gY - 13, 3, 20);
   }
 
   // ground
@@ -490,7 +494,12 @@ function hitPiece(mx, my) {
   for (const wl of walls) if (Math.abs(mToPx(wl.x) - mx) < 9) return { type: 'wall', el: wl };
   if (my < gY - 24) return null;
   for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 12) return { type: 'boost', el: b };
-  for (const z of fricZones) { const xa = mToPx(z.x), xb = mToPx(z.x + z.len); if (mx >= xa - 4 && mx <= xb + 4) return { type: 'friction', el: z }; }
+  for (const z of fricZones) {
+    const xa = mToPx(z.x), xb = mToPx(z.x + z.len);
+    if (mx < xa - 6 || mx > xb + 6) continue;
+    const edge = Math.abs(mx - xa) <= 7 ? 'l' : Math.abs(mx - xb) <= 7 ? 'r' : null;
+    return { type: 'friction', el: z, edge };
+  }
   return null;
 }
 
@@ -532,7 +541,17 @@ sceneC.addEventListener('pointerdown', e => {
   if (!hit) return;
   e.preventDefault();
   sceneC.setPointerCapture(e.pointerId);
-  drag = { kind: 'move', piece: hit.type, el: hit.el };
+  // grabbing a friction patch's end → resize; its middle → move
+  const kind = (hit.type === 'friction' && hit.edge) ? 'resize' : 'move';
+  drag = { kind, piece: hit.type, el: hit.el, edge: hit.edge };
+});
+
+// Cursor hint when hovering placed pieces (resize vs grab)
+sceneC.addEventListener('pointermove', e => {
+  if (drag) return;
+  const r = sceneC.getBoundingClientRect();
+  const hit = hitPiece(e.clientX - r.left, e.clientY - r.top);
+  sceneC.style.cursor = !hit ? 'default' : (hit.type === 'friction' && hit.edge) ? 'ew-resize' : 'grab';
 });
 
 window.addEventListener('pointermove', e => {
@@ -544,6 +563,17 @@ window.addEventListener('pointermove', e => {
     const m = pxToM(e.clientX - r.left);
     if (drag.piece === 'boost' || drag.piece === 'wall') drag.el.x = clamp(snap(m), 0, TRACK_LEN);
     else drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
+    if (!running) { resetRun(); } else { drawScene(); }
+  } else if (drag.kind === 'resize') {
+    const r = sceneC.getBoundingClientRect();
+    const z = drag.el, m = snap(pxToM(e.clientX - r.left));
+    if (drag.edge === 'l') {           // left end moves; right end stays put
+      const right = z.x + z.len, nl = clamp(m, 0, right - 1);
+      z.x = nl; z.len = right - nl;
+    } else {                           // right end moves; left end stays put
+      const nr = clamp(m, z.x + 1, TRACK_LEN);
+      z.len = nr - z.x;
+    }
     if (!running) { resetRun(); } else { drawScene(); }
   }
 });
