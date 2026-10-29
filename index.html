@@ -193,8 +193,8 @@
       <div id="graphCard" class="panel">
         <div id="graphTabs">
           <button data-g="position" class="active">Position–time</button>
-          <button data-g="distance">Distance–time</button>
           <button data-g="velocity">Velocity–time</button>
+          <button data-g="both">Both Distance and Velocity</button>
         </div>
         <div id="graphRow">
           <div id="graphPlot">
@@ -280,9 +280,9 @@ const ke = () => 0.5 * MASS * v * v;
 
 // Fixed graph axes (always from zero). Each axis zooms out (×2) independently.
 const AXES = {
-  position: { t: 8, y: 20 },
-  distance: { t: 8, y: 20 },
-  velocity: { t: 8, y: 12 },
+  position: { t: 5, y: 10 },
+  velocity: { t: 5, y: 12 },
+  both: { t: 5, yv: 12, yd: 20 },   // velocity (left axis) + distance (right axis)
 };
 let zoomX = false, zoomY = false;
 
@@ -626,19 +626,22 @@ function drawPad(el, col, fgDark, sgn) {
     const cxp = pxc - 11 + k * 10;
     sx.beginPath(); sx.moveTo(cxp - 4, pyt + 4); sx.lineTo(cxp + 4, pyt + padH / 2); sx.lineTo(cxp - 4, pyt + padH - 4); sx.stroke();
   }
-  // sign: total height = half the target-speed box (82 → 41); steppers on a row above the value
+  // sign: total height = half the target-speed box (82 → 41)
   const bw = 86, bh = 41, bbot = top - 12, BY = bbot - bh, BX = bx - bw / 2;
   signPost(bx, bbot, top, col);
   panelShaded(BX, BY, bw, bh, 11, col);
-  const minus = miniBtn(BX + 21, BY + 15, 12, '–', col, INK);
-  const plus  = miniBtn(BX + bw - 21, BY + 15, 12, '+', col, INK);
-  sx.fillStyle = fgDark; sx.textBaseline = 'middle';
-  const numStr = sgn + el.dv;
-  sx.font = handFont(18, 800); const nw = sx.measureText(numStr).width;
-  sx.font = handFont(11, 700); const uw = sx.measureText(' m/s').width;
+  // Row 1 — a big + or −
+  sx.fillStyle = fgDark; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+  sx.font = handFont(24, 800); sx.fillText(sgn, bx, BY + 13);
+  // Row 2 — (− button)  value m/s  (+ button)
+  const minus = miniBtn(BX + 13, BY + 30, 9, '–', col, INK);
+  const plus  = miniBtn(BX + bw - 13, BY + 30, 9, '+', col, INK);
+  sx.fillStyle = fgDark;
+  sx.font = handFont(15, 800); const nw = sx.measureText('' + el.dv).width;
+  sx.font = handFont(10, 700); const uw = sx.measureText(' m/s').width;
   const gx0 = bx - (nw + uw) / 2; sx.textAlign = 'left';
-  sx.font = handFont(18, 800); sx.fillText(numStr, gx0, BY + 33);
-  sx.font = handFont(11, 700); sx.fillText(' m/s', gx0 + nw, BY + 34);
+  sx.font = handFont(15, 800); sx.fillText(el.dv, gx0, BY + 31);
+  sx.font = handFont(10, 700); sx.fillText(' m/s', gx0 + nw, BY + 31);
   sx.textAlign = 'center'; sx.textBaseline = 'alphabetic';
   el._ui = { minus, plus };
   el._sign = { x: BX, y: BY, w: bw, h: bh };
@@ -662,56 +665,94 @@ function drawBall(bx, gY, ballCol) {
 
 // ─── Graph rendering ──────────────────────────────────────────────────────────
 function graphSpec() {
-  if (graphType === 'position') return { key: 'x', label: 'Position', unit: 'm', color: '--accent' };
-  if (graphType === 'distance') return { key: 'd', label: 'Distance', unit: 'm', color: '--accent-2' };
-  return { key: 'v', label: 'Velocity', unit: 'm/s', color: '--ball' };
+  if (graphType === 'position') return { key: 'x', label: 'Position', unit: 'm' };
+  return { key: 'v', label: 'Velocity', unit: 'm/s' };
 }
 
 function drawGraph() {
   const { w, h, dpr } = fit(graphC);
   gx.setTransform(dpr, 0, 0, dpr, 0, 0);
   gx.clearRect(0, 0, w, h);
-  const spec = graphSpec();
-  const padL = 52, padR = 16, padT = 14, padB = 34;
-  const x0 = padL, x1 = w - padR, y0 = h - padB, y1 = padT;
+  const both = graphType === 'both';
   const base = AXES[graphType];
-  const tMax = base.t * (zoomX ? 2 : 1), yMax = base.y * (zoomY ? 2 : 1);
-  const X = tt => x0 + (tt / tMax) * (x1 - x0);
-  const Y = vv => y0 + (vv / yMax) * (y1 - y0);
+  const padL = 52, padR = both ? 46 : 16, padT = both ? 24 : 14, padB = 34;
+  const x0 = padL, x1 = w - padR, y0 = h - padB, y1 = padT;
+  const tMax = base.t * (zoomX ? 2 : 1);
+  const yMaxL = (both ? base.yv : base.y) * (zoomY ? 2 : 1);    // left axis (velocity when 'both')
+  const yMaxR = both ? base.yd * (zoomY ? 2 : 1) : null;        // right axis (distance when 'both')
+  const X  = tt => x0 + (tt / tMax) * (x1 - x0);
+  const YL = vv => y0 + (vv / yMaxL) * (y1 - y0);
+  const YR = vv => y0 + (vv / yMaxR) * (y1 - y0);
+  const velCol = getCss('--ball'), distCol = getCss('--accent-2');
 
-  gx.font = handFont(13, 400); gx.fillStyle = getCss('--muted');
-  gx.strokeStyle = getCss('--line'); gx.lineWidth = 1;
-  gx.textAlign = 'right'; gx.textBaseline = 'middle';
+  // horizontal gridlines + left-axis labels
+  gx.font = handFont(13, 400); gx.strokeStyle = getCss('--line'); gx.lineWidth = 1;
+  gx.fillStyle = both ? velCol : getCss('--muted'); gx.textAlign = 'right'; gx.textBaseline = 'middle';
   for (let i = 0; i <= 5; i++) {
-    const vv = (yMax * i) / 5, yy = Y(vv);
+    const vv = (yMaxL * i) / 5, yy = YL(vv);
     gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
-    gx.fillText(vv.toFixed(yMax < 4 ? 1 : 0), x0 - 8, yy);
+    gx.fillText(vv.toFixed(yMaxL < 4 ? 1 : 0), x0 - 8, yy);
   }
-  gx.textAlign = 'center'; gx.textBaseline = 'top';
-  for (let i = 0; i <= 5; i++) {
-    const tt = (tMax * i) / 5, xx = X(tt);
-    gx.beginPath(); gx.moveTo(xx, y0); gx.lineTo(xx, y0 + 5); gx.stroke();
-    gx.fillText(tt.toFixed(1), xx, y0 + 8);
+  // right-axis (distance) labels for 'both'
+  if (both) {
+    gx.fillStyle = distCol; gx.textAlign = 'left';
+    for (let i = 0; i <= 5; i++) gx.fillText(((yMaxR * i) / 5).toFixed(0), x1 + 6, YR((yMaxR * i) / 5));
   }
-  gx.fillStyle = getCss('--muted'); gx.textAlign = 'center'; gx.textBaseline = 'top';
-  gx.fillText('time (s)', (x0 + x1) / 2, h - 14);
-  gx.save(); gx.translate(14, (y0 + y1) / 2); gx.rotate(-Math.PI / 2); gx.textBaseline = 'bottom';
-  gx.fillText(spec.label + ' (' + spec.unit + ')', 0, 0); gx.restore();
 
+  // time axis: major ticks every 1 s (labelled) + minor ticks every 0.5 s
+  gx.strokeStyle = getCss('--line'); gx.fillStyle = getCss('--muted');
+  gx.textAlign = 'center'; gx.textBaseline = 'top';
+  for (let tt = 0; tt <= tMax + 1e-9; tt += 0.5) {
+    const xx = X(tt), major = Math.abs(tt - Math.round(tt)) < 1e-9;
+    gx.lineWidth = 1; gx.beginPath(); gx.moveTo(xx, y0); gx.lineTo(xx, y0 + (major ? 6 : 3)); gx.stroke();
+    if (major) gx.fillText(tt.toFixed(0), xx, y0 + 9);
+  }
+  gx.fillStyle = getCss('--muted'); gx.fillText('time (s)', (x0 + x1) / 2, h - 14);
+
+  // axis titles
+  gx.save(); gx.translate(14, (y0 + y1) / 2); gx.rotate(-Math.PI / 2); gx.textAlign = 'center'; gx.textBaseline = 'bottom';
+  if (both) { gx.fillStyle = velCol; gx.fillText('velocity (m/s)', 0, 0); }
+  else { const spec = graphSpec(); gx.fillStyle = getCss('--muted'); gx.fillText(spec.label + ' (' + spec.unit + ')', 0, 0); }
+  gx.restore();
+  if (both) { gx.save(); gx.translate(w - 11, (y0 + y1) / 2); gx.rotate(Math.PI / 2); gx.textAlign = 'center'; gx.textBaseline = 'bottom'; gx.fillStyle = distCol; gx.fillText('distance (m)', 0, 0); gx.restore(); }
+
+  // traces
   gx.save();
-  gx.beginPath(); gx.rect(x0, y1, x1 - x0, y0 - y1); gx.clip();  // keep traces inside the plot
+  gx.beginPath(); gx.rect(x0, y1, x1 - x0, y0 - y1); gx.clip();
   gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
-  for (const b of balls) {
-    if (b.samples.length < 2) continue;
-    gx.strokeStyle = b.color;
-    gx.beginPath();
-    b.samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[spec.key]); i === 0 ? gx.moveTo(xx, yy) : gx.lineTo(xx, yy); });
-    gx.stroke();
-    const last = b.samples[b.samples.length - 1];
-    gx.fillStyle = b.color;
-    gx.beginPath(); gx.arc(X(last.t), Y(last[spec.key]), 4.5, 0, Math.PI * 2); gx.fill();
+  if (both) {
+    for (const b of balls) {
+      if (b.samples.length < 2) continue;
+      gx.strokeStyle = b.color;
+      gx.setLineDash([]); gx.beginPath();
+      b.samples.forEach((s, i) => { const xx = X(s.t), yy = YL(s.v); i ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); }); gx.stroke();
+      gx.setLineDash([5, 4]); gx.beginPath();
+      b.samples.forEach((s, i) => { const xx = X(s.t), yy = YR(s.d); i ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); }); gx.stroke();
+    }
+    gx.setLineDash([]);
+  } else {
+    const spec = graphSpec();
+    for (const b of balls) {
+      if (b.samples.length < 2) continue;
+      gx.strokeStyle = b.color;
+      gx.beginPath();
+      b.samples.forEach((s, i) => { const xx = X(s.t), yy = YL(s[spec.key]); i ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); }); gx.stroke();
+      const last = b.samples[b.samples.length - 1];
+      gx.fillStyle = b.color; gx.beginPath(); gx.arc(X(last.t), YL(last[spec.key]), 4.5, 0, Math.PI * 2); gx.fill();
+    }
   }
   gx.restore();
+
+  // legend (solid = velocity, dashed = distance) for 'both'
+  if (both) {
+    gx.font = handFont(11, 600); gx.textAlign = 'left'; gx.textBaseline = 'middle';
+    const ly = y1 - 11;
+    gx.lineWidth = 2.4; gx.strokeStyle = getCss('--ink');
+    gx.setLineDash([]); gx.beginPath(); gx.moveTo(x0 + 2, ly); gx.lineTo(x0 + 18, ly); gx.stroke();
+    gx.fillStyle = getCss('--muted'); gx.fillText('velocity', x0 + 22, ly);
+    gx.setLineDash([5, 4]); gx.beginPath(); gx.moveTo(x0 + 78, ly); gx.lineTo(x0 + 94, ly); gx.stroke(); gx.setLineDash([]);
+    gx.fillText('distance', x0 + 98, ly);
+  }
 }
 
 // ─── Energy bar charts (KE, TH) ─────────────────────────────────────────────
