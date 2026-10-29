@@ -4,8 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
+    /* Light theme (default) */
+    --bg: #f0e6cd;
+    --panel: #fbf5e9;
+    --panel-2: #efe3cc;
+    --ink: #262a30;
+    --muted: #867c67;
+    --line: #d8c7a6;
+    --accent: #2d8bd4;
+    --accent-2: #d9a328;
+    --ground: #c7ab7a;
+    /* Shared element colours (both themes) */
+    --ball: #ff6b57;
+    --ball2: #3b9eff;
+    --boost: #4ade80;
+    --fric: #e08a5a;
+    --wall: #aab4c2;
+    --target: #b98cff;
+    --hand: 'Lexend', system-ui, 'Segoe UI', sans-serif;
+  }
+  :root[data-theme="dark"] {
     --bg: #0b0e14;
     --panel: #141a24;
     --panel-2: #1b2330;
@@ -14,37 +37,40 @@
     --line: #2a3442;
     --accent: #3fb6ff;
     --accent-2: #ffce4a;
-    --ball: #ff6b57;
     --ground: #3a4656;
-    --boost: #4ade80;
-    --fric: #e08a5a;
-    --wall: #aab4c2;
-    --target: #b98cff;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%;
     background: var(--bg); color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--hand);
     -webkit-user-select: none; user-select: none;
   }
+  /* a tiny bit of sandy grain on the cream background (light mode only) */
+  :root:not([data-theme="dark"]) body {
+    background-image:
+      radial-gradient(rgba(122,92,46,0.07) 0.8px, transparent 1.2px),
+      radial-gradient(rgba(122,92,46,0.05) 0.8px, transparent 1.2px);
+    background-size: 6px 6px, 9px 9px;
+    background-position: 0 0, 3px 4px;
+  }
   #app { max-width: 1120px; margin: 0 auto; padding: 18px 16px 40px; }
-  h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.04em; margin: 0 0 2px; }
-  .sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: 0.01em; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
 
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .panel { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; }
 
   #stage { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
   #main { flex: 1; min-width: 320px; }
   #sidebar { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
-  #palette { padding: 13px; }
-  #energyPanel { padding: 13px; }
+  #palette { padding: 11px; }
+  #energyPanel { padding: 11px; }
   #energyPanel #energy { display: block; width: 100%; height: 200px; }
 
   /* Controls bar */
   #controls {
     display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
-    padding: 12px 16px; margin-bottom: 14px;
+    padding: 9px 16px; margin-bottom: 10px;
   }
   .ctrl { display: flex; flex-direction: column; gap: 4px; }
   .ctrl label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
@@ -54,30 +80,36 @@
   .spacer { flex: 1; }
 
   button {
-    font: inherit; font-weight: 600; color: var(--ink);
-    background: var(--panel-2); border: 1px solid var(--line);
-    border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    font: inherit; font-size: 15px; color: var(--ink);
+    background: var(--panel-2); border: 2px solid var(--line);
+    border-radius: 11px; padding: 7px 15px; cursor: pointer;
   }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); color: #06121c; border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #06121c; border-color: #1e6fa3; }
   button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
 
-  .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  #themeToggle {
+    position: fixed; top: 14px; right: 16px; z-index: 60;
+    width: 40px; height: 40px; padding: 0; border-radius: 12px; font-size: 19px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .toggle { display: inline-flex; border: 2px solid var(--line); border-radius: 11px; overflow: hidden; }
   .toggle button { border: none; border-radius: 0; background: transparent; padding: 7px 12px; color: var(--muted); }
   .toggle button.on { background: var(--accent-2); color: #241c00; }
 
   /* Scene */
-  #sceneWrap { padding: 0; margin-bottom: 14px; overflow: hidden; }
-  #scene { display: block; width: 100%; height: 180px; touch-action: none; }
+  #sceneWrap { padding: 0; margin-bottom: 10px; overflow: hidden; }
+  #scene { display: block; width: 100%; height: 188px; touch-action: none; }
 
   /* Graph */
-  #graphCard { padding: 12px 14px 14px; }
+  #graphCard { padding: 10px 14px 12px; }
   #graphTabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   #graphTabs button { padding: 7px 12px; font-size: 13px; }
   #graphTabs button.active { background: var(--accent); color: #06121c; border-color: var(--accent); }
   #graphRow { display: flex; gap: 14px; align-items: stretch; }
   #graphPlot { position: relative; flex: 1 1 auto; min-width: 0; }
-  #graph { display: block; width: 100%; height: 300px; }
+  #graph { display: block; width: 100%; height: 250px; }
   .axZoom {
     position: absolute; z-index: 2; font-size: 10.5px; font-weight: 600;
     padding: 3px 8px; border-radius: 6px; color: var(--muted);
@@ -90,23 +122,24 @@
   @media (max-width: 720px) { #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
   /* Palette + energy panel */
-  .ptitle { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .ptitle { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
   .chip {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px; margin-bottom: 10px;
-    border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px 9px; margin-bottom: 6px;
+    border: 2px solid var(--line); border-radius: 12px;
     background: var(--panel-2); cursor: grab;
   }
   .chip:active { cursor: grabbing; }
-  .chip .ico { width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+  .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
   .chip.boost .ico { background: var(--boost); color: #063; }
   .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
   .chip.wall .ico { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
   .chip.target .ico { background: var(--target); color: #231141; font-size: 16px; }
-  .chip .ctxt { font-size: 12px; line-height: 1.25; }
-  .chip .ctxt b { display: block; font-size: 12.5px; }
-  .chip .ctxt span { color: var(--muted); font-size: 11px; }
-  #palette .phint { color: var(--muted); font-size: 11px; line-height: 1.4; margin: 6px 0 12px; }
+  .chip.ball2 .ico { background: #1c2430; color: var(--ball2); font-size: 18px; }
+  .chip .ctxt { font-size: 14px; line-height: 1.2; }
+  .chip .ctxt b { display: block; font-size: 15px; }
+  .chip .ctxt span { color: var(--muted); font-size: 12.5px; }
+  #palette .phint { color: var(--muted); font-size: 13px; line-height: 1.35; margin: 6px 0 12px; }
   #clearBtn { width: 100%; }
 
   #dragGhost {
@@ -116,31 +149,23 @@
     box-shadow: 0 6px 18px rgba(0,0,0,0.5);
   }
 
-  /* Target-speed editor popover */
-  #targetEditor {
-    position: fixed; z-index: 200; width: 212px;
-    background: var(--panel); border: 1px solid var(--target); border-radius: 10px;
+  /* Delete-confirm popover */
+  #deleteConfirm {
+    position: fixed; z-index: 210; width: 190px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
     padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.55);
-    display: flex; flex-direction: column; gap: 9px;
+    display: flex; flex-direction: column; gap: 10px;
   }
-  #targetEditor[hidden] { display: none; }
-  #targetEditor .te-title { font-size: 11px; color: var(--target); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-  #targetEditor .te-dir { width: 100%; }
-  #targetEditor .te-dir button { flex: 1; padding: 6px 4px; font-size: 12px; }
-  #targetEditor .te-dir button.on { background: var(--target); color: #231141; }
-  #targetEditor .te-mag { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  #targetEditor .te-mag button { width: 34px; padding: 6px 0; text-align: center; font-size: 15px; }
-  #targetEditor .te-mag span { font-size: 13px; }
-  #targetEditor .te-mag b { font-size: 15px; }
-  #targetEditor .te-time { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-  #targetEditor .te-time input[type=number] { width: 54px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font: inherit; }
-  #targetEditor .te-hint { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
-  #targetEditor .te-btns { display: flex; gap: 8px; }
-  #targetEditor .te-btns button { flex: 1; padding: 7px; font-size: 12px; }
+  #deleteConfirm[hidden] { display: none; }
+  #deleteConfirm .dc-msg { font-size: 12px; color: var(--ink); line-height: 1.35; }
+  #deleteConfirm .dc-btns { display: flex; gap: 8px; }
+  #deleteConfirm .dc-btns button { flex: 1; padding: 7px; font-size: 12px; }
+  #deleteConfirm .dc-btns button.danger { background: #c0392b; border-color: #c0392b; color: #fff; }
 </style>
 </head>
 <body>
 <div id="app">
+  <button id="themeToggle" aria-label="Toggle light/dark">🌙</button>
   <h1>LAUNCHER</h1>
   <div class="sub">Launch a ball along flat ground, drop track pieces in its path, and watch the motion graph build live.</div>
 
@@ -184,21 +209,24 @@
         <div class="ptitle">Track pieces</div>
         <div class="chip boost" data-piece="boost">
           <div class="ico">+4</div>
-          <div class="ctxt"><b>Speed boost</b><span>instant +4 m/s</span></div>
+          <div class="ctxt"><b>Speed boost</b></div>
         </div>
         <div class="chip target" data-piece="target">
           <div class="ico">⇄</div>
-          <div class="ctxt"><b>Target speed</b><span>set speed · click to edit</span></div>
+          <div class="ctxt"><b>Target speed</b></div>
         </div>
         <div class="chip friction" data-piece="friction">
           <div class="ico">▦</div>
-          <div class="ctxt"><b>Friction patch</b><span>2 m long</span></div>
+          <div class="ctxt"><b>Friction patch</b></div>
         </div>
         <div class="chip wall" data-piece="wall">
           <div class="ico">█</div>
-          <div class="ctxt"><b>Wall</b><span>stops the ball</span></div>
+          <div class="ctxt"><b>Wall</b></div>
         </div>
-        <div class="phint">Drag a piece onto the ground. Drag to move; drag off the track to remove. Click a target-speed gate to edit it.</div>
+        <div class="chip ball2" data-piece="ball2">
+          <div class="ico">●</div>
+          <div class="ctxt"><b>Second ball</b></div>
+        </div>
         <button id="clearBtn">Clear track</button>
       </div>
 
@@ -210,22 +238,11 @@
   </div>
 </div>
 
-<div id="targetEditor" hidden>
-  <div class="te-title">Target speed</div>
-  <div class="toggle te-dir">
-    <button data-dir="-1">◀ Left</button>
-    <button data-dir="1" class="on">Right ▶</button>
-  </div>
-  <div class="te-mag">
-    <button data-step="-2">−</button>
-    <span><b id="teMag">6</b> m/s</span>
-    <button data-step="2">+</button>
-  </div>
-  <label class="te-time"><input type="checkbox" id="teTimeOn"> trigger at <input type="number" id="teTimeVal" min="0" max="16" step="0.5" value="2" disabled> s</label>
-  <div class="te-hint">Before this time it acts as a wall, then launches the ball at the target speed.</div>
-  <div class="te-btns">
-    <button id="teRemove">Remove</button>
-    <button id="teDone" class="primary">Done</button>
+<div id="deleteConfirm" hidden>
+  <div class="dc-msg">Delete this <span id="dcName">piece</span>?</div>
+  <div class="dc-btns">
+    <button id="dcCancel">Cancel</button>
+    <button id="dcDelete" class="danger">Delete</button>
   </div>
 </div>
 
@@ -245,9 +262,10 @@ const MASS      = 1;          // kg (KE = ½·m·v²)
 // ─── State ────────────────────────────────────────────────────────────────────
 let v0 = 6, graphType = 'position';
 let running = false, ballStopped = false, t = 0;
-let v = 0, x = 0;             // live ball state during a run
+let v = 0, x = 0;             // live state of whichever ball is currently moving
 let thermal = 0;             // energy lost to friction + impact (J)
-let samples = [];            // [{t, x, v, d, ke, th}]
+let balls = [];              // every ball: {launcher, x, v, moving, color, d, samples:[{t,x,v,d}]}
+let movingBall = null;       // the one ball currently in motion (null when all at rest)
 let energyMax = 1;           // y-scale for the energy chart (J)
 let lastFrame = 0;
 
@@ -266,12 +284,13 @@ let boosts = [];             // {id, x, used}
 let fricZones = [];          // {id, x, len}
 let walls = [];              // {id, x}
 let targets = [];            // {id, x, mag, dir, time, used}  — target-speed gates
+let secondBalls = [];        // {id, x}  — stationary balls that get hit (equal-mass swap)
 let pieceId = 1;
-let heldGate = null;         // a timed target gate currently holding the ball
-let editingTarget = null;    // target element open in the editor
 
 // Drag state
 let drag = null;             // { kind:'new'|'move', piece, el?, ghost? }
+let lastClick = null;        // { el, time } — used to detect a double-click on a piece
+let confirmPiece = null;     // { piece, el } awaiting delete confirmation
 
 // ─── Elements ─────────────────────────────────────────────────────────────────
 const sceneC = document.getElementById('scene');
@@ -287,7 +306,7 @@ const launchBtn = document.getElementById('launchBtn');
 // ─── Scene geometry ───────────────────────────────────────────────────────────
 const PAD_L = 24, PAD_R = 24;
 function sceneDims() { return { w: sceneC.clientWidth, h: sceneC.clientHeight }; }
-function groundY() { return sceneDims().h - 40; }
+function groundY() { return sceneDims().h - 56; }   // surface line; solid ground fills below it
 function mToPx(m) { const { w } = sceneDims(); return PAD_L + (m / TRACK_LEN) * (w - PAD_L - PAD_R); }
 function pxToM(pxX) { const { w } = sceneDims(); return clamp(((pxX - PAD_L) / (w - PAD_L - PAD_R)) * TRACK_LEN, 0, TRACK_LEN); }
 function clamp(a, lo, hi) { return Math.max(lo, Math.min(hi, a)); }
@@ -302,6 +321,18 @@ function firstCrossed(arr, a, b, activeOnly) {
   for (const p of arr) {
     if (activeOnly && p.used) continue;
     if (crossed(p.x, a, b) && (!hit || Math.abs(p.x - a) < Math.abs(hit.x - a))) hit = p;
+  }
+  return hit;
+}
+// Nearest resting ball the moving ball reaches between a and b. Contact is when the
+// centers are one diameter apart, so the contact point sits just short of the ball.
+function firstBallHit(a, b) {
+  const s = Math.sign(b - a); if (!s) return null;
+  let hit = null;
+  for (const ball of balls) {
+    if (ball === movingBall || ball.moving) continue;
+    const cp = ball.x - s * 2 * BALL_R;
+    if (crossed(cp, a, b) && (!hit || Math.abs(cp - a) < Math.abs(hit.cp - a))) hit = { ball, cp };
   }
   return hit;
 }
@@ -322,11 +353,20 @@ function step(dt) {
     // wall: stop dead on impact (either direction), dumping remaining KE to heat
     const wl = firstCrossed(walls, x, nx, false);
     if (wl) { x = wl.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; break; }
+    // second ball: equal-mass elastic hit → this ball stops dead, the other takes its speed
+    const hit = firstBallHit(x, nx);
+    if (hit) {
+      movingBall.x = hit.cp; movingBall.v = 0; movingBall.moving = false;  // incoming ball stops, touching
+      hit.ball.moving = true; hit.ball.v = v;                              // struck ball takes the speed
+      movingBall = hit.ball;
+      x = hit.ball.x;                        // keep v; continue as the struck ball
+      continue;
+    }
     // target-speed gate
     const g = firstCrossed(targets, x, nx, true);
     if (g) {
-      if (g.time != null && t < g.time) {       // too early → behaves as a wall, holds the ball
-        x = g.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; heldGate = g; break;
+      if (g.time != null && t < g.time) {       // too early → acts as a wall: stop the ball dead
+        x = g.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; break;
       }
       x = g.x;
       const vNew = g.dir * g.mag;
@@ -336,27 +376,36 @@ function step(dt) {
     }
     // speed boost (+ΔV, rightward)
     const b = firstCrossed(boosts, x, nx, true);
-    if (b) { x = b.x; v += BOOST_DV; b.used = true; continue; }
+    if (b) { x = b.x; v += b.dv; b.used = true; continue; }
     x = nx;
     // the right/left edges are NOT walls: let the ball coast offscreen and keep going
   }
 }
 
 // ─── Run control ──────────────────────────────────────────────────────────────
+// Build the ball set: the red launcher at 0, then the blue second balls where placed.
+function buildBalls(launchV) {
+  balls = [{ launcher: true, x: 0, v: launchV, moving: false, color: getCss('--ball'), d: 0, samples: [] }];
+  for (const b of secondBalls) balls.push({ launcher: false, x: b.x, v: 0, moving: false, color: getCss('--ball2'), d: 0, samples: [] });
+}
+function seedSamples() { for (const b of balls) b.samples = [{ t: 0, x: b.x, v: b.v, d: 0 }]; }
+
 function launch() {
   v0 = parseInt(speedEl.value, 10);
   boosts.forEach(b => b.used = false);
   targets.forEach(g => g.used = false);
-  heldGate = null;
+  buildBalls(v0);
+  movingBall = balls[0]; movingBall.moving = true;
   running = true; ballStopped = false; t = 0; x = 0; v = v0; thermal = 0;
-  samples = [{ t: 0, x: 0, v: v0, d: 0, ke: ke(), th: 0 }];
+  seedSamples();
   energyMax = Math.max(1e-6, ke());
   lastFrame = performance.now();
   launchBtn.disabled = true;
 }
 
 function resetRun() {
-  running = false; ballStopped = false; heldGate = null; t = 0; x = 0; v = 0; thermal = 0; samples = []; energyMax = 1;
+  running = false; ballStopped = false; t = 0; x = 0; v = 0; thermal = 0; energyMax = 1;
+  buildBalls(0); movingBall = null;
   launchBtn.disabled = false;
   drawScene(); drawGraph(); drawEnergy();
 }
@@ -367,14 +416,14 @@ function frame(now) {
     const dt = Math.min(0.05, (now - lastFrame) / 1000);
     lastFrame = now;
     t += dt;
-    // a timed gate releases the held ball at its trigger time, at the target speed
-    if (heldGate && t >= heldGate.time) {
-      v = heldGate.dir * heldGate.mag; heldGate.used = true; ballStopped = false; heldGate = null;
+    if (!ballStopped) step(dt);           // the moving ball halts at a wall, but time marches on
+    if (movingBall) { movingBall.x = x; movingBall.v = v; if (ballStopped) movingBall.moving = false; }
+    // record every ball's trajectory so each can be graphed on the same axes
+    for (const b of balls) {
+      const prev = b.samples[b.samples.length - 1];
+      b.d = prev.d + Math.abs(b.x - prev.x);
+      b.samples.push({ t, x: b.x, v: b.v, d: b.d });
     }
-    if (!ballStopped) step(dt);           // ball halts at a wall, but time marches on
-    const prev = samples[samples.length - 1];
-    const d = prev.d + Math.abs(x - prev.x);
-    samples.push({ t, x, v, d, ke: ke(), th: thermal });
     if (ke() + thermal > energyMax) energyMax = ke() + thermal;
     // free to relaunch once the ball is at rest or has left the screen
     if (ballStopped || x > TRACK_LEN) launchBtn.disabled = false;
@@ -399,94 +448,173 @@ function drawScene() {
   sx.clearRect(0, 0, w, h);
   const gY = groundY();
 
-  // friction patches (under the ground line)
+  // ground — a solid mass below the surface, with a lighter top soil band (cel-shaded depth)
+  const groundCol = getCss('--ground');
+  sx.fillStyle = darken(groundCol, 0.12); sx.fillRect(0, gY, w, h - gY);
+  sx.fillStyle = lighten(groundCol, 0.14); sx.fillRect(0, gY, w, 7);           // surface soil
+
+  // friction patches — rough ground SET INTO the surface (sits below it, not on top)
+  const fricCol = getCss('--fric'), FD = 26;
   for (const z of fricZones) {
-    const xa = mToPx(z.x), xb = mToPx(Math.min(TRACK_LEN, z.x + z.len));
-    sx.fillStyle = 'rgba(224,138,90,0.22)';
-    sx.fillRect(xa, gY - 10, xb - xa, 14);
-    // hatching
-    sx.save(); sx.beginPath(); sx.rect(xa, gY - 10, xb - xa, 14); sx.clip();
-    sx.strokeStyle = 'rgba(224,138,90,0.6)'; sx.lineWidth = 1;
-    for (let p = xa - 14; p < xb + 14; p += 6) { sx.beginPath(); sx.moveTo(p, gY + 6); sx.lineTo(p + 14, gY - 12); sx.stroke(); }
+    const xa = mToPx(z.x), xb = mToPx(Math.min(TRACK_LEN, z.x + z.len)), w2 = xb - xa;
+    sx.fillStyle = fricCol; sx.fillRect(xa, gY, w2, FD);
+    sx.fillStyle = darken(fricCol, 0.2); sx.fillRect(xa, gY + FD * 0.58, w2, FD * 0.42);  // shade block
+    // gritty speckles
+    sx.save(); sx.beginPath(); sx.rect(xa, gY, w2, FD); sx.clip();
+    sx.fillStyle = darken(fricCol, 0.45);
+    for (let px = xa + 6; px < xb - 2; px += 9) for (let r2 = 0; r2 < 2; r2++) {
+      const py = gY + 8 + r2 * 9 + (Math.floor(px) % 2 ? 0 : 4);
+      sx.beginPath(); sx.arc(px + r2 * 4, py, 1.5, 0, 7); sx.fill();
+    }
     sx.restore();
-    sx.strokeStyle = 'rgba(224,138,90,0.8)'; sx.lineWidth = 1.5;
-    sx.strokeRect(xa, gY - 10, xb - xa, 14);
-    // drag handles at each end (resize by 1 m)
-    sx.fillStyle = 'rgba(224,138,90,0.95)';
-    sx.fillRect(xa - 1.5, gY - 13, 3, 20);
-    sx.fillRect(xb - 1.5, gY - 13, 3, 20);
+    // side + bottom outline (the top edge is the surface line, stroked below)
+    ink(2.5); sx.beginPath(); sx.moveTo(xa, gY); sx.lineTo(xa, gY + FD); sx.lineTo(xb, gY + FD); sx.lineTo(xb, gY); sx.stroke();
+    // end grips (resize handles)
+    sx.fillStyle = lighten(fricCol, 0.25);
+    roundRect(sx, xa - 3, gY - 3, 6, FD + 6, 3); sx.fill(); ink(2); sx.stroke();
+    roundRect(sx, xb - 3, gY - 3, 6, FD + 6, 3); sx.fill(); ink(2); sx.stroke();
+    z._sign = drawPieceSign((xa + xb) / 2, gY, 'friction', fricCol, '#4a2410', Math.round(z.len) + 'm');
   }
 
-  // ground
-  sx.strokeStyle = getCss('--ground'); sx.lineWidth = 3;
-  sx.beginPath(); sx.moveTo(PAD_L, gY); sx.lineTo(w - PAD_R, gY); sx.stroke();
+  // the surface line itself — bold, the ball rolls along here
+  ink(3); sx.beginPath(); sx.moveTo(0, gY); sx.lineTo(w, gY); sx.stroke();
 
-  // distance ticks
-  sx.fillStyle = getCss('--muted'); sx.font = '11px -apple-system, sans-serif'; sx.textAlign = 'center';
+  // distance ticks + labels (down in the ground)
+  sx.font = handFont(13, 600); sx.textAlign = 'center';
   for (let m = 0; m <= TRACK_LEN; m += 5) {
     const gxp = mToPx(m);
-    sx.strokeStyle = getCss('--line'); sx.lineWidth = 1;
-    sx.beginPath(); sx.moveTo(gxp, gY); sx.lineTo(gxp, gY + 6); sx.stroke();
-    sx.fillText(m + ' m', gxp, gY + 20);
+    ink(1.5); sx.beginPath(); sx.moveTo(gxp, gY); sx.lineTo(gxp, gY + 8); sx.stroke();
+    sx.fillStyle = getCss('--ink'); sx.fillText(m + ' m', gxp, gY + 24);
   }
 
-  // speed boosts (chevrons on the ground)
+  // speed boosts — a booster pad with +/- to set how much it adds
+  const boostCol = getCss('--boost');
   for (const b of boosts) {
-    const bx = mToPx(b.x);
-    sx.strokeStyle = getCss('--boost'); sx.lineWidth = 2.4; sx.lineCap = 'round';
-    for (let k = 0; k < 2; k++) {
-      const off = k * 7;
+    const bx = mToPx(b.x), padW = 38, padH = 14, top = gY - padH;
+    panelShaded(bx - padW / 2, top, padW, padH, 6, boostCol);
+    // forward chevrons (direction of the push)
+    ink(2.6);
+    for (let k = 0; k < 3; k++) {
+      const cxp = bx - 11 + k * 10;
       sx.beginPath();
-      sx.moveTo(bx - 6 + off, gY - 4); sx.lineTo(bx + off, gY - 14); sx.lineTo(bx + 6 + off, gY - 4);
+      sx.moveTo(cxp - 4, top + 4); sx.lineTo(cxp + 4, top + padH / 2); sx.lineTo(cxp - 4, top + padH - 4);
       sx.stroke();
     }
-    sx.fillStyle = getCss('--boost'); sx.font = '700 10px -apple-system, sans-serif'; sx.textAlign = 'center';
-    sx.fillText('+' + BOOST_DV, bx + 3, gY - 20);
-  }
-
-  // target-speed gates (posts with a direction + value tag)
-  for (const g of targets) {
-    const gx2 = mToPx(g.x), col = getCss('--target'), timed = g.time != null;
-    const pT = gY - 42;
-    sx.strokeStyle = col; sx.lineWidth = 2;
-    sx.setLineDash(timed ? [3, 3] : []);          // dashed post = timed (acts as a wall until its time)
-    sx.beginPath(); sx.moveTo(gx2, pT); sx.lineTo(gx2, gY); sx.stroke();
-    sx.setLineDash([]);
-    // tag
-    const label = (g.dir < 0 ? '◀ ' : '▶ ') + g.mag;
-    sx.font = '700 11px -apple-system, sans-serif'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
-    const tw = sx.measureText(label).width + 14, th = 16, ty = pT - 2;
-    sx.fillStyle = col;
-    roundRect(sx, gx2 - tw / 2, ty - th, tw, th, 5); sx.fill();
-    sx.fillStyle = '#231141'; sx.fillText(label, gx2, ty - th / 2);
-    if (timed) {
-      sx.fillStyle = col; sx.font = '700 9px -apple-system, sans-serif';
-      sx.fillText('@' + g.time + 's', gx2, gY - 50);
-    }
+    // sign with a speed stepper
+    const bw = 98, bh = 36, bbot = top - 14, bTop = bbot - bh, BX = bx - bw / 2, BY = bTop;
+    signPost(bx, bbot, top, boostCol);
+    panelShaded(BX, BY, bw, bh, 10, boostCol);
+    const bminus = miniBtn(BX + 14, BY + bh / 2, 9, '–', boostCol, INK);
+    const bplus  = miniBtn(BX + bw - 14, BY + bh / 2, 9, '+', boostCol, INK);
+    sx.fillStyle = '#06381f'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+    sx.font = handFont(18, 800); sx.fillText('+' + b.dv, bx - 8, BY + bh / 2 + 1);
+    sx.font = handFont(11, 600); sx.fillText('m/s', bx + 17, BY + bh / 2 + 2);
     sx.textBaseline = 'alphabetic';
+    b._ui = { minus: bminus, plus: bplus };
+    b._sign = { x: BX, y: BY, w: bw, h: bh };
   }
 
-  // walls (vertical barriers on the ground)
+  // target-speed gates — a narrow, tall sign with direction, speed, and timer
+  const tCol = getCss('--target');
+  for (const g of targets) {
+    const gx2 = mToPx(g.x), timed = g.time != null;
+    // the gate on the ground — same size whether or not a timer is set
+    const gw = 12, gT = gY - 30;
+    panelShaded(gx2 - gw / 2, gT, gw, gY - gT, gw / 2, tCol);
+    if (timed) drawClock(gx2, gT + 10, 4.6, lighten(tCol, 0.5));   // clock = acts as a wall until its time
+
+    // the sign (fixed size regardless of the timer)
+    const sw = 90, sh = 82, sbot = gY - 36, sTop = sbot - sh, X = gx2 - sw / 2, Y = sTop;
+    signPost(gx2, sbot, gT, tCol);
+    panel3D(X, Y, sw, sh, 12, tCol);
+    sx.textAlign = 'center'; sx.textBaseline = 'middle';
+
+    // Row A — direction (arrows only)
+    const dirW = 35, dirH = 22, dAy = Y + 7;
+    const dirL = { x: X + 6, y: dAy, w: dirW, h: dirH }, dirR = { x: X + sw - 6 - dirW, y: dAy, w: dirW, h: dirH };
+    for (const [z, on, arr] of [[dirL, g.dir < 0, '◀'], [dirR, g.dir > 0, '▶']]) {
+      sx.fillStyle = on ? lighten(tCol, 0.5) : darken(tCol, 0.1);
+      roundRect(sx, z.x, z.y, z.w, z.h, 6); sx.fill(); ink(1.6); sx.stroke();
+      sx.fillStyle = on ? INK : lighten(tCol, 0.3);
+      sx.font = handFont(14, 700);
+      sx.fillText(arr, z.x + z.w / 2, z.y + z.h / 2 + 1);
+    }
+
+    // Row B — speed stepper (number over its unit)
+    const sy = Y + 45;
+    const minus = miniBtn(X + 14, sy, 9, '–', tCol, INK);
+    const plus  = miniBtn(X + sw - 14, sy, 9, '+', tCol, INK);
+    sx.fillStyle = '#fff'; sx.font = handFont(22, 800); sx.fillText(g.mag, gx2, sy);
+    sx.font = handFont(11, 600); sx.fillText('m/s', gx2, sy + 13);
+
+    // Row C — timer (clock toggle; same footprint whether on or off)
+    const cy = Y + sh - 13;
+    let tMinus = null, tPlus = null, tToggle = null;
+    if (!timed) {
+      drawClock(gx2, cy, 8, lighten(tCol, 0.5));
+      tToggle = { x: gx2 - 12, y: cy - 12, w: 24, h: 24 };
+    } else {
+      tMinus = miniBtn(X + 14, cy, 7, '–', darken(tCol, 0.05), '#fff');
+      tPlus  = miniBtn(X + sw - 14, cy, 7, '+', darken(tCol, 0.05), '#fff');
+      const ts = g.time.toFixed(1) + 's';
+      sx.font = handFont(12, 700); const twid = sx.measureText(ts).width;
+      const gcx = gx2 - (twid + 11) / 2;
+      drawClock(gcx, cy, 5.5, lighten(tCol, 0.5));
+      sx.fillStyle = '#fff'; sx.textAlign = 'left'; sx.fillText(ts, gcx + 9, cy + 1); sx.textAlign = 'center';
+      tToggle = { x: gx2 - 22, y: cy - 9, w: 44, h: 18 };     // tap the label to clear the timer
+    }
+
+    sx.textBaseline = 'alphabetic';
+    g._ui = { bounds: { x: X, y: Y, w: sw, h: sh }, gx: gx2, gTop: gT, dirL, dirR, minus, plus, tMinus, tPlus, tToggle, timed };
+  }
+
+  // walls — a chunky brick wall standing on the surface
+  const wallCol = getCss('--wall');
   for (const wl of walls) {
-    const wx = mToPx(wl.x), wT = gY - 46, ww = 7;
-    sx.fillStyle = getCss('--wall');
-    sx.fillRect(wx - ww / 2, wT, ww, gY - wT);
-    sx.fillStyle = 'rgba(0,0,0,0.22)';
-    for (let yb = wT + 4; yb < gY - 2; yb += 8) sx.fillRect(wx - ww / 2, yb, ww, 2);
-    sx.strokeStyle = 'rgba(0,0,0,0.4)'; sx.lineWidth = 1; sx.strokeRect(wx - ww / 2, wT, ww, gY - wT);
+    const wx = mToPx(wl.x), ww = 22, wT = gY - 48, wh = gY - wT, wl0 = wx - ww / 2;
+    roundRect(sx, wl0, wT, ww, wh, 5); sx.fillStyle = wallCol; sx.fill();
+    // flat shade block down the right third
+    sx.save(); roundRect(sx, wl0, wT, ww, wh, 5); sx.clip();
+    sx.fillStyle = darken(wallCol, 0.2); sx.fillRect(wl0 + ww * 0.66, wT, ww * 0.34, wh);
+    // brick courses (offset every other row)
+    sx.strokeStyle = INK; sx.lineWidth = 1.8; sx.lineCap = 'round';
+    let row = 0;
+    for (let yb = wT + 9; yb < gY; yb += 9) {
+      sx.beginPath(); sx.moveTo(wl0, yb); sx.lineTo(wl0 + ww, yb); sx.stroke();
+      const jx = wx + (row % 2 ? -ww / 4 : ww / 4);
+      sx.beginPath(); sx.moveTo(jx, yb); sx.lineTo(jx, yb - 9); sx.stroke();
+      row++;
+    }
+    sx.restore();
+    roundRect(sx, wl0, wT, ww, wh, 5); ink(2.5); sx.stroke();
+    wl._sign = drawPieceSign(wx, wT, 'wall', wallCol, '#1c242e');
   }
 
   // launch marker
-  sx.strokeStyle = 'rgba(255,255,255,0.16)'; sx.setLineDash([4, 4]); sx.lineWidth = 1;
+  sx.strokeStyle = 'rgba(255,255,255,0.22)'; sx.setLineDash([5, 5]); sx.lineWidth = 1.5; sx.lineCap = 'round';
   sx.beginPath(); sx.moveTo(mToPx(0), gY - 70); sx.lineTo(mToPx(0), gY); sx.stroke();
   sx.setLineDash([]);
 
-  // ball
-  const bx = mToPx(running || samples.length ? x : 0);
-  const r = Math.max(7, (BALL_R / TRACK_LEN) * (w - PAD_L - PAD_R));
-  sx.beginPath(); sx.arc(bx, gY - r, r, 0, Math.PI * 2);
-  sx.fillStyle = getCss('--ball'); sx.fill();
-  sx.strokeStyle = 'rgba(0,0,0,0.35)'; sx.lineWidth = 1; sx.stroke();
+  // all balls, each in its own colour (resting ones drawn first, mover on top)
+  for (const b of balls) if (!b.moving) drawBall(mToPx(b.x), gY, b.color);
+  for (const b of balls) if (b.moving) drawBall(mToPx(b.x), gY, b.color);
+}
+
+// A flat cartoon ball on the ground line at gY: solid fill, flat shade block, bold outline, shine.
+function drawBall(bx, gY, ballCol) {
+  const { w } = sceneDims();
+  const r = Math.max(12, (BALL_R / TRACK_LEN) * (w - PAD_L - PAD_R) * 1.25);
+  const cyb = gY - r;
+  sx.beginPath(); sx.arc(bx, cyb, r, 0, Math.PI * 2); sx.fillStyle = ballCol; sx.fill();
+  // flat shade crescent (a darker offset disc clipped to the ball)
+  sx.save(); sx.beginPath(); sx.arc(bx, cyb, r, 0, Math.PI * 2); sx.clip();
+  sx.fillStyle = darken(ballCol, 0.22);
+  sx.beginPath(); sx.arc(bx + r * 0.42, cyb + r * 0.42, r, 0, Math.PI * 2); sx.fill();
+  sx.restore();
+  sx.beginPath(); sx.arc(bx, cyb, r, 0, Math.PI * 2); ink(2.5); sx.stroke();
+  // flat round highlight
+  sx.fillStyle = 'rgba(255,255,255,0.92)';
+  sx.beginPath(); sx.arc(bx - r * 0.34, cyb - r * 0.34, r * 0.17, 0, 7); sx.fill();
 }
 
 // ─── Graph rendering ──────────────────────────────────────────────────────────
@@ -508,7 +636,7 @@ function drawGraph() {
   const X = tt => x0 + (tt / tMax) * (x1 - x0);
   const Y = vv => y0 + (vv / yMax) * (y1 - y0);
 
-  gx.font = '11px -apple-system, sans-serif'; gx.fillStyle = getCss('--muted');
+  gx.font = handFont(13, 400); gx.fillStyle = getCss('--muted');
   gx.strokeStyle = getCss('--line'); gx.lineWidth = 1;
   gx.textAlign = 'right'; gx.textBaseline = 'middle';
   for (let i = 0; i <= 5; i++) {
@@ -527,18 +655,20 @@ function drawGraph() {
   gx.save(); gx.translate(14, (y0 + y1) / 2); gx.rotate(-Math.PI / 2); gx.textBaseline = 'bottom';
   gx.fillText(spec.label + ' (' + spec.unit + ')', 0, 0); gx.restore();
 
-  if (samples.length > 1) {
-    gx.save();
-    gx.beginPath(); gx.rect(x0, y1, x1 - x0, y0 - y1); gx.clip();  // keep the trace inside the plot
-    gx.strokeStyle = getCss(spec.color); gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
+  gx.save();
+  gx.beginPath(); gx.rect(x0, y1, x1 - x0, y0 - y1); gx.clip();  // keep traces inside the plot
+  gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
+  for (const b of balls) {
+    if (b.samples.length < 2) continue;
+    gx.strokeStyle = b.color;
     gx.beginPath();
-    samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[spec.key]); i === 0 ? gx.moveTo(xx, yy) : gx.lineTo(xx, yy); });
+    b.samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[spec.key]); i === 0 ? gx.moveTo(xx, yy) : gx.lineTo(xx, yy); });
     gx.stroke();
-    const last = samples[samples.length - 1];
-    gx.fillStyle = getCss(spec.color);
+    const last = b.samples[b.samples.length - 1];
+    gx.fillStyle = b.color;
     gx.beginPath(); gx.arc(X(last.t), Y(last[spec.key]), 4.5, 0, Math.PI * 2); gx.fill();
-    gx.restore();
   }
+  gx.restore();
 }
 
 // ─── Energy bar charts (KE, TH) ─────────────────────────────────────────────
@@ -547,8 +677,8 @@ function drawEnergy() {
   ex.setTransform(dpr, 0, 0, dpr, 0, 0);
   ex.clearRect(0, 0, w, h);
 
-  const last = samples.length ? samples[samples.length - 1] : { ke: 0, th: 0 };
-  const keV = last.ke, thV = last.th;
+  const hasRun = balls.length && balls[0].samples.length > 0;
+  const keV = hasRun ? ke() : 0, thV = hasRun ? thermal : 0;
   const eMax = Math.max(1e-6, energyMax);
 
   const padT = 22, padB = 40, baseY = h - padB, topY = padT;
@@ -566,40 +696,166 @@ function drawEnergy() {
   bars.forEach((b, i) => {
     const cx = slot * (i + 0.5), bh = (clamp(b.val, 0, eMax) / eMax) * plotH;
     const bx = cx - bw / 2, by = baseY - bh;
-    ex.fillStyle = b.col; ex.fillRect(bx, by, bw, bh);
-    ex.strokeStyle = 'rgba(0,0,0,0.3)'; ex.lineWidth = 1; ex.strokeRect(bx, by, bw, bh);
+    if (bh > 0.5) { ex.fillStyle = b.col; ex.fillRect(bx, by, bw, bh);
+      ex.strokeStyle = INK; ex.lineWidth = 2; ex.lineJoin = 'round'; ex.strokeRect(bx, by, bw, bh); }
     // value
-    ex.fillStyle = getCss('--ink'); ex.font = '700 11px -apple-system, sans-serif';
+    ex.fillStyle = getCss('--ink'); ex.font = handFont(14, 400);
     ex.textAlign = 'center'; ex.textBaseline = 'bottom';
     ex.fillText(b.val.toFixed(1), cx, by - 3);
     // labels
-    ex.fillStyle = b.col; ex.font = '700 12px -apple-system, sans-serif'; ex.textBaseline = 'top';
+    ex.fillStyle = b.col; ex.font = handFont(16, 400); ex.textBaseline = 'top';
     ex.fillText(b.lab, cx, baseY + 6);
-    ex.fillStyle = getCss('--muted'); ex.font = '10px -apple-system, sans-serif';
+    ex.fillStyle = getCss('--muted'); ex.font = handFont(12, 400);
     ex.fillText(b.sub, cx, baseY + 22);
   });
 }
 
 function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function roundRect(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
   c.beginPath(); c.moveTo(x + r, y);
   c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
 
+// ─── Colour + hand-drawn cartoon helpers ────────────────────────────────────
+function hexRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function mixC(hex, target, t) { const [r, g, b] = hexRgb(hex); const f = c => Math.round(c + (target - c) * t); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+const lighten = (hex, t) => mixC(hex, 255, t);
+const darken  = (hex, t) => mixC(hex, 0, t);
+
+const INK = '#1a2230';                 // bold outline colour
+const handFont = (size, weight) => (weight || 600) + ' ' + size + "px 'Lexend', system-ui, sans-serif";
+function ink(width) { sx.strokeStyle = INK; sx.lineWidth = width; sx.lineJoin = 'round'; sx.lineCap = 'round'; }
+
+// A flat two-tone panel: solid fill + a darker bottom "shade block" + bold ink outline.
+function panelShaded(x, y, w, h, r, hex) {
+  roundRect(sx, x, y, w, h, r); sx.fillStyle = hex; sx.fill();
+  sx.save(); roundRect(sx, x, y, w, h, r); sx.clip();
+  sx.fillStyle = darken(hex, 0.18); sx.fillRect(x, y + h * 0.62, w, h * 0.38);  // flat shade block
+  sx.restore();
+  roundRect(sx, x, y, w, h, r); ink(2.5); sx.stroke();
+}
+
+// A flat panel with a solid fill and a bold, smooth ink outline (no gradient, no shadow).
+function panel3D(x, y, w, h, r, hex) {
+  roundRect(sx, x, y, w, h, r);
+  sx.fillStyle = hex; sx.fill();
+  ink(2.5); sx.stroke();
+}
+
+// A little post connecting a sign down to its element, with an outlined knob where they meet.
+function signPost(cx, topY, botY, hex) {
+  ink(2.5); sx.beginPath(); sx.moveTo(cx, topY); sx.lineTo(cx, botY); sx.stroke();
+  sx.beginPath(); sx.arc(cx, botY, 3.6, 0, 7); sx.fillStyle = hex; sx.fill(); ink(2); sx.stroke();
+}
+
+// A floating display sign (flat outlined panel on a post) with a hand-lettered label + optional sub-line.
+function drawPieceSign(cx, elTopY, label, hex, fg, sub) {
+  sx.font = handFont(17, 700);
+  const tw = sx.measureText(label).width;
+  let sw = Math.max(54, tw + 26), sh = sub ? 42 : 30;
+  const syBot = elTopY - 15, syTop = syBot - sh;
+  signPost(cx, syTop + sh, elTopY, hex);
+  panelShaded(cx - sw / 2, syTop, sw, sh, 10, hex);
+  sx.fillStyle = fg; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+  sx.font = handFont(17, 700);
+  sx.fillText(label, cx, sub ? syTop + 15 : syTop + sh / 2 + 1);
+  if (sub) {
+    sx.font = handFont(13, 600); sx.fillStyle = lighten(hex, 0.55);
+    sx.fillText(sub, cx, syTop + 31);
+  }
+  sx.textBaseline = 'alphabetic';
+  return { x: cx - sw / 2, y: syTop, w: sw, h: sh };
+}
+
+// A small flat outlined round button (used for +/- on the target sign). Returns its hit circle.
+function miniBtn(cx, cy, rad, label, hex, fg) {
+  sx.beginPath(); sx.arc(cx, cy, rad, 0, 7); sx.fillStyle = lighten(hex, 0.2); sx.fill();
+  ink(2); sx.stroke();
+  sx.fillStyle = fg; sx.font = handFont(Math.round(rad * 1.9), 400);
+  sx.textAlign = 'center'; sx.textBaseline = 'middle'; sx.fillText(label, cx, cy + 1);
+  sx.textBaseline = 'alphabetic';
+  return { cx, cy, r: rad };
+}
+
+// A little clock face with two hands (used for the timer control + the timed gate).
+function drawClock(cx, cy, r, face) {
+  sx.beginPath(); sx.arc(cx, cy, r, 0, 7); sx.fillStyle = face; sx.fill(); ink(1.8); sx.stroke();
+  ink(1.8);
+  sx.beginPath();
+  sx.moveTo(cx, cy); sx.lineTo(cx, cy - r * 0.6);
+  sx.moveTo(cx, cy); sx.lineTo(cx + r * 0.5, cy + r * 0.15);
+  sx.stroke();
+}
+
 // ─── Drag & drop ──────────────────────────────────────────────────────────────
+const inBox = (mx, my, b) => b && mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
+const inCircle = (mx, my, c) => c && Math.hypot(mx - c.cx, my - c.cy) <= c.r + 2;
+
+// Interactive controls on a target sign (direction / speed / timer). Checked before any drag.
+function hitTargetControl(mx, my) {
+  for (const g of targets) {
+    const u = g._ui; if (!u) continue;
+    if (inBox(mx, my, u.dirL)) return { g, kind: 'dirL' };
+    if (inBox(mx, my, u.dirR)) return { g, kind: 'dirR' };
+    if (inCircle(mx, my, u.minus)) return { g, kind: 'magMinus' };
+    if (inCircle(mx, my, u.plus)) return { g, kind: 'magPlus' };
+    if (inCircle(mx, my, u.tMinus)) return { g, kind: 'timeMinus' };
+    if (inCircle(mx, my, u.tPlus)) return { g, kind: 'timePlus' };
+    if (inBox(mx, my, u.tToggle)) return { g, kind: 'timeToggle' };
+  }
+  return null;
+}
+function applyTargetControl(c) {
+  const g = c.g;
+  if (c.kind === 'dirL') g.dir = -1;
+  else if (c.kind === 'dirR') g.dir = 1;
+  else if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, TARGET_STEP, TARGET_MAX);
+  else if (c.kind === 'magPlus') g.mag = clamp(g.mag + TARGET_STEP, TARGET_STEP, TARGET_MAX);
+  else if (c.kind === 'timeToggle') g.time = (g.time == null) ? 2 : null;
+  else if (c.kind === 'timeMinus') g.time = clamp(+(g.time - 0.5).toFixed(1), 0, RUN_TIME_CAP);
+  else if (c.kind === 'timePlus') g.time = clamp(+(g.time + 0.5).toFixed(1), 0, RUN_TIME_CAP);
+}
+
+// +/- steppers on a boost sign
+function hitBoostControl(mx, my) {
+  for (const b of boosts) {
+    const u = b._ui; if (!u) continue;
+    if (inCircle(mx, my, u.minus)) return { b, kind: 'minus' };
+    if (inCircle(mx, my, u.plus)) return { b, kind: 'plus' };
+  }
+  return null;
+}
+function applyBoostControl(c) {
+  c.b.dv = clamp(c.b.dv + (c.kind === 'plus' ? TARGET_STEP : -TARGET_STEP), TARGET_STEP, TARGET_MAX);
+}
+
 function hitPiece(mx, my) {
   const gY = groundY();
-  if (my < gY - 60 || my > gY + 10) return null;
-  for (const g of targets) if (Math.abs(mToPx(g.x) - mx) < 14) return { type: 'target', el: g };
-  for (const wl of walls) if (Math.abs(mToPx(wl.x) - mx) < 9) return { type: 'wall', el: wl };
-  if (my < gY - 24) return null;
-  for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 12) return { type: 'boost', el: b };
+  // targets own a tall sign — test its full bounds or the gate column
+  for (const g of targets) {
+    const u = g._ui;
+    if (u && (inBox(mx, my, u.bounds) || (Math.abs(u.gx - mx) < 10 && my >= u.gTop && my <= gY + 4)))
+      return { type: 'target', el: g };
+  }
+  // walls & boosts: their body on the ground, or their floating sign
+  for (const wl of walls) if (Math.abs(mToPx(wl.x) - mx) < 14 && my >= gY - 50 && my <= gY + 6 || inBox(mx, my, wl._sign))
+    return { type: 'wall', el: wl };
+  for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 21 && my >= gY - 16 && my <= gY + 6 || inBox(mx, my, b._sign))
+    return { type: 'boost', el: b };
+  // second balls: grab the sphere itself
+  const br = Math.max(12, (BALL_R / TRACK_LEN) * (sceneDims().w - PAD_L - PAD_R) * 1.25);
+  for (const bb of secondBalls) if (Math.abs(mToPx(bb.x) - mx) < br + 3 && my >= gY - 2 * br - 4 && my <= gY + 6)
+    return { type: 'ball2', el: bb };
+  // friction patch: rough ground set into the surface (resize edges) or its sign
   for (const z of fricZones) {
     const xa = mToPx(z.x), xb = mToPx(z.x + z.len);
-    if (mx < xa - 6 || mx > xb + 6) continue;
-    const edge = Math.abs(mx - xa) <= 7 ? 'l' : Math.abs(mx - xb) <= 7 ? 'r' : null;
-    return { type: 'friction', el: z, edge };
+    if ((mx >= xa - 6 && mx <= xb + 6 && my >= gY - 4 && my <= gY + 28)) {
+      const edge = Math.abs(mx - xa) <= 7 ? 'l' : Math.abs(mx - xb) <= 7 ? 'r' : null;
+      return { type: 'friction', el: z, edge };
+    }
+    if (inBox(mx, my, z._sign)) return { type: 'friction', el: z, edge: null };
   }
   return null;
 }
@@ -609,6 +865,7 @@ function makeGhost(piece) {
   if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
   else if (piece === 'target') { g.textContent = '▶ 6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
+  else if (piece === 'ball2') { g.textContent = '● ball'; g.style.background = getCss('--ball'); g.style.color = '#2a0f0a'; }
   else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
   document.body.appendChild(g); return g;
 }
@@ -616,9 +873,10 @@ function moveGhost(g, cx, cy) { g.style.left = cx + 'px'; g.style.top = cy + 'px
 
 const snap = m => Math.round(m);   // placement snaps to 1 m increments
 function placePiece(type, m) {
-  if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), used: false });
+  if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), dv: BOOST_DV, used: false });
   else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
   else if (type === 'target') { const g = { id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
+  else if (type === 'ball2') secondBalls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
   else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
 }
 
@@ -637,10 +895,26 @@ document.querySelectorAll('.chip').forEach(chip => {
   });
 });
 
-// Start a drag on an existing placed piece (move / remove)
+// Start a drag on an existing placed piece (move / remove), or tap a target's sign controls
 sceneC.addEventListener('pointerdown', e => {
   const r = sceneC.getBoundingClientRect();
-  const hit = hitPiece(e.clientX - r.left, e.clientY - r.top);
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  // on-sign controls take priority over dragging
+  const ctl = hitTargetControl(mx, my);
+  if (ctl) {
+    e.preventDefault();
+    applyTargetControl(ctl);
+    if (!running) resetRun(); else drawScene();
+    return;
+  }
+  const bctl = hitBoostControl(mx, my);
+  if (bctl) {
+    e.preventDefault();
+    applyBoostControl(bctl);
+    if (!running) resetRun(); else drawScene();
+    return;
+  }
+  const hit = hitPiece(mx, my);
   if (!hit) return;
   e.preventDefault();
   sceneC.setPointerCapture(e.pointerId);
@@ -665,8 +939,8 @@ window.addEventListener('pointermove', e => {
     if (Math.hypot(e.clientX - drag.downX, e.clientY - drag.downY) > 4) drag.moved = true;
     const r = sceneC.getBoundingClientRect();
     const m = pxToM(e.clientX - r.left);
-    if (drag.piece === 'boost' || drag.piece === 'wall' || drag.piece === 'target') drag.el.x = clamp(snap(m), 0, TRACK_LEN);
-    else drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
+    if (drag.piece === 'friction') drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
+    else drag.el.x = clamp(snap(m), 0, TRACK_LEN);
     if (!running) { resetRun(); } else { drawScene(); }
   } else if (drag.kind === 'resize') {
     const r = sceneC.getBoundingClientRect();
@@ -694,18 +968,29 @@ window.addEventListener('pointerup', e => {
   } else if (drag.kind === 'move') {
     if (!overScene(e.clientX, e.clientY)) {
       // drop off the track → delete
-      if (drag.piece === 'boost') boosts = boosts.filter(b => b !== drag.el);
-      else if (drag.piece === 'wall') walls = walls.filter(w => w !== drag.el);
-      else if (drag.piece === 'target') targets = targets.filter(g => g !== drag.el);
-      else fricZones = fricZones.filter(z => z !== drag.el);
-      if (!running) resetRun(); else drawScene();
-    } else if (drag.piece === 'target' && !drag.moved) {
-      // a click (no drag) on a target gate → open its editor
-      openTargetEditor(drag.el);
+      deletePiece(drag.piece, drag.el);
+    } else if (!drag.moved) {
+      // a click (no drag) on a piece — double-click asks to delete it
+      const piece = drag.piece, el = drag.el, now = performance.now();
+      if (lastClick && lastClick.el === el && now - lastClick.time < 400) {
+        lastClick = null;
+        openDeleteConfirm(piece, el, e.clientX, e.clientY);
+      } else {
+        lastClick = { el, time: now };
+      }
     }
   }
   drag = null;
 });
+
+function deletePiece(piece, el) {
+  if (piece === 'boost') boosts = boosts.filter(b => b !== el);
+  else if (piece === 'wall') walls = walls.filter(w => w !== el);
+  else if (piece === 'target') targets = targets.filter(g => g !== el);
+  else if (piece === 'ball2') secondBalls = secondBalls.filter(b => b !== el);
+  else fricZones = fricZones.filter(z => z !== el);
+  if (!running) resetRun(); else drawScene();
+}
 
 // ─── Wiring ───────────────────────────────────────────────────────────────────
 speedEl.addEventListener('input', () => {
@@ -733,72 +1018,51 @@ zoomYBtn.addEventListener('click', () => {
   zoomYBtn.classList.toggle('on', zoomY);
   drawGraph();
 });
-document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; closeTargetEditor(); if (!running) resetRun(); else drawScene(); });
-window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); if (editingTarget) positionTargetEditor(editingTarget); });
+document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; secondBalls = []; closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
+window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); });
 
-// ─── Target-speed editor ──────────────────────────────────────────────────────
-const teEl = document.getElementById('targetEditor');
-const teMag = document.getElementById('teMag');
-const teTimeOn = document.getElementById('teTimeOn');
-const teTimeVal = document.getElementById('teTimeVal');
+// ─── Light / dark theme (light by default) ──────────────────────────────────────
+const themeBtn = document.getElementById('themeToggle');
+function applyTheme(mode) {
+  if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
+  themeBtn.textContent = mode === 'dark' ? '☀️' : '🌙';
+  drawScene(); drawGraph(); drawEnergy();
+}
+let theme = 'light';
+try { if (localStorage.getItem('launcher-theme') === 'dark') theme = 'dark'; } catch (e) {}
+themeBtn.addEventListener('click', () => {
+  theme = (theme === 'dark') ? 'light' : 'dark';
+  try { localStorage.setItem('launcher-theme', theme); } catch (e) {}
+  applyTheme(theme);
+});
+applyTheme(theme);
 
-function refreshTargetEditor() {
-  if (!editingTarget) return;
-  teMag.textContent = editingTarget.mag;
-  teEl.querySelectorAll('.te-dir button').forEach(b => b.classList.toggle('on', +b.dataset.dir === editingTarget.dir));
-  const timed = editingTarget.time != null;
-  teTimeOn.checked = timed;
-  teTimeVal.disabled = !timed;
-  if (timed) teTimeVal.value = editingTarget.time;
+// ─── Delete confirmation (double-click a piece) ─────────────────────────────────
+const dcEl = document.getElementById('deleteConfirm');
+const dcName = document.getElementById('dcName');
+const PIECE_NAMES = { boost: 'speed boost', wall: 'wall', target: 'target speed', friction: 'friction patch', ball2: 'second ball' };
+function openDeleteConfirm(piece, el, cx, cy) {
+  confirmPiece = { piece, el };
+  dcName.textContent = PIECE_NAMES[piece] || 'piece';
+  dcEl.hidden = false;
+  let left = Math.min(cx + 12, window.innerWidth - dcEl.offsetWidth - 8);
+  let top = Math.min(cy + 12, window.innerHeight - dcEl.offsetHeight - 8);
+  dcEl.style.left = Math.max(8, left) + 'px';
+  dcEl.style.top = Math.max(8, top) + 'px';
 }
-function positionTargetEditor(g) {
-  const r = sceneC.getBoundingClientRect();
-  let left = r.left + mToPx(g.x) + 16, top = r.top + 8;
-  left = Math.min(left, window.innerWidth - teEl.offsetWidth - 8);
-  left = Math.max(8, left);
-  teEl.style.left = left + 'px';
-  teEl.style.top = top + 'px';
-}
-function openTargetEditor(g) {
-  editingTarget = g;
-  teEl.hidden = false;
-  refreshTargetEditor();
-  positionTargetEditor(g);
-}
-function closeTargetEditor() { editingTarget = null; teEl.hidden = true; }
-function afterTargetEdit() { if (!running) resetRun(); else drawScene(); }
-
-teEl.querySelector('.te-dir').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || !editingTarget) return;
-  editingTarget.dir = +b.dataset.dir; refreshTargetEditor(); afterTargetEdit();
+function closeDeleteConfirm() { confirmPiece = null; dcEl.hidden = true; }
+document.getElementById('dcCancel').addEventListener('click', closeDeleteConfirm);
+document.getElementById('dcDelete').addEventListener('click', () => {
+  if (confirmPiece) deletePiece(confirmPiece.piece, confirmPiece.el);
+  closeDeleteConfirm();
 });
-teEl.querySelector('.te-mag').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || !editingTarget) return;
-  editingTarget.mag = clamp(editingTarget.mag + (+b.dataset.step), TARGET_STEP, TARGET_MAX);
-  refreshTargetEditor(); afterTargetEdit();
-});
-teTimeOn.addEventListener('change', () => {
-  if (!editingTarget) return;
-  editingTarget.time = teTimeOn.checked ? clamp(parseFloat(teTimeVal.value) || 0, 0, RUN_TIME_CAP) : null;
-  refreshTargetEditor(); afterTargetEdit();
-});
-teTimeVal.addEventListener('input', () => {
-  if (!editingTarget || !teTimeOn.checked) return;
-  editingTarget.time = clamp(parseFloat(teTimeVal.value) || 0, 0, RUN_TIME_CAP);
-  afterTargetEdit();
-});
-document.getElementById('teRemove').addEventListener('click', () => {
-  if (!editingTarget) return;
-  targets = targets.filter(g => g !== editingTarget);
-  closeTargetEditor(); afterTargetEdit();
-});
-document.getElementById('teDone').addEventListener('click', closeTargetEditor);
-// click outside closes the editor
+// click outside closes the confirm popover
 window.addEventListener('pointerdown', e => {
-  if (!editingTarget || teEl.hidden) return;
-  if (teEl.contains(e.target)) return;
-  if (e.target === sceneC) return;   // scene handler decides (may reopen for another gate)
-  closeTargetEditor();
+  if (dcEl.hidden) return;
+  if (dcEl.contains(e.target)) return;
+  if (e.target === sceneC) return;   // scene handler may reopen it for another piece
+  closeDeleteConfirm();
 }, true);
 
 // Hidden dev slider (type "dev") to tune friction deceleration.
@@ -823,6 +1087,8 @@ window.addEventListener('pointerdown', e => {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 resetRun();
 requestAnimationFrame(frame);
+// redraw once the hand-drawn font has loaded so canvas labels pick it up
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); drawEnergy(); });
 </script>
 </body>
 </html>
