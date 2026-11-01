@@ -684,12 +684,21 @@ function drawGraph() {
   const x0 = padL, x1 = w - padR;
   const X = tt => x0 + (tt / tMax) * (x1 - x0);
 
-  // Draw one metric's plot (own y-axis) into the exact band [ty, by]. The time
-  // axis labels are drawn only when drawTime is set, so stacked panels can share
-  // a single time axis at the bottom.
-  function drawPanel(metric, ty, by, drawTime) {
+  // Draw one metric's plot (own y-axis + own time numbers) into the band [ty, by].
+  // opts.caption adds the "time (s)" label; opts.vgrid adds vertical time gridlines
+  // bounded to this panel (so stacked panels stay separate, not seamless).
+  function drawPanel(metric, ty, by, opts) {
+    opts = opts || {};
     const yMax = metric.yMax;
     const Y = vv => by + (vv / yMax) * (ty - by);
+
+    // vertical time gridlines (integer seconds), kept within this panel
+    if (opts.vgrid) {
+      gx.strokeStyle = getCss('--line'); gx.lineWidth = 1;
+      for (let tt = 0; tt <= tMax + 1e-9; tt += 1) {
+        const xx = X(tt); gx.beginPath(); gx.moveTo(xx, ty); gx.lineTo(xx, by); gx.stroke();
+      }
+    }
 
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
@@ -701,16 +710,14 @@ function drawGraph() {
     }
 
     // time axis: major ticks every 1 s (labelled) + minor ticks every 0.5 s
-    if (drawTime) {
-      gx.strokeStyle = getCss('--line'); gx.fillStyle = getCss('--muted');
-      gx.textAlign = 'center'; gx.textBaseline = 'top';
-      for (let tt = 0; tt <= tMax + 1e-9; tt += 0.5) {
-        const xx = X(tt), major = Math.abs(tt - Math.round(tt)) < 1e-9;
-        gx.lineWidth = 1; gx.beginPath(); gx.moveTo(xx, by); gx.lineTo(xx, by + (major ? 6 : 3)); gx.stroke();
-        if (major) gx.fillText(tt.toFixed(0), xx, by + 9);
-      }
-      gx.fillStyle = getCss('--muted'); gx.fillText('time (s)', (x0 + x1) / 2, by + 22);
+    gx.strokeStyle = getCss('--line'); gx.fillStyle = getCss('--muted');
+    gx.textAlign = 'center'; gx.textBaseline = 'top';
+    for (let tt = 0; tt <= tMax + 1e-9; tt += 0.5) {
+      const xx = X(tt), major = Math.abs(tt - Math.round(tt)) < 1e-9;
+      gx.lineWidth = 1; gx.beginPath(); gx.moveTo(xx, by); gx.lineTo(xx, by + (major ? 6 : 3)); gx.stroke();
+      if (major) gx.fillText(tt.toFixed(0), xx, by + 9);
     }
+    if (opts.caption) { gx.fillStyle = getCss('--muted'); gx.fillText('time (s)', (x0 + x1) / 2, by + 22); }
 
     // y-axis title
     gx.save(); gx.translate(14, (ty + by) / 2); gx.rotate(-Math.PI / 2);
@@ -732,21 +739,17 @@ function drawGraph() {
   }
 
   if (both) {
-    // Two squished panels sharing one time axis, in the same height as one graph.
-    const padT = 14, mid = 16;
-    const plotTop = padT, plotBot = h - padB;
-    const panelH = (plotBot - plotTop - mid) / 2;
-    const by1 = plotTop + panelH, ty2 = by1 + mid;
-    // vertical time gridlines run continuously through both panels
-    gx.strokeStyle = getCss('--line'); gx.lineWidth = 1;
-    for (let tt = 0; tt <= tMax + 1e-9; tt += 1) {
-      const xx = X(tt); gx.beginPath(); gx.moveTo(xx, plotTop); gx.lineTo(xx, plotBot); gx.stroke();
-    }
-    drawPanel({ key: 'v', label: 'Velocity', unit: 'm/s', yMax: base.yv * zy }, plotTop, by1, false);
-    drawPanel({ key: 'x', label: 'Position', unit: 'm',  yMax: base.yd * zy }, ty2, plotBot, true);
+    // Two separate panels in one graph's height: each has its own time numbers,
+    // with blank space between them (not a seamless shared axis). No time label.
+    const padT = 14, numH = 18, gap = 22, botPad = 10;
+    const panelH = (h - padT - botPad - 2 * numH - gap) / 2;
+    const ty1 = padT, by1 = ty1 + panelH;
+    const ty2 = by1 + numH + gap, by2 = ty2 + panelH;
+    drawPanel({ key: 'v', label: 'Velocity', unit: 'm/s', yMax: base.yv * zy }, ty1, by1, { vgrid: true });
+    drawPanel({ key: 'x', label: 'Position', unit: 'm',  yMax: base.yd * zy }, ty2, by2, { vgrid: true });
   } else {
     const spec = graphSpec();
-    drawPanel({ key: spec.key, label: spec.label, unit: spec.unit, yMax: base.y * zy }, 14, h - padB, true);
+    drawPanel({ key: spec.key, label: spec.label, unit: spec.unit, yMax: base.y * zy }, 14, h - padB, { caption: true });
   }
 }
 
