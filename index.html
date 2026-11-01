@@ -287,6 +287,9 @@ const MASS      = 1;          // kg (KE = ½·m·v²)
 let v0 = 6, launchX = 0, graphType = 'position';
 let playbackRate = 1;           // 1 = normal (rabbit), 0.5 = half speed (turtle)
 let lastRun = null;             // { v0, x0 } of the last launch, so replay repeats it
+let replaying = false;          // true during a replay: show the full stored curve + a moving marble
+let lastTrace = null;           // [{color, samples}] — the completed run kept on screen during replay
+let runCaptured = false;        // whether lastTrace has been captured for the current (fresh) run
 let running = false, ballStopped = false, t = 0;
 let v = 0, x = 0;             // live state of whichever ball is currently moving
 let thermal = 0;             // energy lost to friction + impact (J)
@@ -435,10 +438,21 @@ function buildBalls(launchV, x0) {
   for (const b of secondBalls) balls.push({ launcher: false, x: b.x, v: 0, moving: false, color: getCss('--ball2'), d: 0, samples: [] });
 }
 function seedSamples() { for (const b of balls) b.samples = [{ t: 0, x: b.x, v: b.v, d: 0 }]; }
+// Snapshot the current trajectories as the static curve to keep on screen during
+// replay, flat-extended to the right edge so the curve spans the whole time axis.
+function snapshotTrace() {
+  return balls.map(b => {
+    const s = b.samples.slice();
+    const last = s[s.length - 1];
+    if (last && last.t < RUN_TIME_CAP) s.push({ t: RUN_TIME_CAP, x: last.x, v: last.v, d: last.d });
+    return { color: b.color, samples: s };
+  });
+}
 
 // Run the ball from (xLaunch, vLaunch) played back at `rate` (1 = normal, 0.5 = half).
-function doLaunch(vLaunch, xLaunch, rate) {
+function doLaunch(vLaunch, xLaunch, rate, isReplay) {
   v0 = vLaunch; launchX = xLaunch; playbackRate = rate;
+  replaying = !!isReplay; runCaptured = false;
   boosts.forEach(b => { b.used = false; b._shake = 0; });
   cuts.forEach(c => { c.used = false; c._shake = 0; });
   targets.forEach(g => { g.used = false; g._shake = 0; });
@@ -453,13 +467,19 @@ function doLaunch(vLaunch, xLaunch, rate) {
   lastRun = { v0, x0: launchX };
   replaySlowBtn.disabled = false; replayFastBtn.disabled = false;
 }
-function launch() { doLaunch(parseInt(speedEl.value, 10), parseInt(posEl.value, 10), 1); }
-// Replay repeats the last run exactly, at the given playback rate.
-function replay(rate) { if (lastRun) doLaunch(lastRun.v0, lastRun.x0, rate); }
+function launch() { doLaunch(parseInt(speedEl.value, 10), parseInt(posEl.value, 10), 1, false); }
+// Replay repeats the last run exactly, at the given rate, keeping the finished
+// graph on screen with a marble running along it.
+function replay(rate) {
+  if (!lastRun) return;
+  if (!lastTrace) lastTrace = snapshotTrace();
+  doLaunch(lastRun.v0, lastRun.x0, rate, true);
+}
 
 function resetRun() {
   launchX = posEl ? parseInt(posEl.value, 10) : 0;
-  running = false; ballStopped = false; t = 0; x = launchX; v = 0; thermal = 0; energyMax = 1;
+  running = false; replaying = false; lastTrace = null; runCaptured = false;
+  ballStopped = false; t = 0; x = launchX; v = 0; thermal = 0; energyMax = 1;
   targets.forEach(g => g._shake = 0); boosts.forEach(b => b._shake = 0); cuts.forEach(c => c._shake = 0);
   heldGate = null;
   buildBalls(0, launchX); movingBall = null;
@@ -491,9 +511,16 @@ function frame(now) {
     }
     if (ke() + thermal > energyMax) energyMax = ke() + thermal;
     // free to relaunch once the ball is truly at rest (not merely held by a tube) or offscreen
-    if ((ballStopped && !heldGate) || x > TRACK_LEN) launchBtn.disabled = false;
+    if ((ballStopped && !heldGate) || x > TRACK_LEN) {
+      launchBtn.disabled = false;
+      // once a fresh run's motion is done, keep its curve so replay can re-trace it
+      if (!replaying && !runCaptured) { lastTrace = snapshotTrace(); runCaptured = true; }
+    }
     // run ends when the graph's time axis is filled (safety cap otherwise)
-    if (t >= RUN_TIME_CAP || t >= MAX_TIME) { running = false; launchBtn.disabled = false; }
+    if (t >= RUN_TIME_CAP || t >= MAX_TIME) {
+      running = false; launchBtn.disabled = false;
+      if (!replaying) { lastTrace = snapshotTrace(); runCaptured = true; }
+    }
     drawScene(); drawGraph(); drawEnergy();
   }
   requestAnimationFrame(frame);
@@ -776,24 +803,38 @@ function drawGraph() {
     gx.textAlign = 'center'; gx.textBaseline = 'bottom';
     gx.fillStyle = getCss('--muted'); gx.fillText(metric.label + ' (' + metric.unit + ')', 0, 0); gx.restore();
 
-    // traces (clipped to the plot area)
+    // traces (clipped to the plot area). During replay the full completed curve
+    // stays on screen (lastTrace) instead of rebuilding as the ball re-runs.
+    const traces = (replaying && lastTrace) ? lastTrace : balls;
     gx.save(); gx.beginPath(); gx.rect(x0, ty, x1 - x0, by - ty); gx.clip();
     gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
-    for (const b of balls) {
+    for (const b of traces) {
       if (b.samples.length < 2) continue;
       gx.strokeStyle = b.color; gx.beginPath();
       b.samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[metric.key]); i ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); });
       gx.stroke();
-      const last = b.samples[b.samples.length - 1];
-      gx.fillStyle = b.color; gx.beginPath(); gx.arc(X(last.t), Y(last[metric.key]), 4.5, 0, Math.PI * 2); gx.fill();
+      if (!replaying) {   // live runs get an end dot; replay uses the moving marble below
+        const last = b.samples[b.samples.length - 1];
+        gx.fillStyle = b.color; gx.beginPath(); gx.arc(X(last.t), Y(last[metric.key]), 4.5, 0, Math.PI * 2); gx.fill();
+      }
     }
     gx.restore();
 
     // start-value marbles: the launch settings (position / speed) at t = 0
-    const mx = X(0), sp = parseInt(speedEl.value, 10) || 0;
-    const marks = [{ val: metric.key === 'v' ? sp : launchX, color: getCss('--ball') }];
+    const mx = X(0);
+    const launchV = (running || replaying) ? v0 : (parseInt(speedEl.value, 10) || 0);
+    const marks = [{ val: metric.key === 'v' ? launchV : launchX, color: getCss('--ball') }];
     for (const sb of secondBalls) marks.push({ val: metric.key === 'v' ? 0 : sb.x, color: getCss('--ball2') });
     for (const m of marks) drawMarbleAt(gx, mx, Math.max(ty + 6, Math.min(by - 6, Y(m.val))), 6.5, m.color);
+
+    // moving marble: the ball running along the (now static) graph during replay
+    if (replaying) {
+      for (const b of balls) {
+        const cx = Math.max(x0, Math.min(x1, X(t)));
+        const cy = Math.max(ty + 6, Math.min(by - 6, Y(b[metric.key])));
+        drawMarbleAt(gx, cx, cy, 6.5, b.color);
+      }
+    }
   }
 
   if (both) {
