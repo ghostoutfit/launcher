@@ -131,6 +131,7 @@
     background: var(--panel-2); cursor: grab;
   }
   .chip:active { cursor: grabbing; }
+  .chip.disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
   .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
   .chip.boost .ico { background: var(--boost); color: #063; }
   .chip.cut .ico { background: var(--cut); color: #4a0a0a; }
@@ -978,7 +979,7 @@ function placePiece(type, m) {
   else if (type === 'cut') cuts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), dv: BOOST_DV, used: false });
   else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
   else if (type === 'target') { const g = { id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
-  else if (type === 'ball2') secondBalls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
+  else if (type === 'ball2') { if (secondBalls.length >= 1) return; secondBalls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) }); refreshBall2Chip(); }
   else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
 }
 
@@ -987,15 +988,21 @@ function overScene(cx, cy) {
   return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
 }
 
+// Only one extra ball is allowed — dim the chip and block its drag once placed.
+const ball2Chip = document.querySelector('.chip.ball2');
+function refreshBall2Chip() { if (ball2Chip) ball2Chip.classList.toggle('disabled', secondBalls.length >= 1); }
+
 // Start a drag from a palette chip (create new piece)
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('pointerdown', e => {
     e.preventDefault();
     const piece = chip.dataset.piece;
+    if (piece === 'ball2' && secondBalls.length >= 1) return;  // one extra ball max
     drag = { kind: 'new', piece, ghost: makeGhost(piece) };
     moveGhost(drag.ghost, e.clientX, e.clientY);
   });
 });
+refreshBall2Chip();
 
 // Start a drag on an existing placed piece (move / remove), or tap a target's sign controls
 sceneC.addEventListener('pointerdown', e => {
@@ -1090,7 +1097,7 @@ function deletePiece(piece, el) {
   else if (piece === 'cut') cuts = cuts.filter(c => c !== el);
   else if (piece === 'wall') walls = walls.filter(w => w !== el);
   else if (piece === 'target') targets = targets.filter(g => g !== el);
-  else if (piece === 'ball2') secondBalls = secondBalls.filter(b => b !== el);
+  else if (piece === 'ball2') { secondBalls = secondBalls.filter(b => b !== el); refreshBall2Chip(); }
   else fricZones = fricZones.filter(z => z !== el);
   if (!running) resetRun(); else drawScene();
 }
@@ -1121,7 +1128,7 @@ zoomYBtn.addEventListener('click', () => {
   zoomYBtn.classList.toggle('on', zoomY);
   drawGraph();
 });
-document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; cuts = []; fricZones = []; walls = []; targets = []; secondBalls = []; closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
+document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; cuts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
 window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); });
 
 // ─── Light / dark theme (light by default) ──────────────────────────────────────
