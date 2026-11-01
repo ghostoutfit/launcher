@@ -106,6 +106,37 @@
   .toggle button { border: none; border-radius: 0; background: transparent; padding: 7px 12px; color: var(--muted); }
   .toggle button.on { background: var(--accent-2); color: #241c00; }
 
+  /* Mode tabs (Sandbox / Puzzle) */
+  #modeTabs { margin: 0 0 10px; }
+  #modeTabs button { font-size: 14px; padding: 7px 18px; font-weight: 700; }
+
+  /* Puzzle menu */
+  #puzzlePanel { margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; }
+  .pzLabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 7px; }
+  .pzRow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .pzBtn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 9px 6px; border-radius: 12px; border: 2px solid var(--line);
+    background: var(--panel-2); cursor: pointer; position: relative; min-height: 58px; justify-content: center;
+  }
+  .pzBtn .pzName { font-size: 12px; font-weight: 700; color: var(--ink); text-align: center; line-height: 1.1; }
+  .pzBtn .pzStars { font-size: 12px; color: var(--accent-2); letter-spacing: 1px; }
+  .pzBtn.locked { opacity: 0.5; cursor: not-allowed; }
+  .pzBtn.locked .pzName { color: var(--muted); }
+  .pzBtn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--panel-2)); }
+  .pzBtn.solved { border-color: var(--boost); }
+  .pzBtn .pzMark { position: absolute; top: 4px; right: 6px; font-size: 11px; }
+  .pzBtn.solved .pzMark { color: var(--boost); }
+
+  #puzzleStatus { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; }
+  #puzzleStatus .psName { font-weight: 800; }
+  #puzzleStatus .psStars { color: var(--accent-2); letter-spacing: 1px; }
+  #puzzleStatus .psGoal { color: var(--muted); }
+  #puzzleStatus .psSolved { color: var(--boost); font-weight: 800; }
+  @media (max-width: 720px) { .pzRow { grid-template-columns: repeat(3, 1fr); } }
+  /* the hidden attribute must win over the display rules above */
+  #graphTabs[hidden], #puzzlePanel[hidden], #puzzleStatus[hidden] { display: none; }
+
   /* Scene */
   #sceneWrap { padding: 0; margin-bottom: 10px; overflow: hidden; }
   #scene { display: block; width: 100%; height: 188px; touch-action: none; }
@@ -181,6 +212,11 @@
   <h1>LAUNCHER</h1>
   <div class="sub">Launch a ball along flat ground, drop track pieces in its path, and watch the motion graph build live.</div>
 
+  <div id="modeTabs" class="toggle">
+    <button data-mode="sandbox" class="on">Sandbox</button>
+    <button data-mode="puzzle">Puzzle</button>
+  </div>
+
   <div id="stage">
     <div id="main">
       <div id="controls" class="panel">
@@ -208,12 +244,24 @@
         <canvas id="scene"></canvas>
       </div>
 
+      <div id="puzzlePanel" class="panel" hidden>
+        <div class="pzGroup">
+          <div class="pzLabel">Position graphs</div>
+          <div class="pzRow" id="pzPosRow"></div>
+        </div>
+        <div class="pzGroup">
+          <div class="pzLabel">Velocity graphs</div>
+          <div class="pzRow" id="pzVelRow"></div>
+        </div>
+      </div>
+
       <div id="graphCard" class="panel">
         <div id="graphTabs">
           <button data-g="position" class="active">Position–time</button>
           <button data-g="velocity">Velocity–time</button>
           <button data-g="both">Both Position and Velocity</button>
         </div>
+        <div id="puzzleStatus" hidden></div>
         <div id="graphRow">
           <div id="graphPlot">
             <canvas id="graph"></canvas>
@@ -287,6 +335,9 @@ const MASS      = 1;          // kg (KE = ½·m·v²)
 let v0 = 6, launchX = 0, graphType = 'position';
 let playbackRate = 1;           // 1 = normal (rabbit), 0.5 = half speed (turtle)
 let lastRun = null;             // { v0, x0 } of the last launch, so replay repeats it
+let mode = 'sandbox';           // 'sandbox' | 'puzzle'
+let currentPuzzle = null;       // the selected puzzle object in puzzle mode
+let puzzleGraded = false;       // whether the current run has been graded against the puzzle
 let replaying = false;          // true during a replay: show the full stored curve + a moving marble
 let lastTrace = null;           // [{color, samples}] — the completed run kept on screen during replay
 let runCaptured = false;        // whether lastTrace has been captured for the current (fresh) run
@@ -452,7 +503,7 @@ function snapshotTrace() {
 // Run the ball from (xLaunch, vLaunch) played back at `rate` (1 = normal, 0.5 = half).
 function doLaunch(vLaunch, xLaunch, rate, isReplay) {
   v0 = vLaunch; launchX = xLaunch; playbackRate = rate;
-  replaying = !!isReplay; runCaptured = false;
+  replaying = !!isReplay; runCaptured = false; puzzleGraded = false;
   boosts.forEach(b => { b.used = false; b._shake = 0; });
   cuts.forEach(c => { c.used = false; c._shake = 0; });
   targets.forEach(g => { g.used = false; g._shake = 0; });
@@ -510,6 +561,7 @@ function frame(now) {
       b.samples.push({ t, x: b.x, v: b.v, d: b.d });
     }
     if (ke() + thermal > energyMax) energyMax = ke() + thermal;
+    if (mode === 'puzzle' && !replaying) gradePuzzle();
     // free to relaunch once the ball is truly at rest (not merely held by a tube) or offscreen
     if ((ballStopped && !heldGate) || x > TRACK_LEN) {
       launchBtn.disabled = false;
@@ -834,6 +886,19 @@ function drawGraph() {
         const cy = Math.max(ty + 6, Math.min(by - 6, Y(b[metric.key])));
         drawMarbleAt(gx, cx, cy, 6.5, b.color);
       }
+    }
+
+    // puzzle target overlay: the goal graph the player is trying to match
+    if (mode === 'puzzle' && currentPuzzle && currentPuzzle.target === 'flatX' && metric.key === 'x') {
+      const ty0 = Math.max(ty + 1, Math.min(by - 1, Y(launchX)));
+      gx.save();
+      gx.strokeStyle = getCss('--accent'); gx.lineWidth = 2.4; gx.setLineDash([7, 5]);
+      gx.beginPath(); gx.moveTo(x0, ty0); gx.lineTo(x1, ty0); gx.stroke();
+      gx.setLineDash([]);
+      gx.fillStyle = getCss('--accent'); gx.font = handFont(11, 700);
+      gx.textAlign = 'right'; gx.textBaseline = 'bottom';
+      gx.fillText('target', x1 - 4, ty0 - 3);
+      gx.restore();
     }
   }
 
@@ -1294,6 +1359,103 @@ window.addEventListener('pointerdown', e => {
     }
   });
 })();
+
+// ─── Puzzle mode ────────────────────────────────────────────────────────────────
+// 6 position + 6 velocity challenges. Only the first position puzzle is built out;
+// the rest are placeholders that still show stars and unlock progressively.
+const PUZZLES = {
+  position: [
+    { id: 'pos1', metric: 'position', name: 'Hold Still', stars: 1, goal: 'Make a flat position graph — keep the ball from moving.', target: 'flatX' },
+    { id: 'pos2', metric: 'position', name: 'Puzzle 2', stars: 1 },
+    { id: 'pos3', metric: 'position', name: 'Puzzle 3', stars: 2 },
+    { id: 'pos4', metric: 'position', name: 'Puzzle 4', stars: 2 },
+    { id: 'pos5', metric: 'position', name: 'Puzzle 5', stars: 3 },
+    { id: 'pos6', metric: 'position', name: 'Puzzle 6', stars: 3 },
+  ],
+  velocity: [
+    { id: 'vel1', metric: 'velocity', name: 'Puzzle 1', stars: 1 },
+    { id: 'vel2', metric: 'velocity', name: 'Puzzle 2', stars: 1 },
+    { id: 'vel3', metric: 'velocity', name: 'Puzzle 3', stars: 2 },
+    { id: 'vel4', metric: 'velocity', name: 'Puzzle 4', stars: 2 },
+    { id: 'vel5', metric: 'velocity', name: 'Puzzle 5', stars: 3 },
+    { id: 'vel6', metric: 'velocity', name: 'Puzzle 6', stars: 3 },
+  ],
+};
+const solvedPuzzles = new Set();
+try { (JSON.parse(localStorage.getItem('launcher-puzzles') || '[]')).forEach(id => solvedPuzzles.add(id)); } catch (e) {}
+function savePuzzles() { try { localStorage.setItem('launcher-puzzles', JSON.stringify([...solvedPuzzles])); } catch (e) {} }
+function puzzleUnlocked(list, i) { return i === 0 || solvedPuzzles.has(list[i - 1].id); }
+function stars(n) { return '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
+
+function renderPuzzles() {
+  for (const [key, rowId] of [['position', 'pzPosRow'], ['velocity', 'pzVelRow']]) {
+    const row = document.getElementById(rowId); row.innerHTML = '';
+    PUZZLES[key].forEach((p, i) => {
+      const unlocked = puzzleUnlocked(PUZZLES[key], i), solved = solvedPuzzles.has(p.id);
+      const btn = document.createElement('button');
+      btn.className = 'pzBtn' + (unlocked ? '' : ' locked') + (solved ? ' solved' : '')
+        + (currentPuzzle && currentPuzzle.id === p.id ? ' active' : '');
+      btn.disabled = !unlocked;
+      btn.innerHTML = '<span class="pzMark">' + (solved ? '✓' : (unlocked ? '' : '🔒')) + '</span>'
+        + '<span class="pzName">' + p.name + '</span><span class="pzStars">' + stars(p.stars) + '</span>';
+      btn.addEventListener('click', () => selectPuzzle(p));
+      row.appendChild(btn);
+    });
+  }
+}
+
+function updatePuzzleStatus() {
+  const el = document.getElementById('puzzleStatus');
+  if (mode !== 'puzzle' || !currentPuzzle) { el.hidden = true; return; }
+  el.hidden = false;
+  const solved = solvedPuzzles.has(currentPuzzle.id), playable = !!currentPuzzle.target;
+  el.innerHTML = '<span class="psName">' + currentPuzzle.name + '</span>'
+    + '<span class="psStars">' + stars(currentPuzzle.stars) + '</span>'
+    + '<span class="psGoal">' + (playable ? currentPuzzle.goal : 'Coming soon — not built yet.') + '</span>'
+    + (solved ? '<span class="psSolved">✓ Solved</span>' : '');
+}
+
+function selectPuzzle(p) {
+  currentPuzzle = p; graphType = p.metric; puzzleGraded = false;
+  renderPuzzles(); updatePuzzleStatus();
+  if (!running) resetRun(); else drawGraph();
+}
+
+function gradePuzzle() {
+  if (puzzleGraded || !currentPuzzle || !currentPuzzle.target || solvedPuzzles.has(currentPuzzle.id)) {
+    if (currentPuzzle && solvedPuzzles.has(currentPuzzle.id)) puzzleGraded = true;
+    return;
+  }
+  if (currentPuzzle.target === 'flatX') {
+    const win = AXES.position.t;                       // grade once the 5 s window is filled
+    const s = balls[0].samples.filter(p => p.t <= win);
+    if (!s.length || s[s.length - 1].t < win - 0.05) return;
+    puzzleGraded = true;
+    let lo = Infinity, hi = -Infinity;
+    for (const p of s) { if (p.x < lo) lo = p.x; if (p.x > hi) hi = p.x; }
+    if (hi - lo <= 1.0) { solvedPuzzles.add(currentPuzzle.id); savePuzzles(); renderPuzzles(); updatePuzzleStatus(); }
+  }
+}
+
+function setMode(m) {
+  mode = m;
+  [...document.querySelectorAll('#modeTabs button')].forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  const puzzle = m === 'puzzle';
+  document.getElementById('puzzlePanel').hidden = !puzzle;
+  document.getElementById('graphTabs').hidden = puzzle;
+  if (puzzle) {
+    renderPuzzles();
+    if (!currentPuzzle) selectPuzzle(PUZZLES.position[0]);
+    else { updatePuzzleStatus(); if (!running) resetRun(); else drawGraph(); }
+  } else {
+    document.getElementById('puzzleStatus').hidden = true;
+    [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType));
+    if (!running) resetRun(); else drawGraph();
+  }
+}
+document.getElementById('modeTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) setMode(b.dataset.mode);
+});
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 resetRun();
