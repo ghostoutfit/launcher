@@ -131,7 +131,9 @@
     background: var(--panel-2); cursor: grab;
   }
   .chip:active { cursor: grabbing; }
-  .chip.disabled { opacity: 0.38; cursor: not-allowed; pointer-events: none; }
+  .chip.disabled { cursor: not-allowed; pointer-events: none; }
+  .chip.ball2.disabled .ico { color: var(--muted); }
+  .chip.ball2.disabled .ctxt b { color: var(--muted); }
   .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
   .chip.boost .ico { background: var(--boost); color: #063; }
   .chip.cut .ico { background: var(--cut); color: #4a0a0a; }
