@@ -79,6 +79,7 @@
   input[type=range] { width: 160px; accent-color: var(--accent); }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 58px; }
   .spacer { flex: 1; }
+  .action-group { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
 
   button {
     font: inherit; font-size: 15px; color: var(--ink);
@@ -235,9 +236,12 @@
           </div>
         </div>
         <div class="spacer"></div>
-        <button id="launchBtn" class="primary">Launch</button>
-        <button id="replaySlowBtn" class="replay" title="Replay at half speed" disabled><span class="rsym">&#8634;</span><span class="ricon" role="img" aria-label="replay half speed"></span></button>
-        <button id="replayFastBtn" class="replay" title="Replay at normal speed" disabled><span class="rsym">&#8634;</span><span class="ricon" role="img" aria-label="replay normal speed"></span></button>
+        <div class="action-group">
+          <button id="launchBtn" class="primary">Launch</button>
+          <button id="replaySlowBtn" class="replay" title="Replay at half speed" disabled><span class="rsym">&#8634;</span><span class="ricon" role="img" aria-label="replay half speed"></span></button>
+          <button id="replayFastBtn" class="replay" title="Replay at normal speed" disabled><span class="rsym">&#8634;</span><span class="ricon" role="img" aria-label="replay normal speed"></span></button>
+          <button id="resetBtn" title="Reset the run">Reset</button>
+        </div>
       </div>
 
       <div id="sceneWrap" class="panel">
@@ -328,7 +332,7 @@ const FRIC_LEN  = 2;          // friction patch length (m)
 const TARGET_STEP = 2;        // target-speed increment (m/s)
 const TARGET_MAX  = 12;       // max target-speed magnitude (m/s)
 const MAX_TIME  = 60;         // hard safety cap (s)
-const RUN_TIME_CAP = 16;      // keep the graph drawing out to here after the ball stops (s)
+const RUN_TIME_CAP = 5;       // everything stops when the 5 s graph window is filled
 const MASS      = 1;          // kg (KE = ½·m·v²)
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -1290,6 +1294,11 @@ document.getElementById('graphTabs').addEventListener('click', e => {
 launchBtn.addEventListener('click', launch);
 replaySlowBtn.addEventListener('click', () => replay(0.5));
 replayFastBtn.addEventListener('click', () => replay(1));
+document.getElementById('resetBtn').addEventListener('click', () => {
+  lastRun = null; lastTrace = null;                       // nothing to replay after a reset
+  replaySlowBtn.disabled = true; replayFastBtn.disabled = true;
+  resetRun();
+});
 const zoomXBtn = document.getElementById('zoomX'), zoomYBtn = document.getElementById('zoomY');
 zoomXBtn.addEventListener('click', () => {
   zoomX = !zoomX;
