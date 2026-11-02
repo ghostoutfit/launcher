@@ -889,15 +889,15 @@ function drawGraph() {
     }
 
     // puzzle target overlay: the goal graph the player is trying to match
-    if (mode === 'puzzle' && currentPuzzle && currentPuzzle.target && metric.key === 'x') {
+    if (mode === 'puzzle' && currentPuzzle && currentPuzzle.target && metric.key === currentPuzzle.target.key) {
       const tgt = currentPuzzle.target;
       const clampY = xv => Math.max(ty + 1, Math.min(by - 1, Y(xv)));
       gx.save();
       gx.strokeStyle = getCss('--accent'); gx.lineWidth = 2.4; gx.setLineDash([7, 5]);
       gx.beginPath();
       let labelY;
-      if (tgt === 'flatX') {                       // flat line at the launch position
-        const yy = clampY(launchX); labelY = yy;
+      if (tgt.kind === 'flat') {                   // flat line at a fixed value
+        const yy = clampY(tgt.value); labelY = yy;
         gx.moveTo(x0, yy); gx.lineTo(x1, yy);
       } else if (tgt.kind === 'poly') {            // piecewise-linear target shape
         tgt.pts.forEach((p, i) => { const px = X(p.t), py = clampY(p.x); i ? gx.lineTo(px, py) : gx.moveTo(px, py); });
@@ -1370,28 +1370,27 @@ window.addEventListener('pointerdown', e => {
 })();
 
 // ─── Puzzle mode ────────────────────────────────────────────────────────────────
-// 6 position + 6 velocity challenges. Only the first position puzzle is built out;
-// the rest are placeholders that still show stars and unlock progressively.
+// 6 position + 6 velocity challenges. No names or hints — the player just reads the
+// target line off the graph and matches it. Each target carries its own axis key
+// ('x' position or 'v' velocity). The rest are placeholders that unlock progressively.
 const PUZZLES = {
   position: [
-    { id: 'pos1', metric: 'position', name: 'Hold Still', stars: 1, goal: 'Make a flat position graph — keep the ball from moving.', target: 'flatX' },
-    { id: 'pos2', metric: 'position', name: 'Puzzle 2', stars: 1 },
-    { id: 'pos3', metric: 'position', name: 'Gear Down', stars: 2, unlocked: true,
-      goal: 'Match the line: fast, then slower. (A speed cut drops the slope.)',
-      target: { kind: 'poly', pts: [{ t: 0, x: 0 }, { t: 1, x: 3 }, { t: 5, x: 7 }] } },
-    { id: 'pos4', metric: 'position', name: 'Puzzle 4', stars: 2 },
-    { id: 'pos5', metric: 'position', name: 'There & Back', stars: 3, unlocked: true,
-      goal: 'Match the line: out, then back. (A target-speed sign can send the ball the other way.)',
-      target: { kind: 'poly', pts: [{ t: 0, x: 1 }, { t: 3, x: 7 }, { t: 5, x: 1 }] } },
-    { id: 'pos6', metric: 'position', name: 'Puzzle 6', stars: 3 },
+    { id: 'pos1', metric: 'position', stars: 1, target: { kind: 'flat', key: 'x', value: 5 } },
+    { id: 'pos2', metric: 'position', stars: 1 },
+    { id: 'pos3', metric: 'position', stars: 2, unlocked: true,
+      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 1, x: 3 }, { t: 5, x: 7 }] } },
+    { id: 'pos4', metric: 'position', stars: 2 },
+    { id: 'pos5', metric: 'position', stars: 3, unlocked: true,
+      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 1 }, { t: 3, x: 7 }, { t: 5, x: 1 }] } },
+    { id: 'pos6', metric: 'position', stars: 3 },
   ],
   velocity: [
-    { id: 'vel1', metric: 'velocity', name: 'Puzzle 1', stars: 1 },
-    { id: 'vel2', metric: 'velocity', name: 'Puzzle 2', stars: 1 },
-    { id: 'vel3', metric: 'velocity', name: 'Puzzle 3', stars: 2 },
-    { id: 'vel4', metric: 'velocity', name: 'Puzzle 4', stars: 2 },
-    { id: 'vel5', metric: 'velocity', name: 'Puzzle 5', stars: 3 },
-    { id: 'vel6', metric: 'velocity', name: 'Puzzle 6', stars: 3 },
+    { id: 'vel1', metric: 'velocity', stars: 1, target: { kind: 'flat', key: 'v', value: 2 } },
+    { id: 'vel2', metric: 'velocity', stars: 1 },
+    { id: 'vel3', metric: 'velocity', stars: 2 },
+    { id: 'vel4', metric: 'velocity', stars: 2 },
+    { id: 'vel5', metric: 'velocity', stars: 3 },
+    { id: 'vel6', metric: 'velocity', stars: 3 },
   ],
 };
 const solvedPuzzles = new Set();
@@ -1418,7 +1417,7 @@ function renderPuzzles() {
         + (currentPuzzle && currentPuzzle.id === p.id ? ' active' : '');
       btn.disabled = !unlocked;
       btn.innerHTML = '<span class="pzMark">' + (solved ? '✓' : (unlocked ? '' : '🔒')) + '</span>'
-        + '<span class="pzName">' + p.name + '</span><span class="pzStars">' + stars(p.stars) + '</span>';
+        + '<span class="pzStars">' + stars(p.stars) + '</span>';
       btn.addEventListener('click', () => selectPuzzle(p));
       row.appendChild(btn);
     });
@@ -1430,9 +1429,8 @@ function updatePuzzleStatus() {
   if (mode !== 'puzzle' || !currentPuzzle) { el.hidden = true; return; }
   el.hidden = false;
   const solved = solvedPuzzles.has(currentPuzzle.id), playable = !!currentPuzzle.target;
-  el.innerHTML = '<span class="psName">' + currentPuzzle.name + '</span>'
-    + '<span class="psStars">' + stars(currentPuzzle.stars) + '</span>'
-    + '<span class="psGoal">' + (playable ? currentPuzzle.goal : 'Coming soon — not built yet.') + '</span>'
+  el.innerHTML = '<span class="psStars">' + stars(currentPuzzle.stars) + '</span>'
+    + (playable ? '' : '<span class="psGoal">Coming soon — not built yet.</span>')
     + (solved ? '<span class="psSolved">✓ Solved</span>' : '');
 }
 
@@ -1451,15 +1449,13 @@ function gradePuzzle() {
   const s = balls[0].samples.filter(p => p.t <= win);
   if (!s.length || s[s.length - 1].t < win - 0.05) return;
   puzzleGraded = true;
-  const tgt = currentPuzzle.target;
-  let pass = false;
-  if (tgt === 'flatX') {                               // position stays nearly flat
-    let lo = Infinity, hi = -Infinity;
-    for (const p of s) { if (p.x < lo) lo = p.x; if (p.x > hi) hi = p.x; }
-    pass = (hi - lo <= 1.0);
-  } else if (tgt.kind === 'poly') {                    // position tracks the target shape
-    let maxDev = 0;
-    for (const p of s) maxDev = Math.max(maxDev, Math.abs(p.x - interpPoly(tgt.pts, p.t)));
+  const tgt = currentPuzzle.target, key = tgt.key;
+  let pass = false, maxDev = 0;
+  if (tgt.kind === 'flat') {                           // value stays near a constant
+    for (const p of s) maxDev = Math.max(maxDev, Math.abs(p[key] - tgt.value));
+    pass = (maxDev <= PUZZLE_TOL);
+  } else if (tgt.kind === 'poly') {                    // value tracks the target shape
+    for (const p of s) maxDev = Math.max(maxDev, Math.abs(p[key] - interpPoly(tgt.pts, p.t)));
     pass = (maxDev <= PUZZLE_TOL);
   }
   if (pass) { solvedPuzzles.add(currentPuzzle.id); savePuzzles(); renderPuzzles(); updatePuzzleStatus(); }
