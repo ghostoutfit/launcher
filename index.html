@@ -889,15 +889,24 @@ function drawGraph() {
     }
 
     // puzzle target overlay: the goal graph the player is trying to match
-    if (mode === 'puzzle' && currentPuzzle && currentPuzzle.target === 'flatX' && metric.key === 'x') {
-      const ty0 = Math.max(ty + 1, Math.min(by - 1, Y(launchX)));
+    if (mode === 'puzzle' && currentPuzzle && currentPuzzle.target && metric.key === 'x') {
+      const tgt = currentPuzzle.target;
+      const clampY = xv => Math.max(ty + 1, Math.min(by - 1, Y(xv)));
       gx.save();
       gx.strokeStyle = getCss('--accent'); gx.lineWidth = 2.4; gx.setLineDash([7, 5]);
-      gx.beginPath(); gx.moveTo(x0, ty0); gx.lineTo(x1, ty0); gx.stroke();
-      gx.setLineDash([]);
+      gx.beginPath();
+      let labelY;
+      if (tgt === 'flatX') {                       // flat line at the launch position
+        const yy = clampY(launchX); labelY = yy;
+        gx.moveTo(x0, yy); gx.lineTo(x1, yy);
+      } else if (tgt.kind === 'poly') {            // piecewise-linear target shape
+        tgt.pts.forEach((p, i) => { const px = X(p.t), py = clampY(p.x); i ? gx.lineTo(px, py) : gx.moveTo(px, py); });
+        labelY = clampY(tgt.pts[tgt.pts.length - 1].x);
+      }
+      gx.stroke(); gx.setLineDash([]);
       gx.fillStyle = getCss('--accent'); gx.font = handFont(11, 700);
       gx.textAlign = 'right'; gx.textBaseline = 'bottom';
-      gx.fillText('target', x1 - 4, ty0 - 3);
+      gx.fillText('target', x1 - 4, labelY - 3);
       gx.restore();
     }
   }
@@ -1367,9 +1376,13 @@ const PUZZLES = {
   position: [
     { id: 'pos1', metric: 'position', name: 'Hold Still', stars: 1, goal: 'Make a flat position graph — keep the ball from moving.', target: 'flatX' },
     { id: 'pos2', metric: 'position', name: 'Puzzle 2', stars: 1 },
-    { id: 'pos3', metric: 'position', name: 'Puzzle 3', stars: 2 },
+    { id: 'pos3', metric: 'position', name: 'Gear Down', stars: 2, unlocked: true,
+      goal: 'Match the line: fast, then slower. (A speed cut drops the slope.)',
+      target: { kind: 'poly', pts: [{ t: 0, x: 0 }, { t: 1, x: 3 }, { t: 5, x: 7 }] } },
     { id: 'pos4', metric: 'position', name: 'Puzzle 4', stars: 2 },
-    { id: 'pos5', metric: 'position', name: 'Puzzle 5', stars: 3 },
+    { id: 'pos5', metric: 'position', name: 'There & Back', stars: 3, unlocked: true,
+      goal: 'Match the line: out, then back. (A target-speed sign can send the ball the other way.)',
+      target: { kind: 'poly', pts: [{ t: 0, x: 1 }, { t: 3, x: 7 }, { t: 5, x: 1 }] } },
     { id: 'pos6', metric: 'position', name: 'Puzzle 6', stars: 3 },
   ],
   velocity: [
@@ -1384,7 +1397,15 @@ const PUZZLES = {
 const solvedPuzzles = new Set();
 try { (JSON.parse(localStorage.getItem('launcher-puzzles') || '[]')).forEach(id => solvedPuzzles.add(id)); } catch (e) {}
 function savePuzzles() { try { localStorage.setItem('launcher-puzzles', JSON.stringify([...solvedPuzzles])); } catch (e) {} }
-function puzzleUnlocked(list, i) { return i === 0 || solvedPuzzles.has(list[i - 1].id); }
+function puzzleUnlocked(list, i) { return !!list[i].unlocked || i === 0 || solvedPuzzles.has(list[i - 1].id); }
+// linear-interpolate a polyline target's position at time tt (clamped to the ends)
+function interpPoly(pts, tt) {
+  if (tt <= pts[0].t) return pts[0].x;
+  for (let i = 1; i < pts.length; i++) {
+    if (tt <= pts[i].t) { const a = pts[i - 1], b = pts[i]; return a.x + (b.x - a.x) * (tt - a.t) / (b.t - a.t); }
+  }
+  return pts[pts.length - 1].x;
+}
 function stars(n) { return '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
 
 function renderPuzzles() {
@@ -1418,7 +1439,7 @@ function updatePuzzleStatus() {
 function selectPuzzle(p) {
   currentPuzzle = p; graphType = p.metric; puzzleGraded = false;
   renderPuzzles(); updatePuzzleStatus();
-  if (!running) resetRun(); else drawGraph();
+  resetRun();   // switching puzzles always starts from a clean track
 }
 
 function gradePuzzle() {
@@ -1426,16 +1447,24 @@ function gradePuzzle() {
     if (currentPuzzle && solvedPuzzles.has(currentPuzzle.id)) puzzleGraded = true;
     return;
   }
-  if (currentPuzzle.target === 'flatX') {
-    const win = AXES.position.t;                       // grade once the 5 s window is filled
-    const s = balls[0].samples.filter(p => p.t <= win);
-    if (!s.length || s[s.length - 1].t < win - 0.05) return;
-    puzzleGraded = true;
+  const win = AXES.position.t;                         // grade once the 5 s window is filled
+  const s = balls[0].samples.filter(p => p.t <= win);
+  if (!s.length || s[s.length - 1].t < win - 0.05) return;
+  puzzleGraded = true;
+  const tgt = currentPuzzle.target;
+  let pass = false;
+  if (tgt === 'flatX') {                               // position stays nearly flat
     let lo = Infinity, hi = -Infinity;
     for (const p of s) { if (p.x < lo) lo = p.x; if (p.x > hi) hi = p.x; }
-    if (hi - lo <= 1.0) { solvedPuzzles.add(currentPuzzle.id); savePuzzles(); renderPuzzles(); updatePuzzleStatus(); }
+    pass = (hi - lo <= 1.0);
+  } else if (tgt.kind === 'poly') {                    // position tracks the target shape
+    let maxDev = 0;
+    for (const p of s) maxDev = Math.max(maxDev, Math.abs(p.x - interpPoly(tgt.pts, p.t)));
+    pass = (maxDev <= PUZZLE_TOL);
   }
+  if (pass) { solvedPuzzles.add(currentPuzzle.id); savePuzzles(); renderPuzzles(); updatePuzzleStatus(); }
 }
+const PUZZLE_TOL = 0.9;   // max position deviation (m) allowed when matching a target line
 
 function setMode(m) {
   mode = m;
