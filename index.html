@@ -837,27 +837,25 @@ function drawGraph() {
       gx.strokeStyle = b.color; gx.beginPath();
       b.samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[metric.key]); i ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); });
       gx.stroke();
-      if (!replaying) {   // live runs get an end dot; replay uses the moving marble below
-        const last = b.samples[b.samples.length - 1];
-        gx.fillStyle = b.color; gx.beginPath(); gx.arc(X(last.t), Y(last[metric.key]), 4.5, 0, Math.PI * 2); gx.fill();
-      }
     }
     gx.restore();
 
-    // start-value marbles: the launch settings (position / speed) at t = 0
-    const mx = X(0);
-    const launchV = (running || replaying) ? v0 : (parseInt(speedEl.value, 10) || 0);
-    const marks = [{ val: metric.key === 'v' ? launchV : launchX, color: getCss('--ball') }];
-    for (const sb of secondBalls) marks.push({ val: metric.key === 'v' ? 0 : sb.x, color: getCss('--ball2') });
-    for (const m of marks) drawMarbleAt(gx, mx, Math.max(ty + 6, Math.min(by - 6, Y(m.val))), 6.5, m.color);
-
-    // moving marble: the ball running along the (now static) graph during replay
-    if (replaying) {
+    // Marbles on the graph. Before a run: start-value marbles at t = 0 (the launch settings).
+    // While the sim is collecting data: one marble riding the head of each curve (gone the
+    // moment collection stops — offscreen or timed out — leaving just the finished curve).
+    if (running) {
       for (const b of balls) {
-        const cx = Math.max(x0, Math.min(x1, X(t)));
-        const cy = Math.max(ty + 6, Math.min(by - 6, Y(b[metric.key])));
+        const last = b.samples[b.samples.length - 1];
+        const cx = replaying ? Math.max(x0, Math.min(x1, X(t))) : X(last.t);
+        const cy = Math.max(ty + 6, Math.min(by - 6, Y(replaying ? b[metric.key] : last[metric.key])));
         drawMarbleAt(gx, cx, cy, 6.5, b.color);
       }
+    } else if (!replaying && !(balls[0] && balls[0].samples.length >= 2)) {
+      const mx = X(0);
+      const launchV = parseInt(speedEl.value, 10) || 0;
+      const marks = [{ val: metric.key === 'v' ? launchV : launchX, color: getCss('--ball') }];
+      for (const sb of secondBalls) marks.push({ val: metric.key === 'v' ? 0 : sb.x, color: getCss('--ball2') });
+      for (const m of marks) drawMarbleAt(gx, mx, Math.max(ty + 6, Math.min(by - 6, Y(m.val))), 6.5, m.color);
     }
 
     // puzzle target overlay: the goal graph the player is trying to match
