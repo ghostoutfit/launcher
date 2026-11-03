@@ -23,7 +23,6 @@
     --ball: #ff6b57;
     --ball2: #3b9eff;
     --boost: #4ade80;
-    --cut: #ef5350;
     --fric: #e08a5a;
     --wall: #aab4c2;
     --target: #b98cff;
@@ -164,7 +163,6 @@
   .chip.ball2.disabled .ctxt b { color: var(--muted); }
   .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
   .chip.boost .ico { background: var(--boost); color: #063; }
-  .chip.cut .ico { background: var(--cut); color: #4a0a0a; }
   .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
   .chip.wall .ico { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
   .chip.target .ico { background: var(--target); color: #231141; font-size: 16px; }
@@ -267,12 +265,8 @@
       <div id="palette" class="panel">
         <div class="ptitle">Track pieces</div>
         <div class="chip boost" data-piece="boost">
-          <div class="ico">+4</div>
-          <div class="ctxt"><b>Speed boost</b></div>
-        </div>
-        <div class="chip cut" data-piece="cut">
-          <div class="ico">−4</div>
-          <div class="ctxt"><b>Speed cut</b></div>
+          <div class="ico">±</div>
+          <div class="ctxt"><b>Speed change</b></div>
         </div>
         <div class="chip target" data-piece="target">
           <div class="ico">⇄</div>
@@ -309,7 +303,7 @@
 const TRACK_LEN = 20;
 const BALL_R    = 0.28;
 let   FRICTION_DECEL = 5;     // deceleration under friction (m/s^2) — dev-tunable
-const BOOST_DV  = 4;          // speed boost / cut (m/s)
+const BOOST_DV  = 4;          // speed change pad: starting value (m/s); the pad's ± buttons step it by TARGET_STEP
 const FRIC_LEN  = 2;          // friction patch length (m)
 const TARGET_STEP = 2;        // target-speed increment (m/s)
 const TARGET_MAX  = 12;       // max target-speed magnitude (m/s)
@@ -344,8 +338,7 @@ const AXES = {
 };
 
 // Placed track pieces
-let boosts = [];             // {id, x, dv, used}  — speed boost (+dv)
-let cuts = [];               // {id, x, dv, used}  — speed cut (−dv)
+let boosts = [];             // {id, x, dv, used}  — speed change pad (dv may be + or −)
 let fricZones = [];          // {id, x, len}
 let walls = [];              // {id, x}
 let targets = [];            // {id, x, mag, dir, time, used}  — target-speed gates
@@ -449,12 +442,9 @@ function step(dt) {
       v = vNew; g.used = true; g._shake = 1;    // kick off the tube's shake
       continue;
     }
-    // speed boost (+ΔV)
+    // speed change pad (+ΔV or −ΔV)
     const b = firstCrossed(boosts, x, nx, true);
     if (b) { x = b.x; v += b.dv; b.used = true; b._shake = 1; continue; }
-    // speed cut (−ΔV)
-    const c = firstCrossed(cuts, x, nx, true);
-    if (c) { x = c.x; v -= c.dv; c.used = true; c._shake = 1; continue; }
     x = nx;
     // the right/left edges are NOT walls: let the ball coast offscreen and keep going
   }
@@ -483,7 +473,6 @@ function doLaunch(vLaunch, xLaunch, rate, isReplay) {
   v0 = vLaunch; launchX = xLaunch; playbackRate = rate;
   replaying = !!isReplay; runCaptured = false; puzzleGraded = false;
   boosts.forEach(b => { b.used = false; b._shake = 0; });
-  cuts.forEach(c => { c.used = false; c._shake = 0; });
   targets.forEach(g => { g.used = false; g._shake = 0; });
   heldGate = null;
   buildBalls(v0, launchX);
@@ -508,7 +497,7 @@ function resetRun() {
   launchX = posEl ? parseInt(posEl.value, 10) : 0;
   running = false; replaying = false; lastTrace = null; runCaptured = false;
   ballStopped = false; t = 0; x = launchX; v = 0;
-  targets.forEach(g => g._shake = 0); boosts.forEach(b => b._shake = 0); cuts.forEach(c => c._shake = 0);
+  targets.forEach(g => g._shake = 0); boosts.forEach(b => b._shake = 0);
   heldGate = null;
   buildBalls(0, launchX); movingBall = null;
   launchBtn.disabled = false;
@@ -530,7 +519,7 @@ function frame(now) {
     }
     if (!ballStopped) step(dt);           // the moving ball halts at a wall, but time marches on
     if (movingBall) { movingBall.x = x; movingBall.v = v; if (ballStopped) movingBall.moving = false; }
-    for (const el of [...targets, ...boosts, ...cuts]) { if (el._shake) { el._shake *= 0.85; if (el._shake < 0.02) el._shake = 0; } }
+    for (const el of [...targets, ...boosts]) { if (el._shake) { el._shake *= 0.85; if (el._shake < 0.02) el._shake = 0; } }
     // record every ball's trajectory so each can be graphed on the same axes
     for (const b of balls) {
       const prev = b.samples[b.samples.length - 1];
@@ -615,9 +604,8 @@ function drawScene() {
     sx.fillStyle = getCss('--ink'); sx.fillText(m + ' m', gxp, gY + 24);
   }
 
-  // speed boosts (+dv) and speed cuts (−dv) — identical pads, opposite sign
-  for (const b of boosts) drawPad(b, getCss('--boost'), '#06381f', '+');
-  for (const c of cuts)   drawPad(c, getCss('--cut'),   '#4a0a0a', '−');
+  // speed change pads (+dv or −dv) — always green
+  for (const b of boosts) drawPad(b, getCss('--boost'), '#06381f', b.dv < 0 ? '−' : '+');
 
   // target-speed launchers — draw the sign here; the tube is drawn after the balls
   const tCol = getCss('--target');
@@ -716,7 +704,7 @@ function drawScene() {
   }
 }
 
-// A push pad (boost +dv / cut −dv): a pad on the ground + a sign whose +/- row sits above the
+// A push pad (speed change, +dv or −dv): a pad on the ground + a sign whose +/- row sits above the
 // value. The pad jiggles (half the target's shake) when it fires. sgn is '+' or '−'.
 function drawPad(el, col, fgDark, sgn) {
   const gY = groundY();
@@ -741,10 +729,11 @@ function drawPad(el, col, fgDark, sgn) {
   const minus = miniBtn(BX + 13, BY + 30, 9, '–', col, INK);
   const plus  = miniBtn(BX + bw - 13, BY + 30, 9, '+', col, INK);
   sx.fillStyle = fgDark;
-  sx.font = handFont(15, 800); const nw = sx.measureText('' + el.dv).width;
+  const dvTxt = (el.dv < 0 ? '−' : '+') + Math.abs(el.dv);
+  sx.font = handFont(15, 800); const nw = sx.measureText(dvTxt).width;
   sx.font = handFont(10, 700); const uw = sx.measureText(' m/s').width;
   const gx0 = bx - (nw + uw) / 2; sx.textAlign = 'left';
-  sx.font = handFont(15, 800); sx.fillText(el.dv, gx0, BY + 31);
+  sx.font = handFont(15, 800); sx.fillText(dvTxt, gx0, BY + 31);
   sx.font = handFont(10, 700); sx.fillText(' m/s', gx0 + nw, BY + 31);
   sx.textAlign = 'center'; sx.textBaseline = 'alphabetic';
   el._ui = { minus, plus };
@@ -1031,9 +1020,9 @@ function applyTargetControl(c) {
   else if (c.kind === 'timePlus') g.time = clamp(+(g.time + 0.5).toFixed(1), 0, RUN_TIME_CAP);
 }
 
-// +/- steppers on a boost or cut sign
+// +/- steppers on a speed change sign
 function hitPadControl(mx, my) {
-  for (const el of [...boosts, ...cuts]) {
+  for (const el of boosts) {
     const u = el._ui; if (!u) continue;
     if (inCircle(mx, my, u.minus)) return { el, kind: 'minus' };
     if (inCircle(mx, my, u.plus)) return { el, kind: 'plus' };
@@ -1041,7 +1030,10 @@ function hitPadControl(mx, my) {
   return null;
 }
 function applyPadControl(c) {
-  c.el.dv = clamp(c.el.dv + (c.kind === 'plus' ? TARGET_STEP : -TARGET_STEP), TARGET_STEP, TARGET_MAX);
+  const dir = c.kind === 'plus' ? TARGET_STEP : -TARGET_STEP;
+  let nv = clamp(c.el.dv + dir, -TARGET_MAX, TARGET_MAX);
+  if (nv === 0) nv = dir;                               // a 0 m/s change does nothing — step past it
+  c.el.dv = nv;
 }
 
 function hitPiece(mx, my) {
@@ -1057,8 +1049,6 @@ function hitPiece(mx, my) {
     return { type: 'wall', el: wl };
   for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 22 && my >= gY - 17 && my <= gY + 6 || inBox(mx, my, b._sign))
     return { type: 'boost', el: b };
-  for (const c of cuts) if (Math.abs(mToPx(c.x) - mx) < 22 && my >= gY - 17 && my <= gY + 6 || inBox(mx, my, c._sign))
-    return { type: 'cut', el: c };
   // second balls: grab the sphere itself
   const br = Math.max(12, (BALL_R / TRACK_LEN) * (sceneDims().w - PAD_L - PAD_R) * 1.25);
   for (const bb of secondBalls) if (Math.abs(mToPx(bb.x) - mx) < br + 3 && my >= gY - 2 * br - 4 && my <= gY + 6)
@@ -1078,7 +1068,6 @@ function hitPiece(mx, my) {
 function makeGhost(piece) {
   const g = document.createElement('div'); g.id = 'dragGhost';
   if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
-  else if (piece === 'cut') { g.textContent = '−' + BOOST_DV + ' m/s'; g.style.background = getCss('--cut'); g.style.color = '#4a0a0a'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
   else if (piece === 'target') { g.textContent = '▶ 6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
   else if (piece === 'ball2') { g.textContent = '● ball'; g.style.background = getCss('--ball'); g.style.color = '#2a0f0a'; }
@@ -1090,7 +1079,6 @@ function moveGhost(g, cx, cy) { g.style.left = cx + 'px'; g.style.top = cy + 'px
 const snap = m => Math.round(m);   // placement snaps to 1 m increments
 function placePiece(type, m) {
   if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), dv: BOOST_DV, used: false });
-  else if (type === 'cut') cuts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), dv: BOOST_DV, used: false });
   else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
   else if (type === 'target') { const g = { id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
   else if (type === 'ball2') { if (secondBalls.length >= 1) return; secondBalls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) }); refreshBall2Chip(); }
@@ -1208,7 +1196,6 @@ window.addEventListener('pointerup', e => {
 
 function deletePiece(piece, el) {
   if (piece === 'boost') boosts = boosts.filter(b => b !== el);
-  else if (piece === 'cut') cuts = cuts.filter(c => c !== el);
   else if (piece === 'wall') walls = walls.filter(w => w !== el);
   else if (piece === 'target') targets = targets.filter(g => g !== el);
   else if (piece === 'ball2') { secondBalls = secondBalls.filter(b => b !== el); refreshBall2Chip(); }
@@ -1239,7 +1226,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   replaySlowBtn.disabled = true; replayFastBtn.disabled = true;
   resetRun();
 });
-document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; cuts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
+document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
 window.addEventListener('resize', () => { drawScene(); drawGraph(); });
 
 // ─── Light / dark theme (light by default) ──────────────────────────────────────
@@ -1262,7 +1249,7 @@ applyTheme(theme);
 // ─── Delete confirmation (double-click a piece) ─────────────────────────────────
 const dcEl = document.getElementById('deleteConfirm');
 const dcName = document.getElementById('dcName');
-const PIECE_NAMES = { boost: 'speed boost', cut: 'speed cut', wall: 'wall', target: 'target speed', friction: 'friction patch', ball2: 'second ball' };
+const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction patch', ball2: 'second ball' };
 function openDeleteConfirm(piece, el, cx, cy) {
   confirmPiece = { piece, el };
   dcName.textContent = PIECE_NAMES[piece] || 'piece';
