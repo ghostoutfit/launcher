@@ -65,8 +65,6 @@
   #main { flex: 1; min-width: 320px; }
   #sidebar { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
   #palette { padding: 11px; }
-  #energyPanel { padding: 11px; }
-  #energyPanel #energy { display: block; width: 100%; height: 200px; }
 
   /* Controls bar */
   #controls {
@@ -152,7 +150,7 @@
   #graph { display: block; width: 100%; height: 250px; }
   @media (max-width: 720px) { #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
-  /* Palette + energy panel */
+  /* Palette */
   .ptitle { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
   .chip {
     display: flex; align-items: center; gap: 10px;
@@ -294,11 +292,6 @@
         </div>
         <button id="clearBtn">Clear track</button>
       </div>
-
-      <div id="energyPanel" class="panel">
-        <div class="ptitle">Energy (J)</div>
-        <canvas id="energy"></canvas>
-      </div>
     </div>
   </div>
 </div>
@@ -336,11 +329,9 @@ let lastTrace = null;           // [{color, samples}] — the completed run kept
 let runCaptured = false;        // whether lastTrace has been captured for the current (fresh) run
 let running = false, ballStopped = false, t = 0;
 let v = 0, x = 0;             // live state of whichever ball is currently moving
-let thermal = 0;             // energy lost to friction + impact (J)
 let balls = [];              // every ball: {launcher, x, v, moving, color, d, samples:[{t,x,v,d}]}
 let movingBall = null;       // the one ball currently in motion (null when all at rest)
 let heldGate = null;         // a timed target holding the ball in its tube until its trigger time
-let energyMax = 1;           // y-scale for the energy chart (J)
 let lastFrame = 0;
 
 const ke = () => 0.5 * MASS * v * v;
@@ -371,8 +362,6 @@ const sceneC = document.getElementById('scene');
 const sx = sceneC.getContext('2d');
 const graphC = document.getElementById('graph');
 const gx = graphC.getContext('2d');
-const energyC = document.getElementById('energy');
-const ex = energyC.getContext('2d');
 const speedEl = document.getElementById('speed');
 const speedVal = document.getElementById('speedVal');
 const posEl = document.getElementById('pos');
@@ -431,17 +420,15 @@ function step(dt) {
   for (let i = 0; i < sub && !ballStopped; i++) {
     // friction opposes motion (works in either direction)
     const decel = onFrictionZone(x) ? FRICTION_DECEL : 0;
-    const vBefore = v;
     if (decel > 0 && v !== 0) {
       const s = Math.sign(v), nv = v - s * decel * h;
       v = (Math.sign(nv) !== s) ? 0 : nv;
     }
-    thermal += 0.5 * MASS * (vBefore * vBefore - v * v);   // friction work → heat
     if (Math.abs(v) <= 1e-4) { v = 0; ballStopped = true; break; }
     const nx = x + v * h;
     // wall: stop dead on impact (either direction), dumping remaining KE to heat
     const wl = firstCrossed(walls, x, nx, false);
-    if (wl) { x = wl.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; break; }
+    if (wl) { x = wl.x; v = 0; ballStopped = true; break; }
     // second ball: equal-mass elastic hit → this ball stops dead, the other takes its speed
     const hit = firstBallHit(x, nx);
     if (hit) {
@@ -455,20 +442,19 @@ function step(dt) {
     const g = firstCrossed(targets, x, nx, true);
     if (g) {
       if (g.time != null && t < g.time) {       // too early → the tube holds the ball until its time
-        x = g.x; thermal += 0.5 * MASS * v * v; v = 0; ballStopped = true; heldGate = g; break;
+        x = g.x; v = 0; ballStopped = true; heldGate = g; break;
       }
       x = g.x;
       const vNew = g.dir * g.mag;
-      thermal += Math.max(0, 0.5 * MASS * (v * v - vNew * vNew));  // only a slow-down adds heat
       v = vNew; g.used = true; g._shake = 1;    // kick off the tube's shake
       continue;
     }
     // speed boost (+ΔV)
     const b = firstCrossed(boosts, x, nx, true);
     if (b) { x = b.x; v += b.dv; b.used = true; b._shake = 1; continue; }
-    // speed cut (−ΔV) — the lost kinetic energy goes to heat
+    // speed cut (−ΔV)
     const c = firstCrossed(cuts, x, nx, true);
-    if (c) { x = c.x; const vb = v; v -= c.dv; thermal += Math.max(0, 0.5 * MASS * (vb * vb - v * v)); c.used = true; c._shake = 1; continue; }
+    if (c) { x = c.x; v -= c.dv; c.used = true; c._shake = 1; continue; }
     x = nx;
     // the right/left edges are NOT walls: let the ball coast offscreen and keep going
   }
@@ -502,9 +488,8 @@ function doLaunch(vLaunch, xLaunch, rate, isReplay) {
   heldGate = null;
   buildBalls(v0, launchX);
   movingBall = balls[0]; movingBall.moving = true;
-  running = true; ballStopped = false; t = 0; x = launchX; v = v0; thermal = 0;
+  running = true; ballStopped = false; t = 0; x = launchX; v = v0;
   seedSamples();
-  energyMax = Math.max(1e-6, ke());
   lastFrame = performance.now();
   launchBtn.disabled = true;
   lastRun = { v0, x0: launchX };
@@ -522,12 +507,12 @@ function replay(rate) {
 function resetRun() {
   launchX = posEl ? parseInt(posEl.value, 10) : 0;
   running = false; replaying = false; lastTrace = null; runCaptured = false;
-  ballStopped = false; t = 0; x = launchX; v = 0; thermal = 0; energyMax = 1;
+  ballStopped = false; t = 0; x = launchX; v = 0;
   targets.forEach(g => g._shake = 0); boosts.forEach(b => b._shake = 0); cuts.forEach(c => c._shake = 0);
   heldGate = null;
   buildBalls(0, launchX); movingBall = null;
   launchBtn.disabled = false;
-  drawScene(); drawGraph(); drawEnergy();
+  drawScene(); drawGraph();
 }
 
 // ─── Main loop ────────────────────────────────────────────────────────────────
@@ -552,7 +537,6 @@ function frame(now) {
       b.d = prev.d + Math.abs(b.x - prev.x);
       b.samples.push({ t, x: b.x, v: b.v, d: b.d });
     }
-    if (ke() + thermal > energyMax) energyMax = ke() + thermal;
     if (mode === 'puzzle' && !replaying) gradePuzzle();
     // marble left the screen: stop collecting data and freeze the graph where it ended
     // (no flat extension), leaving the replay buttons ready
@@ -573,7 +557,7 @@ function frame(now) {
         if (!replaying) { lastTrace = snapshotTrace(); runCaptured = true; }
       }
     }
-    drawScene(); drawGraph(); drawEnergy();
+    drawScene(); drawGraph();
   }
   requestAnimationFrame(frame);
 }
@@ -925,45 +909,6 @@ function drawGraph() {
   }
 }
 
-// ─── Energy bar charts (KE, TH) ─────────────────────────────────────────────
-function drawEnergy() {
-  const { w, h, dpr } = fit(energyC);
-  ex.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ex.clearRect(0, 0, w, h);
-
-  const hasRun = balls.length && balls[0].samples.length > 0;
-  const keV = hasRun ? ke() : 0, thV = hasRun ? thermal : 0;
-  const eMax = Math.max(1e-6, energyMax);
-
-  const padT = 22, padB = 40, baseY = h - padB, topY = padT;
-  const plotH = baseY - topY;
-  const bars = [
-    { lab: 'KE', val: keV, col: getCss('--accent'), sub: 'kinetic' },
-    { lab: 'TH', val: thV, col: getCss('--fric'),   sub: 'thermal' },
-  ];
-  const n = bars.length, slot = w / n, bw = Math.min(42, slot * 0.56);
-
-  // gridlines
-  ex.strokeStyle = getCss('--line'); ex.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) { const yy = baseY - (plotH * i) / 4; ex.beginPath(); ex.moveTo(0, yy); ex.lineTo(w, yy); ex.stroke(); }
-
-  bars.forEach((b, i) => {
-    const cx = slot * (i + 0.5), bh = (clamp(b.val, 0, eMax) / eMax) * plotH;
-    const bx = cx - bw / 2, by = baseY - bh;
-    if (bh > 0.5) { ex.fillStyle = b.col; ex.fillRect(bx, by, bw, bh);
-      ex.strokeStyle = INK; ex.lineWidth = 2; ex.lineJoin = 'round'; ex.strokeRect(bx, by, bw, bh); }
-    // value
-    ex.fillStyle = getCss('--ink'); ex.font = handFont(14, 400);
-    ex.textAlign = 'center'; ex.textBaseline = 'bottom';
-    ex.fillText(b.val.toFixed(1), cx, by - 3);
-    // labels
-    ex.fillStyle = b.col; ex.font = handFont(16, 400); ex.textBaseline = 'top';
-    ex.fillText(b.lab, cx, baseY + 6);
-    ex.fillStyle = getCss('--muted'); ex.font = handFont(12, 400);
-    ex.fillText(b.sub, cx, baseY + 22);
-  });
-}
-
 function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function roundRect(c, x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2);
@@ -1295,7 +1240,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   resetRun();
 });
 document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; cuts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
-window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); });
+window.addEventListener('resize', () => { drawScene(); drawGraph(); });
 
 // ─── Light / dark theme (light by default) ──────────────────────────────────────
 const themeBtn = document.getElementById('themeToggle');
@@ -1303,7 +1248,7 @@ function applyTheme(mode) {
   if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
   themeBtn.textContent = mode === 'dark' ? '☀️' : '🌙';
-  drawScene(); drawGraph(); drawEnergy();
+  drawScene(); drawGraph();
 }
 let theme = 'light';
 try { if (localStorage.getItem('launcher-theme') === 'dark') theme = 'dark'; } catch (e) {}
@@ -1477,7 +1422,7 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 resetRun();
 requestAnimationFrame(frame);
 // redraw once the hand-drawn font has loaded so canvas labels pick it up
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); drawEnergy(); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); });
 </script>
 </body>
 </html>
