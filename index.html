@@ -25,6 +25,7 @@
     --boost: #4ade80;
     --fric: #e08a5a;
     --wall: #aab4c2;
+    --bumper: #f06fa4;
     --target: #b98cff;
     --hand: 'Lexend', system-ui, 'Segoe UI', sans-serif;
   }
@@ -276,7 +277,7 @@
           <div class="ico">▦</div>
           <div class="ctxt"><b>Friction patch</b></div>
         </div>
-        <div class="chip wall" data-piece="wall">
+        <div class="chip wall" data-piece="wall" title="Click a placed wall to make it bouncy">
           <div class="ico">█</div>
           <div class="ctxt"><b>Wall</b></div>
         </div>
@@ -302,6 +303,12 @@
 // ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
 const TRACK_LEN = 20;
 const BALL_R    = 0.28;
+const WALL_HW   = 0.25;       // wall half-thickness (m) — drawn width is 2*WALL_HW
+const BALL_VR   = 0.35;       // drawn ball radius (m)
+// A wall's x is where the BALL'S CENTER sits when it hits from the left (always an integer, since
+// x snaps to 1 m). The wall body stands WALL_D further right, so the ball touches its face
+// instead of overlapping it. From the right the ball stops at x + 2*WALL_D.
+const WALL_D    = WALL_HW + BALL_VR;
 let   FRICTION_DECEL = 5;     // deceleration under friction (m/s^2) — dev-tunable
 const BOOST_DV  = 4;          // speed change pad: starting value (m/s); the pad's ± buttons step it by TARGET_STEP
 const FRIC_LEN  = 2;          // friction patch length (m)
@@ -340,7 +347,7 @@ const AXES = {
 // Placed track pieces
 let boosts = [];             // {id, x, dv, used}  — speed change pad (dv may be + or −)
 let fricZones = [];          // {id, x, len}
-let walls = [];              // {id, x}
+let walls = [];              // {id, x, bouncy}  — x is the ball's contact position (see WALL_D)
 let targets = [];            // {id, x, mag, dir, time, used}  — target-speed gates
 let secondBalls = [];        // {id, x}  — stationary balls that get hit (equal-mass swap)
 let pieceId = 1;
@@ -395,6 +402,16 @@ function firstCrossed(arr, a, b, activeOnly) {
   }
   return hit;
 }
+// Nearest wall face the ball's center reaches between a and b → { wall, cp } (cp = center at contact).
+function firstWallHit(a, b) {
+  const s = Math.sign(b - a); if (!s) return null;
+  let hit = null;
+  for (const wall of walls) {
+    const cp = s > 0 ? wall.x : wall.x + 2 * WALL_D;
+    if (crossed(cp, a, b) && (!hit || Math.abs(cp - a) < Math.abs(hit.cp - a))) hit = { wall, cp };
+  }
+  return hit;
+}
 // Nearest resting ball the moving ball reaches between a and b. Contact is when the
 // centers are one diameter apart, so the contact point sits just short of the ball.
 function firstBallHit(a, b) {
@@ -419,9 +436,14 @@ function step(dt) {
     }
     if (Math.abs(v) <= 1e-4) { v = 0; ballStopped = true; break; }
     const nx = x + v * h;
-    // wall: stop dead on impact (either direction), dumping remaining KE to heat
-    const wl = firstCrossed(walls, x, nx, false);
-    if (wl) { x = wl.x; v = 0; ballStopped = true; break; }
+    // wall: the ball's center reaches the wall face (x going right, x + 2*WALL_D going left).
+    // Plain walls stop it dead; bouncy walls reflect it at the same speed.
+    const wh = firstWallHit(x, nx);
+    if (wh) {
+      x = wh.cp;
+      if (wh.wall.bouncy) { v = -v; continue; }
+      v = 0; ballStopped = true; break;
+    }
     // second ball: equal-mass elastic hit → this ball stops dead, the other takes its speed
     const hit = firstBallHit(x, nx);
     if (hit) {
@@ -664,10 +686,11 @@ function drawScene() {
               dirL, dirR, minus, plus, tMinus, tPlus, tToggle, timed };
   }
 
-  // walls — a chunky brick wall standing on the surface
-  const wallCol = getCss('--wall');
+  // walls — a chunky brick wall standing on the surface (pink = bouncy)
   for (const wl of walls) {
-    const wx = mToPx(wl.x), ww = 22, wT = gY - 48, wh = gY - wT, wl0 = wx - ww / 2;
+    const wallCol = getCss(wl.bouncy ? '--bumper' : '--wall');
+    const ppm = (sceneDims().w - PAD_L - PAD_R) / TRACK_LEN;
+    const wx = mToPx(wl.x + WALL_D), ww = Math.max(14, 2 * WALL_HW * ppm), wT = gY - 48, wh = gY - wT, wl0 = wx - ww / 2;
     roundRect(sx, wl0, wT, ww, wh, 5); sx.fillStyle = wallCol; sx.fill();
     // flat shade block down the right third
     sx.save(); roundRect(sx, wl0, wT, ww, wh, 5); sx.clip();
@@ -1043,7 +1066,7 @@ function hitPiece(mx, my) {
       return { type: 'target', el: g };
   }
   // walls & boosts: their body on the ground, or their floating sign
-  for (const wl of walls) if (Math.abs(mToPx(wl.x) - mx) < 14 && my >= gY - 50 && my <= gY + 6 || inBox(mx, my, wl._sign))
+  for (const wl of walls) if (Math.abs(mToPx(wl.x + WALL_D) - mx) < 14 && my >= gY - 50 && my <= gY + 6 || inBox(mx, my, wl._sign))
     return { type: 'wall', el: wl };
   for (const b of boosts) if (Math.abs(mToPx(b.x) - mx) < 22 && my >= gY - 17 && my <= gY + 6 || inBox(mx, my, b._sign))
     return { type: 'boost', el: b };
@@ -1077,7 +1100,7 @@ function moveGhost(g, cx, cy) { g.style.left = cx + 'px'; g.style.top = cy + 'px
 const snap = m => Math.round(m);   // placement snaps to 1 m increments
 function placePiece(type, m) {
   if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), dv: BOOST_DV, used: false });
-  else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) });
+  else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m - WALL_D), 0, TRACK_LEN - 1), bouncy: false });
   else if (type === 'target') { const g = { id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
   else if (type === 'ball2') { if (secondBalls.length >= 1) return; secondBalls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) }); refreshBall2Chip(); }
   else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
@@ -1149,6 +1172,7 @@ window.addEventListener('pointermove', e => {
     const r = sceneC.getBoundingClientRect();
     const m = pxToM(e.clientX - r.left);
     if (drag.piece === 'friction') drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
+    else if (drag.piece === 'wall') drag.el.x = clamp(snap(m - WALL_D), 0, TRACK_LEN - 1);
     else drag.el.x = clamp(snap(m), 0, TRACK_LEN);
     if (!running) { resetRun(); } else { drawScene(); }
   } else if (drag.kind === 'resize') {
@@ -1181,6 +1205,7 @@ window.addEventListener('pointerup', e => {
     } else if (!drag.moved) {
       // a click (no drag) on a piece — double-click asks to delete it
       const piece = drag.piece, el = drag.el, now = performance.now();
+      if (piece === 'wall') { el.bouncy = !el.bouncy; if (!running) resetRun(); else drawScene(); }   // click toggles bouncy
       if (lastClick && lastClick.el === el && now - lastClick.time < 400) {
         lastClick = null;
         openDeleteConfirm(piece, el, e.clientX, e.clientY);
