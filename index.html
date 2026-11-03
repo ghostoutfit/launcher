@@ -483,11 +483,11 @@ function buildBalls(launchV, x0) {
 function seedSamples() { for (const b of balls) b.samples = [{ t: 0, x: b.x, v: b.v, d: 0 }]; }
 // Snapshot the current trajectories as the static curve to keep on screen during
 // replay, flat-extended to the right edge so the curve spans the whole time axis.
-function snapshotTrace() {
+function snapshotTrace(extend = true) {
   return balls.map(b => {
     const s = b.samples.slice();
     const last = s[s.length - 1];
-    if (last && last.t < RUN_TIME_CAP) s.push({ t: RUN_TIME_CAP, x: last.x, v: last.v, d: last.d });
+    if (extend && last && last.t < RUN_TIME_CAP) s.push({ t: RUN_TIME_CAP, x: last.x, v: last.v, d: last.d });
     return { color: b.color, samples: s };
   });
 }
@@ -554,16 +554,24 @@ function frame(now) {
     }
     if (ke() + thermal > energyMax) energyMax = ke() + thermal;
     if (mode === 'puzzle' && !replaying) gradePuzzle();
-    // free to relaunch once the ball is truly at rest (not merely held by a tube) or offscreen
-    if ((ballStopped && !heldGate) || x > TRACK_LEN) {
-      launchBtn.disabled = false;
-      // once a fresh run's motion is done, keep its curve so replay can re-trace it
-      if (!replaying && !runCaptured) { lastTrace = snapshotTrace(); runCaptured = true; }
-    }
-    // run ends when the graph's time axis is filled (safety cap otherwise)
-    if (t >= RUN_TIME_CAP || t >= MAX_TIME) {
+    // marble left the screen: stop collecting data and freeze the graph where it ended
+    // (no flat extension), leaving the replay buttons ready
+    if (x > TRACK_LEN || x < 0) {
       running = false; launchBtn.disabled = false;
-      if (!replaying) { lastTrace = snapshotTrace(); runCaptured = true; }
+      replaySlowBtn.disabled = false; replayFastBtn.disabled = false;
+      if (!replaying) { lastTrace = snapshotTrace(false); runCaptured = true; }
+    } else {
+      // free to relaunch once the ball is truly at rest (not merely held by a tube)
+      if (ballStopped && !heldGate) {
+        launchBtn.disabled = false;
+        // once a fresh run's motion is done, keep its curve so replay can re-trace it
+        if (!replaying && !runCaptured) { lastTrace = snapshotTrace(); runCaptured = true; }
+      }
+      // run ends when the graph's time axis is filled (safety cap otherwise)
+      if (t >= RUN_TIME_CAP || t >= MAX_TIME) {
+        running = false; launchBtn.disabled = false;
+        if (!replaying) { lastTrace = snapshotTrace(); runCaptured = true; }
+      }
     }
     drawScene(); drawGraph(); drawEnergy();
   }
