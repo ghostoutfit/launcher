@@ -746,23 +746,23 @@ function drawPad(el, col, fgDark, sgn) {
     const cxp = pxc - 11 + k * 10;
     sx.beginPath(); sx.moveTo(cxp - 4, pyt + 4); sx.lineTo(cxp + 4, pyt + padH / 2); sx.lineTo(cxp - 4, pyt + padH - 4); sx.stroke();
   }
-  // sign: total height = half the target-speed box (82 → 41)
-  const bw = 86, bh = 41, bbot = top - 12, BY = bbot - bh, BX = bx - bw / 2;
+  // sign: three rows — big +/−, the value, then the − / + buttons (own row so the value never covers them)
+  const bw = 86, bh = 62, bbot = top - 12, BY = bbot - bh, BX = bx - bw / 2;
   signPost(bx, bbot, top, col);
   panelShaded(BX, BY, bw, bh, 11, col);
   // Row 1 — a big + or −
   sx.fillStyle = fgDark; sx.textAlign = 'center'; sx.textBaseline = 'middle';
   sx.font = handFont(24, 800); sx.fillText(sgn, bx, BY + 13);
-  // Row 2 — (− button)  value m/s  (+ button)
-  const minus = miniBtn(BX + 13, BY + 30, 9, '–', col, INK);
-  const plus  = miniBtn(BX + bw - 13, BY + 30, 9, '+', col, INK);
+  // Row 2 — value m/s;  Row 3 — (− button) … (+ button)
+  const minus = miniBtn(BX + 13, BY + 49, 9, '–', col, INK);
+  const plus  = miniBtn(BX + bw - 13, BY + 49, 9, '+', col, INK);
   sx.fillStyle = fgDark;
   const dvTxt = (el.dv < 0 ? '−' : '+') + Math.abs(el.dv);
   sx.font = handFont(15, 800); const nw = sx.measureText(dvTxt).width;
   sx.font = handFont(10, 700); const uw = sx.measureText(' m/s').width;
   const gx0 = bx - (nw + uw) / 2; sx.textAlign = 'left';
-  sx.font = handFont(15, 800); sx.fillText(dvTxt, gx0, BY + 31);
-  sx.font = handFont(10, 700); sx.fillText(' m/s', gx0 + nw, BY + 31);
+  sx.font = handFont(15, 800); sx.fillText(dvTxt, gx0, BY + 33);
+  sx.font = handFont(10, 700); sx.fillText(' m/s', gx0 + nw, BY + 33);
   sx.textAlign = 'center'; sx.textBaseline = 'alphabetic';
   el._ui = { minus, plus };
   el._sign = { x: BX, y: BY, w: bw, h: bh };
