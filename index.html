@@ -870,7 +870,7 @@ function drawGraph() {
       for (const b of balls) {
         const last = b.samples[b.samples.length - 1];
         const cx = replaying ? Math.max(x0, Math.min(x1, X(t))) : X(last.t);
-        const cy = Math.max(ty + 6, Math.min(by - 6, Y(replaying ? b[metric.key] : last[metric.key])));
+        const cy = Y(replaying ? b[metric.key] : last[metric.key]);   // centered on the true value, not clamped inside the plot
         drawMarbleAt(gx, cx, cy, 6.5, b.color);
       }
     } else if (!replaying && !(balls[0] && balls[0].samples.length >= 2)) {
@@ -878,7 +878,7 @@ function drawGraph() {
       const launchV = parseInt(speedEl.value, 10) || 0;
       const marks = [{ val: metric.key === 'v' ? launchV : launchX, color: getCss('--ball') }];
       for (const sb of secondBalls) marks.push({ val: metric.key === 'v' ? 0 : sb.x, color: getCss('--ball2') });
-      for (const m of marks) drawMarbleAt(gx, mx, Math.max(ty + 6, Math.min(by - 6, Y(m.val))), 6.5, m.color);
+      for (const m of marks) drawMarbleAt(gx, mx, Y(m.val), 6.5, m.color);
     }
 
     // puzzle target overlay: the goal graph the player is trying to match
