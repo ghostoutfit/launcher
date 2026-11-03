@@ -150,15 +150,6 @@
   #graphRow { display: flex; gap: 14px; align-items: stretch; }
   #graphPlot { position: relative; flex: 1 1 auto; min-width: 0; }
   #graph { display: block; width: 100%; height: 250px; }
-  .axZoom {
-    position: absolute; z-index: 2; font-size: 10.5px; font-weight: 600;
-    padding: 3px 8px; border-radius: 6px; color: var(--muted);
-    background: rgba(20,26,36,0.82); border: 1px solid var(--line);
-  }
-  .axZoom:hover { color: var(--ink); border-color: var(--accent); }
-  .axZoom.on { color: var(--accent); border-color: var(--accent); }
-  #zoomY { top: 2px; left: 2px; }
-  #zoomX { bottom: 30px; right: 4px; }
   @media (max-width: 720px) { #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
   /* Palette + energy panel */
@@ -269,8 +260,6 @@
         <div id="graphRow">
           <div id="graphPlot">
             <canvas id="graph"></canvas>
-            <button id="zoomY" class="axZoom" title="Double the vertical axis (always from zero)">Zoom out</button>
-            <button id="zoomX" class="axZoom" title="Double the time axis (always from zero)">Zoom out</button>
           </div>
         </div>
       </div>
@@ -356,13 +345,12 @@ let lastFrame = 0;
 
 const ke = () => 0.5 * MASS * v * v;
 
-// Fixed graph axes (always from zero). Each axis zooms out (×2) independently.
+// Fixed graph axes (always from zero). Position is always 0–20 m.
 const AXES = {
-  position: { t: 5, y: 10 },
+  position: { t: 5, y: 20 },
   velocity: { t: 5, y: 12 },
   both: { t: 5, yv: 12, yd: 20 },   // velocity (left axis) + distance (right axis)
 };
-let zoomX = false, zoomY = false;
 
 // Placed track pieces
 let boosts = [];             // {id, x, dv, used}  — speed boost (+dv)
@@ -813,8 +801,7 @@ function drawGraph() {
   gx.setTransform(dpr, 0, 0, dpr, 0, 0);
   gx.clearRect(0, 0, w, h);
   const base = AXES[graphType];
-  const tMax = base.t * (zoomX ? 2 : 1);
-  const zy = zoomY ? 2 : 1;
+  const tMax = base.t;
   const padL = 52, padR = 16, padB = 34;
   const x0 = padL, x1 = w - padR;
   const X = tt => x0 + (tt / tMax) * (x1 - x0);
@@ -922,11 +909,11 @@ function drawGraph() {
     const panelH = (h - padT - botPad - 2 * numH - gap) / 2;
     const ty1 = padT, by1 = ty1 + panelH;
     const ty2 = by1 + numH + gap, by2 = ty2 + panelH;
-    drawPanel({ key: 'v', label: 'Velocity', unit: 'm/s', yMax: base.yv * zy }, ty1, by1, { vgrid: true });
-    drawPanel({ key: 'x', label: 'Position', unit: 'm',  yMax: base.yd * zy }, ty2, by2, { vgrid: true });
+    drawPanel({ key: 'v', label: 'Velocity', unit: 'm/s', yMax: base.yv }, ty1, by1, { vgrid: true });
+    drawPanel({ key: 'x', label: 'Position', unit: 'm',  yMax: base.yd }, ty2, by2, { vgrid: true });
   } else {
     const spec = graphSpec();
-    drawPanel({ key: spec.key, label: spec.label, unit: spec.unit, yMax: base.y * zy }, 14, h - padB, { caption: true });
+    drawPanel({ key: spec.key, label: spec.label, unit: spec.unit, yMax: base.y }, 14, h - padB, { caption: true });
   }
 }
 
@@ -1298,19 +1285,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   lastRun = null; lastTrace = null;                       // nothing to replay after a reset
   replaySlowBtn.disabled = true; replayFastBtn.disabled = true;
   resetRun();
-});
-const zoomXBtn = document.getElementById('zoomX'), zoomYBtn = document.getElementById('zoomY');
-zoomXBtn.addEventListener('click', () => {
-  zoomX = !zoomX;
-  zoomXBtn.textContent = zoomX ? 'Zoom in' : 'Zoom out';
-  zoomXBtn.classList.toggle('on', zoomX);
-  drawGraph();
-});
-zoomYBtn.addEventListener('click', () => {
-  zoomY = !zoomY;
-  zoomYBtn.textContent = zoomY ? 'Zoom in' : 'Zoom out';
-  zoomYBtn.classList.toggle('on', zoomY);
-  drawGraph();
 });
 document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; cuts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
 window.addEventListener('resize', () => { drawScene(); drawGraph(); drawEnergy(); });
