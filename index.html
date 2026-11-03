@@ -23,6 +23,7 @@
     --ball: #ff6b57;
     --ball2: #3b9eff;
     --boost: #4ade80;
+    --cut: #ef5350;
     --fric: #e08a5a;
     --wall: #aab4c2;
     --bumper: #f06fa4;
@@ -631,8 +632,8 @@ function drawScene() {
     sx.fillStyle = getCss('--ink'); sx.fillText(m + ' m', gxp, gY + 24);
   }
 
-  // speed change pads (+dv or −dv) — always green
-  for (const b of boosts) drawPad(b, getCss('--boost'), '#06381f', b.dv < 0 ? '−' : '+');
+  // speed change pads: green when adding speed (+dv), red when removing it (−dv)
+  for (const b of boosts) drawPad(b, getCss(b.dv < 0 ? '--cut' : '--boost'), b.dv < 0 ? '#4a0a0a' : '#06381f', b.dv < 0 ? '−' : '+');
 
   // target-speed launchers — draw the sign here; the tube is drawn after the balls
   const tCol = getCss('--target');
@@ -643,7 +644,7 @@ function drawScene() {
     g._tube = { cx: gx2, cy: tcy, L, H, top: tubeTop };
 
     // the sign (fixed size), on a post down to the tube
-    const sw = 90, sh = 82, sbot = tubeTop - 6, sTop = sbot - sh, X = gx2 - sw / 2, Y = sTop;
+    const sw = 112, sh = 82, sbot = tubeTop - 6, sTop = sbot - sh, X = gx2 - sw / 2, Y = sTop;
     signPost(gx2, sbot, tubeTop + 2, tCol);
     panel3D(X, Y, sw, sh, 12, tCol);
     sx.textAlign = 'center'; sx.textBaseline = 'middle';
@@ -680,9 +681,13 @@ function drawScene() {
     } else {
       tMinus = miniBtn(X + 14, cy, 7, '–', darken(tCol, 0.05), '#fff');
       tPlus  = miniBtn(X + sw - 14, cy, 7, '+', darken(tCol, 0.05), '#fff');
-      const ts = g.time.toFixed(1) + 's';
-      sx.fillStyle = '#fff'; sx.font = handFont(15, 700); sx.fillText(ts, gx2, cy + 1);
-      tToggle = { x: gx2 - 19, y: cy - 9, w: 38, h: 18 };     // tap to clear the timer
+      // clock icon stays beside the whole-second value; tap the pair to clear the timer
+      const ts = Math.round(g.time) + 's';
+      sx.font = handFont(15, 700); const tw = sx.measureText(ts).width;
+      const gw = 16 + 5 + tw, cx0 = gx2 - gw / 2;
+      drawClock(cx0 + 8, cy, 8, lighten(tCol, 0.5));
+      sx.fillStyle = '#fff'; sx.textAlign = 'left'; sx.fillText(ts, cx0 + 21, cy + 1); sx.textAlign = 'center';
+      tToggle = { x: cx0 - 3, y: cy - 11, w: gw + 6, h: 22 };
     }
 
     sx.textBaseline = 'alphabetic';
@@ -1042,8 +1047,8 @@ function applyTargetControl(c) {
   else if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, TARGET_STEP, TARGET_MAX);
   else if (c.kind === 'magPlus') g.mag = clamp(g.mag + TARGET_STEP, TARGET_STEP, TARGET_MAX);
   else if (c.kind === 'timeToggle') g.time = (g.time == null) ? 2 : null;
-  else if (c.kind === 'timeMinus') g.time = clamp(+(g.time - 0.5).toFixed(1), 0, RUN_TIME_CAP);
-  else if (c.kind === 'timePlus') g.time = clamp(+(g.time + 0.5).toFixed(1), 0, RUN_TIME_CAP);
+  else if (c.kind === 'timeMinus') g.time = clamp(Math.round(g.time) - 1, 0, RUN_TIME_CAP);
+  else if (c.kind === 'timePlus') g.time = clamp(Math.round(g.time) + 1, 0, RUN_TIME_CAP);
 }
 
 // +/- steppers on a speed change sign
@@ -1103,11 +1108,35 @@ function makeGhost(piece) {
 function moveGhost(g, cx, cy) { g.style.left = cx + 'px'; g.style.top = cy + 'px'; }
 
 const snap = m => Math.round(m);   // placement snaps to 1 m increments
+// Pieces (everything except friction patches, which may overlap anything) must stay at least
+// MIN_GAP m apart, measured between their bodies (a wall's body stands WALL_D right of its x).
+const MIN_GAP = 2;
+const bodyX = (piece, x) => piece === 'wall' ? x + WALL_D : x;
+function spacingOk(piece, x, self) {
+  const bx = bodyX(piece, x);
+  const others = [...boosts.map(e => [e, 'boost']), ...walls.map(e => [e, 'wall']), ...targets.map(e => [e, 'target']), ...secondBalls.map(e => [e, 'ball2'])];
+  return others.every(([e, k]) => e === self || Math.abs(bodyX(k, e.x) - bx) >= MIN_GAP - 1e-9);
+}
+// Nearest legal snapped x to `want` (null if the track is too crowded).
+function nearestSlot(piece, want, self) {
+  const hi = piece === 'wall' ? TRACK_LEN - 1 : TRACK_LEN;
+  for (let d = 0; d <= TRACK_LEN; d++) {
+    for (const x of d ? [want - d, want + d] : [want]) {
+      if (x >= 0 && x <= hi && spacingOk(piece, x, self)) return x;
+    }
+  }
+  return null;
+}
 function placePiece(type, m) {
-  if (type === 'boost') boosts.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), dv: BOOST_DV, used: false });
-  else if (type === 'wall') walls.push({ id: pieceId++, x: clamp(snap(m - WALL_D), 0, TRACK_LEN - 1), bouncy: false });
-  else if (type === 'target') { const g = { id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN), mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
-  else if (type === 'ball2') { if (secondBalls.length >= 1) return; secondBalls.push({ id: pieceId++, x: clamp(snap(m), 0, TRACK_LEN) }); refreshBall2Chip(); }
+  if (type !== 'friction') {
+    if (type === 'ball2' && secondBalls.length >= 1) return;
+    const x = nearestSlot(type, clamp(snap(type === 'wall' ? m - WALL_D : m), 0, TRACK_LEN), null);
+    if (x === null) return;                         // no room: nothing is placed
+    if (type === 'boost') boosts.push({ id: pieceId++, x, dv: BOOST_DV, used: false });
+    else if (type === 'wall') walls.push({ id: pieceId++, x, bouncy: false });
+    else if (type === 'target') { const g = { id: pieceId++, x, mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
+    else { secondBalls.push({ id: pieceId++, x }); refreshBall2Chip(); }
+  }
   else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
 }
 
@@ -1205,8 +1234,11 @@ window.addEventListener('pointermove', e => {
     const r = sceneC.getBoundingClientRect();
     const m = pxToM(e.clientX - r.left);
     if (drag.piece === 'friction') drag.el.x = clamp(snap(m - drag.el.len / 2), 0, TRACK_LEN - drag.el.len);
-    else if (drag.piece === 'wall') drag.el.x = clamp(snap(m - WALL_D), 0, TRACK_LEN - 1);
-    else drag.el.x = clamp(snap(m), 0, TRACK_LEN);
+    else {
+      const want = clamp(snap(drag.piece === 'wall' ? m - WALL_D : m), 0, TRACK_LEN);
+      const nx = nearestSlot(drag.piece, want, drag.el);   // stay ≥ MIN_GAP from other pieces
+      if (nx !== null) drag.el.x = nx;
+    }
     if (!running) { resetRun(); } else { drawScene(); }
   } else if (drag.kind === 'resize') {
     const r = sceneC.getBoundingClientRect();
