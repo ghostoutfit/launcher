@@ -682,7 +682,7 @@ function drawScene() {
       tMinus = miniBtn(X + 14, cy, 7, '–', darken(tCol, 0.05), '#fff');
       tPlus  = miniBtn(X + sw - 14, cy, 7, '+', darken(tCol, 0.05), '#fff');
       // clock icon stays beside the whole-second value; tap the pair to clear the timer
-      const ts = Math.round(g.time) + 's';
+      const ts = '@ ' + Math.round(g.time) + 's';
       sx.font = handFont(15, 700); const tw = sx.measureText(ts).width;
       const gw = 16 + 5 + tw, cx0 = gx2 - gw / 2;
       drawClock(cx0 + 8, cy, 8, lighten(tCol, 0.5));
