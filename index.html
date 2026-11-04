@@ -905,8 +905,9 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    for (let i = 0; i <= 5; i++) {
-      const vv = (yMax * i) / 5, yy = Y(vv);
+    const nGrid = metric.key === 'x' ? 4 : 5;   // position: gridlines every 5 m (matches the world's ruler)
+    for (let i = 0; i <= nGrid; i++) {
+      const vv = (yMax * i) / nGrid, yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
       gx.fillStyle = getCss('--muted'); gx.fillText(vv.toFixed(yMax < 4 ? 1 : 0), x0 - 8, yy);
     }
@@ -1484,7 +1485,7 @@ window.addEventListener('pointerdown', e => {
 // ('x' position or 'v' velocity). The rest are placeholders that unlock progressively.
 const PUZZLES = {
   position: [
-    { id: 'pos1', metric: 'position', stars: 1, target: { kind: 'flat', key: 'x', value: 5 } },
+    { id: 'pos1', metric: 'position', stars: 1, target: { kind: 'flat', key: 'x', value: 10 } },
     { id: 'pos2', metric: 'position', stars: 1 },
     { id: 'pos3', metric: 'position', stars: 2, unlocked: true,
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 1, x: 3 }, { t: 5, x: 7 }] } },
@@ -1732,7 +1733,7 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-resetRun();
+setMode('puzzle');   // open on the puzzle menu (also resets the run)
 requestAnimationFrame(frame);
 // redraw once the hand-drawn font has loaded so canvas labels pick it up
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); });
