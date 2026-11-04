@@ -1086,25 +1086,24 @@ function drawGraph() {
 
 // ─── Click the graph to read off a coordinate (integer t and value); click again to clear ──
 let graphPanels = [], graphGeom = null;
-let graphPoint = null;              // { key, t, val }
+let graphPoints = [];               // [{ key, t, val }]
 function drawGraphPoint() {
-  if (!graphPoint) return;
-  const P = graphPanels.find(p => p.key === graphPoint.key); if (!P) return;
-  const { x0, x1, tMax } = graphGeom;
-  const px = x0 + (graphPoint.t / tMax) * (x1 - x0), py = P.by + (graphPoint.val / P.yMax) * (P.ty - P.by);
-  const label = '(' + graphPoint.t + ' s, ' + graphPoint.val + ' ' + P.unit + ')';
-  gx.save();
-  gx.setLineDash([4, 4]); gx.strokeStyle = getCss('--muted'); gx.lineWidth = 1;
-  gx.beginPath(); gx.moveTo(px, P.by); gx.lineTo(px, py); gx.lineTo(x0, py); gx.stroke(); gx.setLineDash([]);
-  gx.fillStyle = getCss('--ink'); gx.strokeStyle = getCss('--panel'); gx.lineWidth = 2;
-  gx.beginPath(); gx.arc(px, py, 5, 0, Math.PI * 2); gx.fill(); gx.stroke();
-  gx.font = handFont(14, 700); gx.textBaseline = 'middle';
-  const tw = gx.measureText(label).width + 12, left = px + 10 + tw > x1;
-  const bx = left ? px - 10 - tw : px + 10, by2 = Math.max(P.ty + 12, py - 16);
-  gx.fillStyle = getCss('--panel'); gx.strokeStyle = getCss('--ink'); gx.lineWidth = 1.5;
-  roundRect(gx, bx, by2 - 11, tw, 22, 6); gx.fill(); gx.stroke();
-  gx.fillStyle = getCss('--ink'); gx.textAlign = 'left'; gx.fillText(label, bx + 6, by2);
-  gx.restore();
+  for (const pt of graphPoints) {
+    const P = graphPanels.find(p => p.key === pt.key); if (!P) continue;
+    const { x0, x1, tMax } = graphGeom;
+    const px = x0 + (pt.t / tMax) * (x1 - x0), py = P.by + (pt.val / P.yMax) * (P.ty - P.by);
+    const label = '(' + pt.t + ' s, ' + pt.val + ' ' + P.unit + ')';
+    gx.save();
+    gx.fillStyle = getCss('--ink'); gx.strokeStyle = getCss('--panel'); gx.lineWidth = 2;
+    gx.beginPath(); gx.arc(px, py, 5, 0, Math.PI * 2); gx.fill(); gx.stroke();
+    gx.font = handFont(14, 700); gx.textBaseline = 'middle';
+    const tw = gx.measureText(label).width + 12, left = px + 10 + tw > x1;
+    const bx = left ? px - 10 - tw : px + 10, by2 = Math.max(P.ty + 12, py - 16);
+    gx.fillStyle = getCss('--panel'); gx.strokeStyle = getCss('--ink'); gx.lineWidth = 1.5;
+    roundRect(gx, bx, by2 - 11, tw, 22, 6); gx.fill(); gx.stroke();
+    gx.fillStyle = getCss('--ink'); gx.textAlign = 'left'; gx.fillText(label, bx + 6, by2);
+    gx.restore();
+  }
 }
 // Menu opened by clicking an axis title: pick which quantity that axis graphs.
 const axisMenu = document.getElementById('axisMenu');
@@ -1114,7 +1113,7 @@ function openAxisMenu(panel, cx, cy) {
   axisMenu.innerHTML = '';
   for (const k of Object.keys(opts)) {
     const b = document.createElement('button'); b.textContent = opts[k].label; b.className = k === cur ? 'on' : '';
-    b.addEventListener('click', ev => { ev.stopPropagation(); if (isPos) posMode = k; else velMode = k; graphPoint = null; closeAxisMenu(); drawGraph(); });
+    b.addEventListener('click', ev => { ev.stopPropagation(); if (isPos) posMode = k; else velMode = k; graphPoints = []; closeAxisMenu(); drawGraph(); });
     axisMenu.appendChild(b);
   }
   axisMenu.hidden = false;
@@ -1129,15 +1128,16 @@ graphC.addEventListener('click', e => {
   const { x0, x1, tMax } = graphGeom;
   for (const p of graphPanels) {
     const a = p.altBtn;
-    if (a && mx >= a.x0 && mx <= a.x1 && my >= a.y0 && my <= a.y1) { a.set(); graphPoint = null; drawGraph(); return; }
+    if (a && mx >= a.x0 && mx <= a.x1 && my >= a.y0 && my <= a.y1) { a.set(); graphPoints = []; drawGraph(); return; }
     const t = p.titleHit;
     if (t && mx >= t.x0 && mx <= t.x1 && my >= t.y0 && my <= t.y1) { openAxisMenu(p, e.clientX, e.clientY); return; }
   }
   const P = graphPanels.find(p => my >= p.ty - 6 && my <= p.by + 6); if (!P) return;
   const t = Math.round(clamp((mx - x0) / (x1 - x0), 0, 1) * tMax);
   const val = Math.min(Math.round(clamp((P.by - my) / (P.by - P.ty), 0, 1) * P.yMax), P.key === 'x' ? TRACK_LEN - 1 : 1e9);
-  if (graphPoint) graphPoint = null;                 // a second click clears it
-  else graphPoint = { key: P.key, t, val };
+  const at = graphPoints.findIndex(q => q.key === P.key && q.t === t && q.val === val);
+  if (at >= 0) graphPoints.splice(at, 1);            // clicking an existing point removes it
+  else graphPoints.push({ key: P.key, t, val });
   drawGraph();
 });
 
