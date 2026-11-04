@@ -380,9 +380,9 @@ const ke = () => 0.5 * MASS * v * v;
 
 // Fixed graph axes (always from zero). Position is always 0–20 m.
 const AXES = {
-  position: { t: 5, y: 20 },
+  position: { t: 5, y: 21 },   // 21 m shown, only up to 20 labelled
   velocity: { t: 5, y: 12 },
-  both: { t: 5, yv: 12, yd: 20 },   // velocity (left axis) + distance (right axis)
+  both: { t: 5, yv: 12, yd: 21 },   // velocity (left axis) + distance (right axis)
 };
 
 // Placed track pieces
@@ -875,11 +875,16 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    for (let i = 0; i <= 5; i++) {
-      const vv = (yMax * i) / 5, yy = Y(vv);
+    const posAxis = metric.key === 'x';   // position: gridlines every 5 m up to 20, plot top at 21 (unlabelled)
+    const tickVals = [];
+    if (posAxis) { for (let m = 0; m <= TRACK_LEN; m += 5) tickVals.push(m); }
+    else for (let i = 0; i <= 5; i++) tickVals.push((yMax * i) / 5);
+    for (const vv of tickVals) {
+      const yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
       gx.fillStyle = getCss('--muted'); gx.fillText(vv.toFixed(yMax < 4 ? 1 : 0), x0 - 8, yy);
     }
+    if (posAxis) { gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, ty); gx.lineTo(x1, ty); gx.stroke(); }
 
     // time axis: major ticks every 1 s (labelled) + minor ticks every 0.5 s
     gx.strokeStyle = getCss('--line'); gx.fillStyle = getCss('--muted');
