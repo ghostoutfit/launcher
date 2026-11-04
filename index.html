@@ -2021,6 +2021,20 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 setMode('sandbox');   // open on Sandbox (also resets the run)
+// A puzzle JSON pasted after the URL (…/#{"format":…} or …/?puzzle={…}, raw, URL-encoded, or base64) loads straight into Create → Load & play.
+(function loadPuzzleFromUrl() {
+  let raw = (location.hash.slice(1) || location.search.slice(1)).trim();
+  if (!raw) return;
+  raw = raw.replace(/^puzzle=/, '');
+  let text = raw;
+  try { text = decodeURIComponent(raw); } catch (e) {}
+  if (text[0] !== '{') { try { text = atob(raw); } catch (e) {} }
+  if (text[0] !== '{') return;                     // not a puzzle link — ignore
+  setMode('create');
+  cpJson.value = text;
+  try { startTest(parsePuzzleJson(text)); cpSay('Puzzle loaded from the link — build a track that matches the dashed line.', 'ok'); }
+  catch (e) { cpSay(e.message, 'err'); }
+})();
 requestAnimationFrame(frame);
 // redraw once the hand-drawn font has loaded so canvas labels pick it up
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); });
