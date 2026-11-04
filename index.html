@@ -1276,8 +1276,8 @@ function applyTargetControl(c) {
   else if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, TARGET_STEP, TARGET_MAX);
   else if (c.kind === 'magPlus') g.mag = clamp(g.mag + TARGET_STEP, TARGET_STEP, TARGET_MAX);
   else if (c.kind === 'timeToggle') g.time = (g.time == null) ? 2 : null;
-  else if (c.kind === 'timeMinus') g.time = clamp(Math.round(g.time) - 1, 0, RUN_TIME_CAP);
-  else if (c.kind === 'timePlus') g.time = clamp(Math.round(g.time) + 1, 0, RUN_TIME_CAP);
+  else if (c.kind === 'timeMinus') g.time = clamp(Math.round(g.time) - 1, 0, RUN_TIME_CAP - 1);
+  else if (c.kind === 'timePlus') g.time = clamp(Math.round(g.time) + 1, 0, RUN_TIME_CAP - 1);
 }
 
 // +/- steppers on a speed change sign
