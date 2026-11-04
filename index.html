@@ -337,7 +337,7 @@
 <div id="tip"></div>
 <script>
 // ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
-const TRACK_LEN = 20;
+const TRACK_LEN = 21;   // world is 21 m long; the ruler only labels up to 20
 const BALL_R    = 0.28;
 const WALL_HW   = 0.25;       // wall half-thickness (m) — drawn width is 2*WALL_HW
 const BALL_VR   = 0.35;       // drawn ball radius (m)
@@ -378,11 +378,11 @@ let lastFrame = 0;
 
 const ke = () => 0.5 * MASS * v * v;
 
-// Fixed graph axes (always from zero). Position is always 0–20 m.
+// Fixed graph axes (always from zero). Position is always 0–20 m (the world itself is 21 m long).
 const AXES = {
-  position: { t: 5, y: 21 },   // 21 m shown, only up to 20 labelled
+  position: { t: 5, y: 20 },
   velocity: { t: 5, y: 12 },
-  both: { t: 5, yv: 12, yd: 21 },   // velocity (left axis) + distance (right axis)
+  both: { t: 5, yv: 12, yd: 20 },   // velocity (left axis) + distance (right axis)
 };
 
 // Placed track pieces
@@ -875,16 +875,11 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    const posAxis = metric.key === 'x';   // position: gridlines every 5 m up to 20, plot top at 21 (unlabelled)
-    const tickVals = [];
-    if (posAxis) { for (let m = 0; m <= TRACK_LEN; m += 5) tickVals.push(m); }
-    else for (let i = 0; i <= 5; i++) tickVals.push((yMax * i) / 5);
-    for (const vv of tickVals) {
-      const yy = Y(vv);
+    for (let i = 0; i <= 5; i++) {
+      const vv = (yMax * i) / 5, yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
       gx.fillStyle = getCss('--muted'); gx.fillText(vv.toFixed(yMax < 4 ? 1 : 0), x0 - 8, yy);
     }
-    if (posAxis) { gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, ty); gx.lineTo(x1, ty); gx.stroke(); }
 
     // time axis: major ticks every 1 s (labelled) + minor ticks every 0.5 s
     gx.strokeStyle = getCss('--line'); gx.fillStyle = getCss('--muted');
@@ -1596,7 +1591,7 @@ function makePuzzleJson() {
   if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first — the puzzle is made from its graph.', 'err'); return; }
   const metric = document.querySelector('input[name=cpMetric]:checked').value, key = metric === 'velocity' ? 'v' : 'x';
   const samples = lastTrace[0].samples, T = AXES.position.t, pts = [];
-  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? TRACK_LEN : 1e9).toFixed(2)]);
+  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? AXES.position.y : 1e9).toFixed(2)]);
   if (key === 'v' && Math.min(...pts.map(q => q[1])) < 0) { cpSay('That run\'s velocity goes negative, which the graph can\'t show. Try a different run.', 'err'); return; }
   cpJson.value = JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts });
   cpSay('Puzzle made — copy the JSON below.', 'ok');
