@@ -383,12 +383,6 @@
   </div>
 </div>
 <script>
-// A reload starts fresh: forget saved progress/theme so the page looks like a first visit.
-// (Browsers don't tell a page whether it was a hard or soft refresh, so any reload clears.)
-try {
-  const nav = performance.getEntriesByType('navigation')[0];
-  if (nav && nav.type === 'reload') { localStorage.removeItem('launcher-puzzles'); localStorage.removeItem('launcher-theme'); }
-} catch (e) {}
 // ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
 const TRACK_LEN = 21;   // world is 21 m long; the ruler only labels up to 20
 const BALL_R    = 0.28;
@@ -1619,6 +1613,10 @@ drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // p
         + row('devLbs', 'logo ball size', 1, 30, 0.1, lv('--lbs'), ' %')
         + row('devLbx', 'logo ball x', -10, 110, 0.1, lv('--lbx'), ' %')
         + row('devLby', 'logo ball y', -10, 110, 0.1, lv('--lby'), ' %');
+      const clr = document.createElement('button'); clr.textContent = 'Clear level progress';
+      clr.style.cssText = 'padding:5px 8px;font-size:12px;align-self:flex-start';
+      clr.addEventListener('click', () => { solvedPuzzles.clear(); savePuzzles(); renderPuzzles(); });
+      box.appendChild(clr);
       document.body.appendChild(box);
       const s = box.querySelector('#devFric'), vlab = box.querySelector('#devFricV');
       s.addEventListener('input', () => { FRICTION_DECEL = parseFloat(s.value); vlab.textContent = FRICTION_DECEL.toFixed(1); if (!running) resetRun(); });
