@@ -536,7 +536,7 @@ function resetRun() {
 // ─── Main loop ────────────────────────────────────────────────────────────────
 function frame(now) {
   if (running) {
-    const dt = Math.min(0.05, (now - lastFrame) / 1000) * playbackRate;
+    const dt = Math.max(0, Math.min(0.05, (now - lastFrame) / 1000)) * playbackRate;   // rAF's timestamp can precede lastFrame (set at click) → never run backwards
     lastFrame = now;
     t += dt;
     // a timed tube that's been holding the ball shoots it out at its trigger time
@@ -866,13 +866,35 @@ function drawGraph() {
     const traces = (replaying && lastTrace) ? lastTrace : balls;
     gx.save(); gx.beginPath(); gx.rect(x0, ty, x1 - x0, by - ty); gx.clip();
     gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
+    // The velocity axis starts at 0, so negative speeds can't be drawn: break the line there
+    // and remember where it first went negative so we can flag it below.
+    const isV = metric.key === 'v';
+    let negT = null;
     for (const b of traces) {
       if (b.samples.length < 2) continue;
       gx.strokeStyle = b.color; gx.beginPath();
-      b.samples.forEach((s, i) => { const xx = X(s.t), yy = Y(s[metric.key]); i ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); });
+      let pen = false;
+      for (const s of b.samples) {
+        if (isV && s.v < 0) { pen = false; if (negT === null || s.t < negT) negT = s.t; continue; }
+        const xx = X(s.t), yy = Y(s[metric.key]);
+        pen ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); pen = true;
+      }
       gx.stroke();
     }
     gx.restore();
+
+    if (negT !== null) {   // alert where the velocity first went negative
+      const msg = 'Velocity has become negative - graph not shown';
+      gx.font = handFont(12, 700);
+      const aw = gx.measureText(msg).width + 16, ah = 22;
+      const ax = Math.max(x0 + 4, Math.min(x1 - aw - 4, X(negT) - aw / 2)), ay = by - ah - 12;
+      gx.fillStyle = getCss('--cut'); roundRect(gx, ax, ay, aw, ah, 6); gx.fill();
+      gx.strokeStyle = INK; gx.lineWidth = 1.6; gx.stroke();
+      gx.fillStyle = '#4a0a0a'; gx.textAlign = 'center'; gx.textBaseline = 'middle';
+      gx.fillText(msg, ax + aw / 2, ay + ah / 2 + 1);
+      gx.beginPath(); gx.moveTo(X(negT), by); gx.lineTo(X(negT), ay + ah); gx.stroke();   // pointer to the spot
+      gx.textBaseline = 'alphabetic';
+    }
 
     // Marbles on the graph. Before a run: start-value marbles at t = 0 (the launch settings).
     // While the sim is collecting data: one marble riding the head of each curve (gone the
@@ -881,8 +903,9 @@ function drawGraph() {
       for (const b of balls) {
         const last = b.samples[b.samples.length - 1];
         const cx = replaying ? Math.max(x0, Math.min(x1, X(t))) : X(last.t);
-        const cy = Y(replaying ? b[metric.key] : last[metric.key]);   // centered on the true value, not clamped inside the plot
-        drawMarbleAt(gx, cx, cy, 6.5, b.color);
+        const val = replaying ? b[metric.key] : last[metric.key];
+        if (metric.key === 'v' && val < 0) continue;                 // off the velocity axis: no marble
+        drawMarbleAt(gx, cx, Y(val), 6.5, b.color);                  // centered on the true value
       }
     } else if (!replaying && !(balls[0] && balls[0].samples.length >= 2)) {
       const mx = X(0);
