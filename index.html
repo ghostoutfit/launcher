@@ -111,11 +111,9 @@
   #pzBack { font-size: 22px; font-weight: 700; padding: 11px 26px; }
   #brand { font-size: 28px; font-weight: 800; letter-spacing: 0.01em; }
   /* logo on the right, with a red ball laid over it (size / x / y are dev-tunable — type "dev") */
-  #logoWrap { position: relative; margin-left: auto; height: 56px; --lbs: 8; --lbx: 20; --lby: 76; }
+  #logoWrap { position: relative; height: 56px; --lbs: 8.2; --lbx: 13.4; --lby: 66.5; }
   #logoImg { display: block; height: 100%; width: auto; }
-  #logoBall { position: absolute; left: calc(var(--lbx) * 1%); top: calc(var(--lby) * 1%); width: calc(var(--lbs) * 1%); aspect-ratio: 1;
-    transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #1a2230; box-sizing: border-box;
-    background: radial-gradient(circle at 35% 30%, #ff9a8a 0 12%, #e0483a 45%, #b52a1f 100%); }
+  #logoBall { position: absolute; left: calc(var(--lbx) * 1%); top: calc(var(--lby) * 1%); width: calc(var(--lbs) * 1%); aspect-ratio: 1; transform: translate(-50%, -50%); }
   body.pz-menu #controls, body.pz-menu #sceneWrap, body.pz-menu #graphCard, body.pz-menu #sidebar { display: none; }
   /* solved celebration */
   #winOverlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
@@ -239,6 +237,7 @@
   <button id="themeToggle" aria-label="Toggle light/dark">🌙</button>
 
   <div id="tabRow">
+  <div id="logoWrap"><img id="logoImg" src="harmony-ramp.png" alt="Harmony"><canvas id="logoBall" width="100" height="100"></canvas></div>
   <div id="brand">LAUNCHER</div>
   <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match a target graph. Create: turn a run into a puzzle to share, or load one.">
     <button data-mode="sandbox" class="on">Sandbox</button>
@@ -246,7 +245,6 @@
     <button data-mode="create">Create</button>
   </div>
   <button id="pzBack" hidden data-tip="Return to the list of puzzles.">Back to all puzzles</button>
-  <div id="logoWrap"><img id="logoImg" src="harmony-ramp.png" alt="Harmony"><div id="logoBall"></div></div>
   </div>
 
   <div id="stage">
@@ -1575,6 +1573,18 @@ window.addEventListener('pointerdown', e => {
   if (e.target === sceneC) return;   // scene handler may reopen it for another piece
   closeDeleteConfirm();
 }, true);
+
+// The logo's red ball: the world ball's cartoon style (flat fill, shade crescent, bold outline, highlight).
+function drawLogoBall() {
+  const c = document.getElementById('logoBall').getContext('2d'), col = getCss('--ball'), R = 44, m = 50;
+  c.clearRect(0, 0, 100, 100);
+  c.beginPath(); c.arc(m, m, R, 0, 7); c.fillStyle = col; c.fill();
+  c.save(); c.beginPath(); c.arc(m, m, R, 0, 7); c.clip();
+  c.fillStyle = darken(col, 0.22); c.beginPath(); c.arc(m + R * 0.42, m + R * 0.42, R, 0, 7); c.fill(); c.restore();
+  c.beginPath(); c.arc(m, m, R, 0, 7); c.strokeStyle = INK; c.lineWidth = 7; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.92)'; c.beginPath(); c.arc(m - R * 0.34, m - R * 0.34, R * 0.17, 0, 7); c.fill();
+}
+drawLogoBall();
 
 // Hidden dev slider (type "dev") to tune friction deceleration.
 (function(){
