@@ -1244,7 +1244,7 @@ graphC.addEventListener('click', e => {
     if (t && mx >= t.x0 && mx <= t.x1 && my >= t.y0 && my <= t.y1) { openAxisMenu(p, e.clientX, e.clientY); return; }
   }
   const P = graphPanels.find(p => my >= p.ty - 6 && my <= p.by + 6); if (!P) return;
-  const t = Math.round(clamp((mx - x0) / (x1 - x0), 0, 1) * tMax);
+  const t = Math.round(clamp((mx - x0) / (x1 - x0), 0, 1) * tMax * 2) / 2;   // nearest half second
   const val = Math.min(Math.round(clamp((P.by - my) / (P.by - P.ty), 0, 1) * P.yMax), P.key === 'x' ? TRACK_LEN - 1 : 1e9);
   const at = graphPoints.findIndex(q => q.key === P.key && q.t === t && q.val === val);
   if (at >= 0) graphPoints.splice(at, 1);            // clicking an existing point removes it
