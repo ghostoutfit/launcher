@@ -391,6 +391,7 @@
 const TRACK_LEN = 21;   // world is 21 m long; the ruler only labels up to 20
 const BALL_R    = 0.28;
 const WALL_HW   = 0.25;       // wall half-thickness (m) — drawn width is 2*WALL_HW
+const CREEP_TIME = 0.25;      // s — how long the struck-from ball takes to close up to the struck ball's start spot
 const BALL_VR   = 0.35;       // drawn ball radius (m)
 // A wall's x is where the BALL'S CENTER sits when it hits from the left (always an integer, since
 // x snaps to 1 m). The wall body stands WALL_D further right, so the ball touches its face
@@ -530,6 +531,8 @@ function step(dt) {
     const hit = firstBallHit(x, nx);
     if (hit) {
       movingBall.x = hit.cp; movingBall.v = 0; movingBall.moving = false;  // incoming ball stops, touching
+      // ...then eases forward onto the struck ball's start spot, staying one diameter behind it
+      movingBall.creep = { from: hit.cp, to: hit.ball.x, s: Math.sign(nx - x), t0: t, other: hit.ball };
       hit.ball.moving = true; hit.ball.v = v;                              // struck ball takes the speed
       movingBall = hit.ball;
       x = hit.ball.x;                        // keep v; continue as the struck ball
@@ -630,6 +633,12 @@ function frame(now) {
     if (!ballStopped) step(dt);           // the moving ball halts at a wall, but time marches on
     if (movingBall) { movingBall.x = x; movingBall.v = v; if (ballStopped) movingBall.moving = false; }
     for (const el of [...targets, ...boosts]) { if (el._shake) { el._shake *= 0.85; if (el._shake < 0.02) el._shake = 0; } }
+    for (const b of balls) if (b.creep) {          // closing drift after a collision (v stays 0)
+      const c = b.creep, k = Math.min(1, (t - c.t0) / CREEP_TIME), e = 1 - (1 - k) * (1 - k);
+      const want = c.from + (c.to - c.from) * e, lim = c.other.x - c.s * 2 * BALL_R;
+      b.x = c.s > 0 ? Math.min(want, lim) : Math.max(want, lim);
+      if (k >= 1 && b.x === c.to) b.creep = null;
+    }
     // record every ball's trajectory so each can be graphed on the same axes
     for (const b of balls) {
       let prev = b.samples[b.samples.length - 1];
