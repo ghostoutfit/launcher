@@ -716,7 +716,7 @@ function drawScene() {
     }
     sx.restore();
     roundRect(sx, wl0, wT, ww, wh, 5); ink(2.5); sx.stroke();
-    wl._sign = drawPieceSign(wx, wT, 'wall', wallCol, '#1c242e');
+    wl._sign = drawPieceSign(wx, wT, wl.bouncy ? 'bouncy wall' : 'wall', wallCol, '#1c242e');
   }
 
   // launch marker
@@ -1340,7 +1340,7 @@ const dcName = document.getElementById('dcName');
 const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction patch', ball2: 'second ball' };
 function openDeleteConfirm(piece, el, cx, cy) {
   confirmPiece = { piece, el };
-  dcName.textContent = PIECE_NAMES[piece] || 'piece';
+  dcName.textContent = (piece === 'wall' && el.bouncy) ? 'bouncy wall' : (PIECE_NAMES[piece] || 'piece');
   dcEl.hidden = false;
   let left = Math.min(cx + 12, window.innerWidth - dcEl.offsetWidth - 8);
   let top = Math.min(cy + 12, window.innerHeight - dcEl.offsetHeight - 8);
