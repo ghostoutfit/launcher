@@ -888,6 +888,7 @@ function drawGraph() {
   const padL = 52, padR = 16, padB = 34;
   const x0 = padL, x1 = w - padR;
   const X = tt => x0 + (tt / tMax) * (x1 - x0);
+  graphPanels = []; graphGeom = { x0, x1, tMax };
 
   // Draw one metric's plot (own y-axis + own time numbers) into the band [ty, by].
   // opts.caption adds the "time (s)" label; opts.vgrid adds vertical time gridlines
@@ -896,6 +897,7 @@ function drawGraph() {
     opts = opts || {};
     const yMax = metric.yMax;
     const Y = vv => by + (vv / yMax) * (ty - by);
+    graphPanels.push({ key: metric.key, unit: metric.unit, ty, by, yMax });
 
     // vertical time gridlines (integer seconds), kept within this panel
     if (opts.vgrid) {
@@ -1027,7 +1029,42 @@ function drawGraph() {
     const spec = graphSpec();
     drawPanel({ key: spec.key, label: spec.label, unit: spec.unit, yMax: base.y }, 14, h - padB, { caption: true });
   }
+  drawGraphPoint();
 }
+
+// ─── Click the graph to read off a coordinate (integer t and value); click again to clear ──
+let graphPanels = [], graphGeom = null;
+let graphPoint = null;              // { key, t, val }
+function drawGraphPoint() {
+  if (!graphPoint) return;
+  const P = graphPanels.find(p => p.key === graphPoint.key); if (!P) return;
+  const { x0, x1, tMax } = graphGeom;
+  const px = x0 + (graphPoint.t / tMax) * (x1 - x0), py = P.by + (graphPoint.val / P.yMax) * (P.ty - P.by);
+  const label = '(' + graphPoint.t + ' s, ' + graphPoint.val + ' ' + P.unit + ')';
+  gx.save();
+  gx.setLineDash([4, 4]); gx.strokeStyle = getCss('--muted'); gx.lineWidth = 1;
+  gx.beginPath(); gx.moveTo(px, P.by); gx.lineTo(px, py); gx.lineTo(x0, py); gx.stroke(); gx.setLineDash([]);
+  gx.fillStyle = getCss('--ink'); gx.strokeStyle = getCss('--panel'); gx.lineWidth = 2;
+  gx.beginPath(); gx.arc(px, py, 5, 0, Math.PI * 2); gx.fill(); gx.stroke();
+  gx.font = handFont(14, 700); gx.textBaseline = 'middle';
+  const tw = gx.measureText(label).width + 12, left = px + 10 + tw > x1;
+  const bx = left ? px - 10 - tw : px + 10, by2 = Math.max(P.ty + 12, py - 16);
+  gx.fillStyle = getCss('--panel'); gx.strokeStyle = getCss('--ink'); gx.lineWidth = 1.5;
+  roundRect(gx, bx, by2 - 11, tw, 22, 6); gx.fill(); gx.stroke();
+  gx.fillStyle = getCss('--ink'); gx.textAlign = 'left'; gx.fillText(label, bx + 6, by2);
+  gx.restore();
+}
+graphC.addEventListener('click', e => {
+  if (!graphGeom) return;
+  const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const { x0, x1, tMax } = graphGeom;
+  const P = graphPanels.find(p => my >= p.ty - 6 && my <= p.by + 6); if (!P) return;
+  const t = Math.round(clamp((mx - x0) / (x1 - x0), 0, 1) * tMax);
+  const val = Math.round(clamp((P.by - my) / (P.by - P.ty), 0, 1) * P.yMax);
+  if (graphPoint) graphPoint = null;                 // a second click clears it
+  else graphPoint = { key: P.key, t, val };
+  drawGraph();
+});
 
 function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function roundRect(c, x, y, w, h, r) {
@@ -1263,6 +1300,16 @@ document.querySelectorAll('.chip').forEach(chip => {
 });
 refreshBall2Chip();
 
+// The ball waiting at the launch position can be dragged along the track to set it.
+function overStartBall(mx, my) {
+  if (running || replaying) return false;
+  const gY = groundY(), br = ballRadius(), cx = mToPx(parseInt(posEl.value, 10));
+  return Math.hypot(mx - cx, my - (gY - br)) <= br + 6;
+}
+function setLaunchFromPx(mx) {
+  const m = clamp(Math.round(pxToM(mx)), +posEl.min, +posEl.max);
+  if (String(m) !== posEl.value) { posEl.value = m; posEl.dispatchEvent(new Event('input')); }
+}
 // Start a drag on an existing placed piece (move / remove), or tap a target's sign controls
 sceneC.addEventListener('pointerdown', e => {
   const r = sceneC.getBoundingClientRect();
@@ -1283,7 +1330,13 @@ sceneC.addEventListener('pointerdown', e => {
     return;
   }
   const hit = hitPiece(mx, my);
-  if (!hit) return;
+  if (!hit) {
+    if (overStartBall(mx, my)) {            // grab the waiting ball to set the launch position
+      e.preventDefault(); sceneC.setPointerCapture(e.pointerId);
+      drag = { kind: 'ball' }; setLaunchFromPx(mx);
+    }
+    return;
+  }
   e.preventDefault();
   sceneC.setPointerCapture(e.pointerId);
   // grabbing a friction patch's end → resize; its middle → move
@@ -1323,12 +1376,13 @@ sceneC.addEventListener('pointermove', e => {
   if (drag) { showTip(null); return; }
   const r = sceneC.getBoundingClientRect();
   const hit = hitPiece(e.clientX - r.left, e.clientY - r.top);
-  sceneC.style.cursor = !hit ? 'default' : (hit.type === 'friction' && hit.edge) ? 'ew-resize' : 'grab';
+  sceneC.style.cursor = !hit ? (overStartBall(e.clientX - r.left, e.clientY - r.top) ? 'grab' : 'default') : (hit.type === 'friction' && hit.edge) ? 'ew-resize' : 'grab';
   showTip(hit ? TIPS[hit.type === 'wall' && hit.el.bouncy ? 'wallBouncy' : hit.type] : null, e.clientX, e.clientY);
 });
 
 window.addEventListener('pointermove', e => {
   if (!drag) return;
+  if (drag.kind === 'ball') { setLaunchFromPx(e.clientX - sceneC.getBoundingClientRect().left); return; }
   if (drag.kind === 'new') {
     moveGhost(drag.ghost, e.clientX, e.clientY);
   } else if (drag.kind === 'move') {
