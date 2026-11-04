@@ -114,7 +114,9 @@
   #pzBack { margin-left: auto; }
   #pzBack[hidden] + #modeTabs, #pzBack:not([hidden]) + #modeTabs { margin-left: 0; }
   #pzBack[hidden] + #modeTabs { margin-left: auto; }
-  #pzBack { font-size: 16px; font-weight: 700; padding: 10px 16px; white-space: nowrap; }
+  #pzBack { font-size: 14px; font-weight: 700; padding: 9px 12px; white-space: nowrap; }
+  /* when the header is too narrow for logo + Back + tabs, the tabs stay put on the top row and Back drops below */
+  @media (max-width: 1130px) { #modeTabs { order: 2; margin-left: auto !important; } #pzBack { order: 3; } }
   #brand { font-family: 'Josefin Sans', 'Century Gothic', Futura, sans-serif; font-size: 28px; font-weight: 700; letter-spacing: 0.01em; color: #0b509c; position: relative; top: 10px; }
   /* logo on the right, with a red ball laid over it (size / x / y are dev-tunable — type "dev") */
   #logoWrap { position: relative; height: 56px; --lbs: 8.2; --lbx: 13.4; --lby: 66.5; }
