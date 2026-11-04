@@ -608,6 +608,12 @@ function resetRun() {
   drawScene(); drawGraph();
 }
 
+// Any edit to the world discards the graph just made and disables replay.
+function worldChanged() {
+  lastRun = null; replayFastBtn.disabled = true;
+  resetRun();
+}
+
 // ─── Main loop ────────────────────────────────────────────────────────────────
 function frame(now) {
   if (running) {
@@ -895,16 +901,16 @@ function drawMarbleAt(c, cx, cy, r, col) {
 }
 
 // ─── Graph rendering ──────────────────────────────────────────────────────────
-// The position-type axis can show Position / Distance / Displacement; the velocity-type axis Velocity / Speed.
+// The position-type axis can show Position / Distance; the velocity-type axis Velocity / Speed.
 // (Puzzles always use plain Position / Velocity, so the choice is ignored there.)
 let posMode = 'x', velMode = 'v';
-const POS_SPECS = { x: { key: 'x', label: 'Position', unit: 'm' }, d: { key: 'd', label: 'Distance', unit: 'm' }, dx: { key: 'dx', label: 'Displacement', unit: 'm' } };
+const POS_SPECS = { x: { key: 'x', label: 'Position', unit: 'm' }, d: { key: 'd', label: 'Distance', unit: 'm' } };
 const VEL_SPECS = { v: { key: 'v', label: 'Velocity', unit: 'm/s' }, sp: { key: 'sp', label: 'Speed', unit: 'm/s' } };
 function posSpec() { return POS_SPECS[activePuzzle() ? 'x' : posMode]; }
 function velSpec() { return VEL_SPECS[activePuzzle() ? 'v' : velMode]; }
 function graphSpec() { return graphType === 'position' ? posSpec() : velSpec(); }
-// value of a graph key for a sample (or live ball) o of trace b — dx and sp are derived from x and v
-function metricVal(b, o, key) { return key === 'dx' ? o.x - b.samples[0].x : key === 'sp' ? Math.abs(o.v) : o[key]; }
+// value of a graph key for a sample (or live ball) o of trace b — sp is derived from v
+function metricVal(b, o, key) { return key === 'sp' ? Math.abs(o.v) : o[key]; }
 
 function drawGraph() {
   const both = graphType === 'both';
@@ -970,7 +976,7 @@ function drawGraph() {
     gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
     // The velocity axis starts at 0, so negative speeds can't be drawn: break the line there
     // and remember where it first went negative so we can flag it below.
-    const isNeg = metric.key === 'v' || metric.key === 'dx';   // axes start at 0, so a negative value can't be drawn
+    const isNeg = metric.key === 'v';   // axes start at 0, so a negative value can't be drawn
     let negT = null;
     for (const b of traces) {
       if (b.samples.length < 2) continue;
@@ -990,12 +996,12 @@ function drawGraph() {
     gx.restore();
 
     if (negT !== null) {   // alert beside the vertical line where the value first went negative
-      const what = metric.key === 'v' ? 'Velocity' : 'Displacement';
+      const what = 'Velocity';
       const lines = [what + ' has', 'become negative -', 'graph not shown'];
       const compact = (by - ty) < 150;                    // 'both' view panels are short
       const fs = compact ? 13 : 18, lh = compact ? 16 : 22, bh = compact ? 22 : 30;
       const canSwitch = !activePuzzle();
-      const btnText = metric.key === 'v' ? 'Show Speed' : 'Show Distance';
+      const btnText = 'Show Speed';
       gx.font = handFont(fs, 700);
       const aw = Math.max(...lines.map(l => gx.measureText(l).width), canSwitch ? gx.measureText(btnText).width + 16 : 0) + 24;
       const ah = lines.length * lh + 12 + (canSwitch ? bh + 8 : 0);
@@ -1012,7 +1018,7 @@ function drawGraph() {
         const bx = ax + 8, bw = aw - 16, byy = ay + ah - bh - 6;
         gx.fillStyle = getCss('--panel'); roundRect(gx, bx, byy, bw, bh, 7); gx.fill(); gx.stroke();
         gx.fillStyle = INK; gx.fillText(btnText, bx + bw / 2, byy + bh / 2 + 1);
-        graphPanels[graphPanels.length - 1].altBtn = { x0: bx, x1: bx + bw, y0: byy, y1: byy + bh, set: metric.key === 'v' ? () => { velMode = 'sp'; } : () => { posMode = 'd'; } };
+        graphPanels[graphPanels.length - 1].altBtn = { x0: bx, x1: bx + bw, y0: byy, y1: byy + bh, set: () => { velMode = 'sp'; } };
       }
       gx.textBaseline = 'alphabetic';
     }
@@ -1388,14 +1394,14 @@ sceneC.addEventListener('pointerdown', e => {
   if (ctl) {
     e.preventDefault();
     applyTargetControl(ctl);
-    if (!running) resetRun(); else drawScene();
+    worldChanged();
     return;
   }
   const bctl = hitPadControl(mx, my);
   if (bctl) {
     e.preventDefault();
     applyPadControl(bctl);
-    if (!running) resetRun(); else drawScene();
+    worldChanged();
     return;
   }
   const hit = hitPiece(mx, my);
@@ -1464,7 +1470,7 @@ window.addEventListener('pointermove', e => {
       const nx = nearestSlot(drag.piece, want, drag.el);   // stay ≥ MIN_GAP from other pieces
       if (nx !== null) drag.el.x = nx;
     }
-    if (!running) { resetRun(); } else { drawScene(); }
+    worldChanged();
   } else if (drag.kind === 'resize') {
     const r = sceneC.getBoundingClientRect();
     const z = drag.el, m = snap(pxToM(e.clientX - r.left));
@@ -1475,7 +1481,7 @@ window.addEventListener('pointermove', e => {
       const nr = clamp(m, z.x + 1, TRACK_LEN);
       z.len = nr - z.x;
     }
-    if (!running) { resetRun(); } else { drawScene(); }
+    worldChanged();
   }
 });
 
@@ -1486,7 +1492,7 @@ window.addEventListener('pointerup', e => {
     if (overScene(e.clientX, e.clientY)) {
       const r = sceneC.getBoundingClientRect();
       placePiece(drag.piece, pxToM(e.clientX - r.left));
-      if (!running) resetRun(); else drawScene();
+      worldChanged();
     }
   } else if (drag.kind === 'move') {
     if (!overScene(e.clientX, e.clientY)) {
@@ -1495,7 +1501,7 @@ window.addEventListener('pointerup', e => {
     } else if (!drag.moved) {
       // a click (no drag) on a piece — double-click asks to delete it
       const piece = drag.piece, el = drag.el, now = performance.now();
-      if (piece === 'wall') { el.bouncy = !el.bouncy; if (!running) resetRun(); else drawScene(); }   // click toggles bouncy
+      if (piece === 'wall') { el.bouncy = !el.bouncy; worldChanged(); }   // click toggles bouncy
       if (lastClick && lastClick.el === el && now - lastClick.time < 400) {
         lastClick = null;
         openDeleteConfirm(piece, el, e.clientX, e.clientY);
@@ -1513,17 +1519,17 @@ function deletePiece(piece, el) {
   else if (piece === 'target') targets = targets.filter(g => g !== el);
   else if (piece === 'ball2') { secondBalls = secondBalls.filter(b => b !== el); refreshBall2Chip(); }
   else fricZones = fricZones.filter(z => z !== el);
-  if (!running) resetRun(); else drawScene();
+  worldChanged();
 }
 
 // ─── Wiring ───────────────────────────────────────────────────────────────────
 speedEl.addEventListener('input', () => {
   speedVal.textContent = parseInt(speedEl.value, 10) + ' m/s';
-  if (!running) resetRun();
+  worldChanged();
 });
 posEl.addEventListener('input', () => {
   posVal.textContent = parseInt(posEl.value, 10) + ' m';
-  if (!running) resetRun();
+  worldChanged();
 });
 document.getElementById('graphTabs').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
@@ -1538,7 +1544,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   replayFastBtn.disabled = true;
   resetRun();
 });
-document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
+document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); worldChanged(); });
 window.addEventListener('resize', () => { drawScene(); drawGraph(); });
 
 // ─── Light / dark theme (light by default) ──────────────────────────────────────
@@ -1623,7 +1629,7 @@ drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // p
       box.appendChild(clr);
       document.body.appendChild(box);
       const s = box.querySelector('#devFric'), vlab = box.querySelector('#devFricV');
-      s.addEventListener('input', () => { FRICTION_DECEL = parseFloat(s.value); vlab.textContent = FRICTION_DECEL.toFixed(1); if (!running) resetRun(); });
+      s.addEventListener('input', () => { FRICTION_DECEL = parseFloat(s.value); vlab.textContent = FRICTION_DECEL.toFixed(1); worldChanged(); });
       for (const [id, v] of [['devLbs', '--lbs'], ['devLbx', '--lbx'], ['devLby', '--lby']]) {
         const inp = box.querySelector('#' + id), out = box.querySelector('#' + id + 'V');
         inp.addEventListener('input', () => { lw.style.setProperty(v, inp.value); out.textContent = inp.value; });
