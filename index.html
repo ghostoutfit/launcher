@@ -413,9 +413,9 @@ const ke = () => 0.5 * MASS * v * v;
 
 // Fixed graph axes (always from zero). Position is always 0–20 m (the world itself is 21 m long).
 const AXES = {
-  position: { t: 5, y: 20 },
+  position: { t: 5, y: 20.5 },   // shows a little past 20 m so the line isn't cut off
   velocity: { t: 5, y: 12 },
-  both: { t: 5, yv: 12, yd: 20 },   // velocity (left axis) + distance (right axis)
+  both: { t: 5, yv: 12, yd: 20.5 },   // velocity (left axis) + distance (right axis)
 };
 
 // Placed track pieces
@@ -919,9 +919,9 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    const nGrid = metric.key === 'x' ? 4 : 5;   // position: gridlines every 5 m (matches the world's ruler)
-    for (let i = 0; i <= nGrid; i++) {
-      const vv = (yMax * i) / nGrid, yy = Y(vv);
+    const gridStep = metric.key === 'x' ? 5 : yMax / 5;   // position: gridlines every 5 m (matches the world's ruler)
+    for (let vv = 0; vv <= yMax + 1e-9; vv += gridStep) {
+      const yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
       gx.fillStyle = getCss('--muted'); gx.fillText(vv.toFixed(yMax < 4 ? 1 : 0), x0 - 8, yy);
     }
@@ -1069,7 +1069,7 @@ graphC.addEventListener('click', e => {
   const { x0, x1, tMax } = graphGeom;
   const P = graphPanels.find(p => my >= p.ty - 6 && my <= p.by + 6); if (!P) return;
   const t = Math.round(clamp((mx - x0) / (x1 - x0), 0, 1) * tMax);
-  const val = Math.round(clamp((P.by - my) / (P.by - P.ty), 0, 1) * P.yMax);
+  const val = Math.min(Math.round(clamp((P.by - my) / (P.by - P.ty), 0, 1) * P.yMax), P.key === 'x' ? TRACK_LEN - 1 : 1e9);
   if (graphPoint) graphPoint = null;                 // a second click clears it
   else graphPoint = { key: P.key, t, val };
   drawGraph();
@@ -1740,7 +1740,7 @@ function makePuzzleJson() {
   if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first — the puzzle is made from its graph.', 'err'); return; }
   const metric = document.querySelector('input[name=cpMetric]:checked').value, key = metric === 'velocity' ? 'v' : 'x';
   const samples = lastTrace[0].samples, T = AXES.position.t, pts = [];
-  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? AXES.position.y : 1e9).toFixed(2)]);
+  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? Math.floor(AXES.position.y) : 1e9).toFixed(2)]);
   if (key === 'v' && Math.min(...pts.map(q => q[1])) < 0) { cpSay('That run\'s velocity goes negative, which the graph can\'t show. Try a different run.', 'err'); return; }
   cpJson.value = JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts });
   cpSay('Puzzle made — copy the JSON below.', 'ok');
