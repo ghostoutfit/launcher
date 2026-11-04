@@ -183,6 +183,8 @@
   #graphTabs button { padding: 7px 12px; font-size: 13px; }
   #graphTabs button.active { background: var(--accent); color: #06121c; border-color: var(--accent); }
   #graphRow { display: flex; gap: 14px; align-items: stretch; }
+  #clearPoints { position: absolute; top: 0; right: 0; z-index: 3; padding: 5px 10px; font-size: 13px; font-weight: 700; }
+  #clearPoints[hidden] { display: none; }
   #graphPlot { position: relative; flex: 1 1 auto; min-width: 0; }
   #graph { display: block; width: 100%; height: 250px; }
   @media (max-width: 720px) { #stage { grid-template-columns: minmax(0, 1fr); } #graphCard, #sidebar { grid-column: 1; margin-top: 0; } #sidebar { flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
@@ -332,6 +334,7 @@
         <div id="puzzleStatus" hidden></div>
         <div id="graphRow">
           <div id="graphPlot">
+            <button id="clearPoints" hidden>Clear All Points</button>
             <canvas id="graph" data-tip="Motion graph: each ball's position or velocity against time."></canvas>
           </div>
         </div>
@@ -1095,8 +1098,11 @@ function drawGraph() {
 
 // ─── Click the graph to read off a coordinate (integer t and value); click again to clear ──
 let graphPanels = [], graphGeom = null;
+const clearPointsBtn = document.getElementById('clearPoints');
+clearPointsBtn.addEventListener('click', () => { graphPoints = []; drawGraph(); });
 let graphPoints = [];               // [{ key, t, val }]
 function drawGraphPoint() {
+  clearPointsBtn.hidden = graphPoints.length === 0;
   for (const pt of graphPoints) {
     const P = graphPanels.find(p => p.key === pt.key); if (!P) continue;
     const { x0, x1, tMax } = graphGeom;
