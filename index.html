@@ -136,7 +136,7 @@
 
   /* Puzzle menu */
   #puzzlePanel { margin-bottom: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
-  .pzLabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .pzLabel { font-size: 22px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
   .pzRow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .pzBtn {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -383,6 +383,12 @@
   </div>
 </div>
 <script>
+// A reload starts fresh: forget saved progress/theme so the page looks like a first visit.
+// (Browsers don't tell a page whether it was a hard or soft refresh, so any reload clears.)
+try {
+  const nav = performance.getEntriesByType('navigation')[0];
+  if (nav && nav.type === 'reload') { localStorage.removeItem('launcher-puzzles'); localStorage.removeItem('launcher-theme'); }
+} catch (e) {}
 // ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
 const TRACK_LEN = 21;   // world is 21 m long; the ruler only labels up to 20
 const BALL_R    = 0.28;
@@ -1602,7 +1608,8 @@ drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // p
     seq = (seq + e.key.toLowerCase()).slice(-3);
     if (seq === 'dev') {
       let box = document.getElementById('devBox');
-      if (box) { box.remove(); return; }
+      if (box) { box.remove(); devUnlockAll = false; renderPuzzles(); return; }
+      devUnlockAll = true; renderPuzzles();
       box = document.createElement('div'); box.id = 'devBox';
       box.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:50;background:#141a24;border:1px solid #2a3442;border-radius:8px;padding:8px 10px;font:12px sans-serif;color:#8a97a8;display:flex;flex-direction:column;gap:6px';
       const row = (id, label, min, max, step, val, unit) => '<label style="display:flex;gap:8px;align-items:center">' + label +
@@ -1656,7 +1663,8 @@ const PUZZLES = {
 const solvedPuzzles = new Set();
 try { (JSON.parse(localStorage.getItem('launcher-puzzles') || '[]')).forEach(id => solvedPuzzles.add(id)); } catch (e) {}
 function savePuzzles() { try { localStorage.setItem('launcher-puzzles', JSON.stringify([...solvedPuzzles])); } catch (e) {} }
-function puzzleUnlocked(list, i) { return !!list[i].unlocked || i % 5 === 0 || solvedPuzzles.has(list[i - 1].id); }
+let devUnlockAll = false;   // dev mode (type "dev") opens every level
+function puzzleUnlocked(list, i) { return devUnlockAll || !!list[i].unlocked || i % 5 === 0 || solvedPuzzles.has(list[i - 1].id); }
 // linear-interpolate a polyline target's position at time tt (clamped to the ends)
 function interpPoly(pts, tt) {
   if (tt <= pts[0].t) return pts[0].x;
