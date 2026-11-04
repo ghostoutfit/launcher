@@ -300,13 +300,13 @@
             <span>Build a track, press Launch, then pick which graph becomes the target:</span>
             <label><input type="radio" name="cpMetric" value="position" checked> Position</label>
             <label><input type="radio" name="cpMetric" value="velocity"> Velocity</label>
-            <button id="cpMake" data-tip="Turn the last run's graph into puzzle JSON.">Make puzzle</button>
+            <button id="cpMake" data-tip="Turn the last run's graph into a shareable puzzle link.">Make puzzle</button>
           </div>
         </div>
-        <div class="pzLabel" style="margin-top:10px">Puzzle JSON — copy to share, or paste one here to play it</div>
-        <textarea id="cpJson" rows="5" spellcheck="false" placeholder='Paste puzzle JSON here, then press "Load &amp; play"'></textarea>
+        <div class="pzLabel" style="margin-top:10px">Puzzle link — copy to share, or paste a link (or JSON) here to play it</div>
+        <textarea id="cpJson" rows="5" spellcheck="false" placeholder='Paste a puzzle link or JSON here, then press "Load &amp; play"'></textarea>
         <div class="cpRow">
-          <button id="cpCopy" data-tip="Copy the JSON text to the clipboard.">Copy</button>
+          <button id="cpCopy" data-tip="Copy the puzzle link to the clipboard.">Copy</button>
           <button id="cpLoad" data-tip="Clear the track and play this puzzle yourself.">Load &amp; play</button>
           <button id="cpBack" data-tip="Leave the puzzle and return to your own track." hidden>Back to building</button>
           <span id="cpMsg"></span>
@@ -1963,11 +1963,24 @@ function makePuzzleJson() {
   const samples = lastTrace[0].samples, T = AXES.position.t, pts = [];
   for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? Math.floor(AXES.position.y) : 1e9).toFixed(2)]);
   if (key === 'v' && Math.min(...pts.map(q => q[1])) < 0) { cpSay('That run\'s velocity goes negative, which the graph can\'t show. Try a different run.', 'err'); return; }
-  cpJson.value = JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts });
-  cpSay('Puzzle made — copy the JSON below.', 'ok');
+  cpJson.value = location.href.split(/[#?]/)[0] + '#' + encodeURIComponent(JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts }));
+  cpSay('Puzzle link made — copy it below to share.', 'ok');
 }
 // Validate pasted JSON and turn it into a puzzle object (or throw with a readable message).
-function parsePuzzleJson(text) {
+// Accepts bare JSON or a link with the puzzle after a # or ? (raw, URL-encoded or base64) → the JSON text.
+function puzzleTextFromInput(input) {
+  let t = String(input).trim();
+  if (t[0] !== '{') {
+    const m = t.match(/[#?]([\s\S]*)$/); if (m) t = m[1];
+    t = t.replace(/^puzzle=/, '');
+    const raw = t;
+    try { t = decodeURIComponent(raw); } catch (e) {}
+    if (t[0] !== '{') { try { t = atob(raw); } catch (e) {} }
+  }
+  return t;
+}
+function parsePuzzleJson(input) {
+  const text = puzzleTextFromInput(input);
   let d; try { d = JSON.parse(text); } catch (e) { throw new Error('That isn\'t valid JSON.'); }
   if (!d || d.format !== 'launcher-puzzle') throw new Error('That JSON isn\'t a Launcher puzzle.');
   if (d.metric !== 'position' && d.metric !== 'velocity') throw new Error('Puzzle metric must be "position" or "velocity".');
@@ -2023,15 +2036,10 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 setMode('sandbox');   // open on Sandbox (also resets the run)
 // A puzzle JSON pasted after the URL (…/#{"format":…} or …/?puzzle={…}, raw, URL-encoded, or base64) loads straight into Create → Load & play.
 (function loadPuzzleFromUrl() {
-  let raw = (location.hash.slice(1) || location.search.slice(1)).trim();
-  if (!raw) return;
-  raw = raw.replace(/^puzzle=/, '');
-  let text = raw;
-  try { text = decodeURIComponent(raw); } catch (e) {}
-  if (text[0] !== '{') { try { text = atob(raw); } catch (e) {} }
+  const text = puzzleTextFromInput(location.hash || location.search);
   if (text[0] !== '{') return;                     // not a puzzle link — ignore
   setMode('create');
-  cpJson.value = text;
+  cpJson.value = location.href;
   try { startTest(parsePuzzleJson(text)); cpSay('Puzzle loaded from the link — build a track that matches the dashed line.', 'ok'); }
   catch (e) { cpSay(e.message, 'err'); }
 })();
