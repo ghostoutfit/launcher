@@ -701,6 +701,15 @@ function drawScene() {
     sx.fillStyle = getCss('--ink'); sx.fillText(m + ' m', gxp, gY + 24);
   }
 
+  // where each piece sits, written below it (skipped on multiples of 5 — the ruler already says so)
+  sx.font = handFont(12, 700); sx.textAlign = 'center'; sx.fillStyle = getCss('--ink');
+  const posLabel = (m, px) => { if (Math.abs(m / 5 - Math.round(m / 5)) < 1e-6) return; sx.fillText(+m.toFixed(1) + ' m', px, gY + 46); };
+  for (const b of boosts) posLabel(b.x, mToPx(b.x));
+  for (const g of targets) posLabel(g.x, mToPx(g.x));
+  for (const w of walls) posLabel(w.x, mToPx(w.x + WALL_D));
+  for (const b of secondBalls) posLabel(b.x, mToPx(b.x));
+  for (const z of fricZones) { posLabel(z.x, mToPx(z.x)); posLabel(z.x + z.len, mToPx(z.x + z.len)); }
+
   // speed change pads: green when adding speed (+dv), red when removing it (−dv)
   for (const b of boosts) drawPad(b, getCss(b.dv < 0 ? '--cut' : '--boost'), b.dv < 0 ? '#4a0a0a' : '#06381f', b.dv < 0 ? '−' : '+');
 
