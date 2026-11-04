@@ -263,14 +263,14 @@
   <div id="stage">
     <div id="main">
       <div id="controls" class="panel">
-        <div class="ctrl" data-tip="Where the ball starts (0–15 m).">
+        <div class="ctrl" data-tip="Where the marble starts (0–15 m).">
           <label>Launch position</label>
           <div class="row">
             <input type="range" id="pos" min="0" max="15" step="1" value="0">
             <span class="val" id="posVal">0 m</span>
           </div>
         </div>
-        <div class="ctrl" data-tip="How fast the ball starts, going right (0–10 m/s).">
+        <div class="ctrl" data-tip="How fast the marble starts, going right (0–10 m/s).">
           <label>Launch speed</label>
           <div class="row">
             <input type="range" id="speed" min="0" max="10" step="1" value="6">
@@ -279,9 +279,9 @@
         </div>
         <div class="spacer"></div>
         <div class="action-group">
-          <button id="launchBtn" class="primary" data-tip="Release the ball. The run records for 5 s, or until the ball leaves the screen.">Launch</button>
+          <button id="launchBtn" class="primary" data-tip="Release the marble. The run records for 5 s, or until the marble leaves the screen.">Launch</button>
           <button id="replayFastBtn" class="replay" data-tip="Replay the last run at the same speed." disabled aria-label="Replay"><span class="rsym">&#8634;</span></button>
-          <button id="resetBtn" data-tip="Clear the run and graph and put the ball back at its start.">Reset</button>
+          <button id="resetBtn" data-tip="Clear the run and graph and put the marble back at its start.">Reset</button>
           <button id="clearBtn" data-tip="Remove every track piece.">Clear</button>
         </div>
       </div>
@@ -335,7 +335,7 @@
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
-            <canvas id="graph" data-tip="Motion graph: each ball's position or velocity against time."></canvas>
+            <canvas id="graph" data-tip="Motion graph: each marble's position or velocity against time."></canvas>
           </div>
         </div>
       </div>
@@ -362,7 +362,7 @@
         </div>
         <div class="chip ball2" data-piece="ball2">
           <div class="ico"><canvas id="ball2Icon" width="56" height="56"></canvas></div>
-          <div class="ctxt"><b>Second ball</b></div>
+          <div class="ctxt"><b>Marble 2 (M2)</b></div>
         </div>
       </div>
     </div>
@@ -544,7 +544,7 @@ function step(dt) {
     // target-speed gate
     const g = firstCrossed(targets, x, nx, true);
     if (g) {
-      if (g.time != null && t < g.time) {       // too early → the tube holds the ball until its time
+      if (g.time != null && t < g.time) {       // too early → the tube holds the marble until its time
         x = g.x; v = 0; ballStopped = true; heldGate = g; break;
       }
       x = g.x;
@@ -1330,7 +1330,7 @@ function makeGhost(piece) {
   if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
   else if (piece === 'target') { g.textContent = '▶ 6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
-  else if (piece === 'ball2') { g.textContent = '● ball'; g.style.background = getCss('--ball2'); g.style.color = '#0a1f3a'; }
+  else if (piece === 'ball2') { g.textContent = '● marble'; g.style.background = getCss('--ball2'); g.style.color = '#0a1f3a'; }
   else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
   document.body.appendChild(g); return g;
 }
@@ -1358,7 +1358,7 @@ function nearestSlot(piece, want, self) {
 }
 function placePiece(type, m) {
   if (type !== 'friction') {
-    if (type === 'ball2' && secondBalls.length >= 1) return;
+    if (type === 'ball2' && (secondBalls.length >= 1 || mode === 'puzzle')) return;
     const x = nearestSlot(type, clamp(snap(type === 'wall' ? m - WALL_D : m), 0, TRACK_LEN), null);
     if (x === null) return;                         // no room: nothing is placed
     if (type === 'boost') boosts.push({ id: pieceId++, x, dv: BOOST_DV, used: false });
@@ -1376,14 +1376,14 @@ function overScene(cx, cy) {
 
 // Only one extra ball is allowed — dim the chip and block its drag once placed.
 const ball2Chip = document.querySelector('.chip.ball2');
-function refreshBall2Chip() { if (ball2Chip) ball2Chip.classList.toggle('disabled', secondBalls.length >= 1); }
+function refreshBall2Chip() { if (ball2Chip) ball2Chip.classList.toggle('disabled', secondBalls.length >= 1 || mode === 'puzzle'); }   // no puzzle uses two marbles
 
 // Start a drag from a palette chip (create new piece)
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('pointerdown', e => {
     e.preventDefault();
     const piece = chip.dataset.piece;
-    if (piece === 'ball2' && secondBalls.length >= 1) return;  // one extra ball max
+    if (piece === 'ball2' && (secondBalls.length >= 1 || mode === 'puzzle')) return;  // one extra marble max; none in puzzles
     drag = { kind: 'new', piece, ghost: makeGhost(piece) };
     moveGhost(drag.ghost, e.clientX, e.clientY);
   });
@@ -1436,12 +1436,12 @@ sceneC.addEventListener('pointerdown', e => {
 
 // ─── Hover tooltips: one brief line per element ───────────────────────────────
 const TIPS = {
-  boost:    'Speed change: adds its value to the ball\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
-  target:   'Target speed: sets the ball to the speed and direction shown. A timer holds the ball until that time.',
-  friction: 'Friction pad: slows the ball while it\'s on it. Drag its ends to resize.',
-  wall:     'Wall: stops the ball. Click it to make it bouncy.',
-  wallBouncy: 'Bouncy wall: reflects the ball at the same speed. Click it to make it a plain wall.',
-  ball2:    'Second ball: waits at rest. When hit, it takes the first ball\'s speed and the first stops.',
+  boost:    'Speed change: adds its value to the marble\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
+  target:   'Target speed: sets the marble to the speed and direction shown. A timer holds the marble until that time.',
+  friction: 'Friction pad: slows the marble while it\'s on it. Drag its ends to resize.',
+  wall:     'Wall: stops the marble. Click it to make it bouncy.',
+  wallBouncy: 'Bouncy wall: reflects the marble at the same speed. Click it to make it a plain wall.',
+  ball2:    'Marble 2 (M2): waits at rest. When hit, it takes the first marble\'s speed and the first stops.',
 };
 const tipEl = document.getElementById('tip');
 function showTip(text, cx, cy) {
@@ -1582,7 +1582,7 @@ applyTheme(theme);
 // ─── Delete confirmation (double-click a piece) ─────────────────────────────────
 const dcEl = document.getElementById('deleteConfirm');
 const dcName = document.getElementById('dcName');
-const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction pad', ball2: 'second ball' };
+const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction pad', ball2: 'marble 2' };
 function openDeleteConfirm(piece, el, cx, cy) {
   confirmPiece = { piece, el };
   dcName.textContent = (piece === 'wall' && el.bouncy) ? 'bouncy wall' : (PIECE_NAMES[piece] || 'piece');
@@ -1739,7 +1739,9 @@ function syncPuzzleView() {
   document.body.classList.toggle('pz-menu', menu);
   document.getElementById('pzBack').hidden = !(puzzle && currentPuzzle);
 }
+function clearTrack() { boosts = []; walls = []; targets = []; fricZones = []; secondBalls = []; refreshBall2Chip(); }
 function selectPuzzle(p) {
+  clearTrack();
   currentPuzzle = p; graphType = p.metric; puzzleGraded = false;
   hideWin(); syncPuzzleView(); renderPuzzles(); updatePuzzleStatus();
   resetRun();   // switching puzzles always starts from a clean track
@@ -1820,10 +1822,11 @@ function setMode(m) {
   if (mode === 'create' && m !== 'create' && testPuzzle) exitTest();      // leaving Create ends a loaded puzzle
   const prevMode = mode;
   mode = m;
-  if (m === 'puzzle' && prevMode !== 'puzzle') currentPuzzle = null;   // entering Puzzle always starts at the menu
+  if (m === 'puzzle' && prevMode !== 'puzzle') { currentPuzzle = null; clearTrack(); }   // entering Puzzle starts at the menu with an empty track
   hideWin();
   [...document.querySelectorAll('#modeTabs button')].forEach(b => b.classList.toggle('on', b.dataset.mode === m));
   const puzzle = m === 'puzzle', create = m === 'create';
+  refreshBall2Chip();
   syncPuzzleView();
   document.getElementById('createPanel').hidden = !create;
   document.getElementById('graphTabs').hidden = puzzle || (create && !!testPuzzle);
