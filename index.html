@@ -920,7 +920,7 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    const gridStep = (metric.unit === 'm') ? 5 : yMax / 5;   // position: gridlines every 5 m (matches the world's ruler)
+    const gridStep = (metric.unit === 'm') ? 5 : 2;   // position: gridlines every 5 m (matches the world's ruler)
     for (let vv = 0; vv <= yMax + 1e-9; vv += gridStep) {
       const yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
