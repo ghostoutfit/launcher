@@ -163,6 +163,7 @@
   .chip.disabled { cursor: not-allowed; pointer-events: none; }
   .chip.ball2.disabled .ico { color: var(--muted); }
   .chip.ball2.disabled .ctxt b { color: var(--muted); }
+  .chip .ctxt b { white-space: nowrap; }
   .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
   .chip.boost .ico { background: var(--boost); color: #063; }
   .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
@@ -273,7 +274,7 @@
         <div class="ptitle">Track pieces</div>
         <div class="chip boost" data-piece="boost">
           <div class="ico">±</div>
-          <div class="ctxt"><b>Speed change</b></div>
+          <div class="ctxt"><b>Speed Change</b></div>
         </div>
         <div class="chip target" data-piece="target">
           <div class="ico">⇄</div>
@@ -281,7 +282,7 @@
         </div>
         <div class="chip friction" data-piece="friction">
           <div class="ico">▦</div>
-          <div class="ctxt"><b>Friction patch</b></div>
+          <div class="ctxt"><b>Friction</b></div>
         </div>
         <div class="chip wall" data-piece="wall">
           <div class="ico">█</div>
@@ -716,7 +717,7 @@ function drawScene() {
     }
     sx.restore();
     roundRect(sx, wl0, wT, ww, wh, 5); ink(2.5); sx.stroke();
-    wl._sign = drawPieceSign(wx, wT, wl.bouncy ? 'bouncy wall' : 'wall', wallCol, '#1c242e');
+    wl._sign = drawPieceSign(wx, wT, wl.bouncy ? 'bouncy\nwall' : 'wall', wallCol, '#1c242e');
   }
 
   // launch marker
@@ -972,14 +973,16 @@ function signPost(cx, topY, botY, hex) {
 // A floating display sign (flat outlined panel on a post) with a hand-lettered label + optional sub-line.
 function drawPieceSign(cx, elTopY, label, hex, fg, sub) {
   sx.font = handFont(17, 700);
-  const tw = sx.measureText(label).width;
-  let sw = Math.max(54, tw + 26), sh = sub ? 42 : 30;
+  const lines = String(label).split('\n');                  // '\n' in the label = a second line
+  const tw = Math.max(...lines.map(l => sx.measureText(l).width));
+  let sw = Math.max(54, tw + 26), sh = sub ? 42 : lines.length > 1 ? 48 : 30;
   const syBot = elTopY - 15, syTop = syBot - sh;
   signPost(cx, syTop + sh, elTopY, hex);
   panelShaded(cx - sw / 2, syTop, sw, sh, 10, hex);
   sx.fillStyle = fg; sx.textAlign = 'center'; sx.textBaseline = 'middle';
   sx.font = handFont(17, 700);
-  sx.fillText(label, cx, sub ? syTop + 15 : syTop + sh / 2 + 1);
+  if (lines.length > 1) lines.forEach((l, i) => sx.fillText(l, cx, syTop + 14 + i * 19));
+  else sx.fillText(label, cx, sub ? syTop + 15 : syTop + sh / 2 + 1);
   if (sub) {
     sx.font = handFont(13, 600); sx.fillStyle = lighten(hex, 0.55);
     sx.fillText(sub, cx, syTop + 31);
@@ -1193,7 +1196,7 @@ sceneC.addEventListener('pointerdown', e => {
 const TIPS = {
   boost:    'Speed change: adds its value to the ball\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
   target:   'Target speed: sets the ball to the speed and direction shown. A timer holds the ball until that time.',
-  friction: 'Friction patch: slows the ball while it\'s on it. Drag its ends to resize.',
+  friction: 'Friction: slows the ball while it\'s on it. Drag its ends to resize.',
   wall:     'Wall: stops the ball. Click it to make it bouncy.',
   wallBouncy: 'Bouncy wall: reflects the ball at the same speed. Click it to make it a plain wall.',
   ball2:    'Second ball: waits at rest. When hit, it takes the first ball\'s speed and the first stops.',
@@ -1337,7 +1340,7 @@ applyTheme(theme);
 // ─── Delete confirmation (double-click a piece) ─────────────────────────────────
 const dcEl = document.getElementById('deleteConfirm');
 const dcName = document.getElementById('dcName');
-const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction patch', ball2: 'second ball' };
+const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction', ball2: 'second ball' };
 function openDeleteConfirm(piece, el, cx, cy) {
   confirmPiece = { piece, el };
   dcName.textContent = (piece === 'wall' && el.bouncy) ? 'bouncy wall' : (PIECE_NAMES[piece] || 'piece');
