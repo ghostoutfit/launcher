@@ -1856,6 +1856,7 @@ document.getElementById('pzBack').addEventListener('click', backToMenu);
 const winEl = document.getElementById('winOverlay'), confC = document.getElementById('confetti');
 let confetti = [], confRaf = 0;
 function nextPuzzle() {
+  if (currentPuzzle && currentPuzzle.id === 'shared') return null;     // a linked puzzle has no "next"
   const all = [...PUZZLES.position, ...PUZZLES.velocity];
   const i = all.findIndex(p => currentPuzzle && p.id === currentPuzzle.id);
   const n = all[i + 1];
@@ -1917,7 +1918,7 @@ function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left
   }
   if (pass) {
     if (isTest) { testSolved = true; }
-    else { solvedPuzzles.add(P.id); savePuzzles(); renderPuzzles(); }
+    else if (P.id !== 'shared') { solvedPuzzles.add(P.id); savePuzzles(); renderPuzzles(); }   // a linked puzzle isn't part of saved progress
     updatePuzzleStatus();
     if (!isTest && mode === 'puzzle') showWin();
   } else if (!isTest && mode === 'puzzle') tryEl.hidden = false;   // a beat to think before revising
@@ -2034,15 +2035,20 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 setMode('sandbox');   // open on Sandbox (also resets the run)
-// A puzzle JSON pasted after the URL (…/#{"format":…} or …/?puzzle={…}, raw, URL-encoded, or base64) loads straight into Create → Load & play.
-(function loadPuzzleFromUrl() {
+// A puzzle code after the URL (…/#%7B…, raw JSON, or …/?puzzle=…) opens that puzzle on its own, in Puzzle mode
+// (also when the code is pasted into the address bar of an already-open page → hashchange).
+function loadPuzzleFromUrl() {
   const text = puzzleTextFromInput(location.hash || location.search);
   if (text[0] !== '{') return;                     // not a puzzle link — ignore
-  setMode('create');
-  cpJson.value = location.hash || ('#' + location.search.slice(1).replace(/^puzzle=/, ''));
-  try { startTest(parsePuzzleJson(text)); cpSay('Puzzle loaded from the address — build a track that matches the dashed line.', 'ok'); }
-  catch (e) { cpSay(e.message, 'err'); }
-})();
+  try {
+    const P = parsePuzzleJson(text); P.id = 'shared';
+    setMode('puzzle'); selectPuzzle(P);
+  } catch (e) {
+    setMode('create'); cpJson.value = location.hash || location.search; cpSay(e.message, 'err');
+  }
+}
+loadPuzzleFromUrl();
+window.addEventListener('hashchange', loadPuzzleFromUrl);
 requestAnimationFrame(frame);
 // redraw once the hand-drawn font has loaded so canvas labels pick it up
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); });
