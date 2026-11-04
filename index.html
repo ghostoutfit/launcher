@@ -90,12 +90,9 @@
   button.primary { background: var(--accent); color: #06121c; border-color: #1e6fa3; }
   button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
 
-  /* Replay buttons: circle-arrow + turtle (half speed) / rabbit (normal speed) */
+  /* Replay button: circle-arrow (same speed) */
   .replay { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; }
   .replay .rsym { font-size: 20px; line-height: 1; margin-top: -2px; }
-  /* icon tinted to the palette (ink) via mask, so it tracks light/dark mode */
-  .replay .ricon { height: 23px; width: 28px; display: block; background: var(--ink);
-    -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
 
   #themeToggle {
     position: fixed; top: 14px; right: 16px; z-index: 60;
@@ -199,6 +196,11 @@
   .chip .ctxt span { color: var(--muted); font-size: 12.5px; }
   #palette .phint { color: var(--muted); font-size: 13px; line-height: 1.35; margin: 6px 0 12px; }
 
+  #axisMenu { position: fixed; z-index: 500; background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
+    padding: 5px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.25); }
+  #axisMenu[hidden] { display: none; }
+  #axisMenu button { text-align: left; padding: 6px 14px; font-size: 14px; font-weight: 700; }
+  #axisMenu button.on { background: var(--accent); color: #06121c; border-color: var(--accent); }
   #tip {
     position: fixed; z-index: 90; pointer-events: none; max-width: 220px; display: none;
     background: var(--ink); color: var(--panel, #fff); border-radius: 8px; padding: 6px 10px;
@@ -260,8 +262,7 @@
         <div class="spacer"></div>
         <div class="action-group">
           <button id="launchBtn" class="primary" data-tip="Release the ball. The run records for 5 s, or until the ball leaves the screen.">Launch</button>
-          <button id="replaySlowBtn" class="replay" data-tip="Replay the last run at half speed." disabled><span class="rsym">&#8634;</span><span class="ricon" role="img" aria-label="replay half speed"></span></button>
-          <button id="replayFastBtn" class="replay" data-tip="Replay the last run at normal speed." disabled><span class="rsym">&#8634;</span><span class="ricon" role="img" aria-label="replay normal speed"></span></button>
+          <button id="replayFastBtn" class="replay" data-tip="Replay the last run at the same speed." disabled aria-label="Replay"><span class="rsym">&#8634;</span></button>
           <button id="resetBtn" data-tip="Clear the run and graph and put the ball back at its start.">Reset</button>
           <button id="clearBtn" data-tip="Remove every track piece.">Clear</button>
         </div>
@@ -358,6 +359,7 @@
 </div>
 
 <div id="tip"></div>
+<div id="axisMenu" hidden></div>
 <div id="winOverlay" hidden>
   <canvas id="confetti"></canvas>
   <div id="winCard">
@@ -398,6 +400,7 @@ let testSolved = false;
 let authorState = null;         // the author's own track, parked while they play an imported puzzle
 // the puzzle currently being graded / drawn as a dashed target (puzzle tab, or a loaded puzzle in Create)
 function activePuzzle() { return mode === 'puzzle' ? currentPuzzle : mode === 'create' ? testPuzzle : null; }
+let bounceAt = null;            // contact point of a bouncy-wall reflection this frame (adds a v = 0 sample)
 let puzzleGraded = false;       // whether the current run has been graded against the puzzle
 let replaying = false;          // true during a replay: show the full stored curve + a moving marble
 let lastTrace = null;           // [{color, samples}] — the completed run kept on screen during replay
@@ -441,18 +444,7 @@ const speedVal = document.getElementById('speedVal');
 const posEl = document.getElementById('pos');
 const posVal = document.getElementById('posVal');
 const launchBtn = document.getElementById('launchBtn');
-const replaySlowBtn = document.getElementById('replaySlowBtn');
 const replayFastBtn = document.getElementById('replayFastBtn');
-// Turtle (half speed) and Rabbit (normal speed) icons — from the fission sim.
-const TURTLE_SRC = "data:image/png;base64,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";
-const RABBIT_SRC = "data:image/png;base64,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";
-function setRicon(btn, src) {
-  const el = btn.querySelector('.ricon');
-  el.style.webkitMaskImage = 'url("' + src + '")';
-  el.style.maskImage = 'url("' + src + '")';
-}
-setRicon(replaySlowBtn, TURTLE_SRC);
-setRicon(replayFastBtn, RABBIT_SRC);
 
 // ─── Scene geometry ───────────────────────────────────────────────────────────
 const PAD_L = 24, PAD_R = 24;
@@ -515,7 +507,7 @@ function step(dt) {
     const wh = firstWallHit(x, nx);
     if (wh) {
       x = wh.cp;
-      if (wh.wall.bouncy) { v = -v; continue; }
+      if (wh.wall.bouncy) { v = -v; bounceAt = wh.cp; continue; }
       v = 0; ballStopped = true; break;
     }
     // second ball: equal-mass elastic hit → this ball stops dead, the other takes its speed
@@ -578,7 +570,7 @@ function doLaunch(vLaunch, xLaunch, rate, isReplay) {
   lastFrame = performance.now();
   launchBtn.disabled = true;
   lastRun = { v0, x0: launchX };
-  replaySlowBtn.disabled = false; replayFastBtn.disabled = false;
+  replayFastBtn.disabled = false;
 }
 function launch() { doLaunch(parseInt(speedEl.value, 10), parseInt(posEl.value, 10), 1, false); }
 // Replay repeats the last run exactly, at the given rate, keeping the finished
@@ -618,16 +610,21 @@ function frame(now) {
     for (const el of [...targets, ...boosts]) { if (el._shake) { el._shake *= 0.85; if (el._shake < 0.02) el._shake = 0; } }
     // record every ball's trajectory so each can be graphed on the same axes
     for (const b of balls) {
-      const prev = b.samples[b.samples.length - 1];
+      let prev = b.samples[b.samples.length - 1];
+      if (bounceAt !== null && b === movingBall) {   // a reflection passes through v = 0: speed dips to 0 and back
+        const dd = prev.d + Math.abs(bounceAt - prev.x);
+        prev = { t: (prev.t + t) / 2, x: bounceAt, v: 0, d: dd }; b.samples.push(prev);
+      }
       b.d = prev.d + Math.abs(b.x - prev.x);
       b.samples.push({ t, x: b.x, v: b.v, d: b.d });
     }
+    bounceAt = null;
     if ((mode === 'puzzle' || mode === 'create') && !replaying) gradePuzzle();
     // marble left the screen: stop collecting data and freeze the graph where it ended
     // (no flat extension), leaving the replay buttons ready
     if (x > TRACK_LEN || x < 0) {
       running = false; launchBtn.disabled = false;
-      replaySlowBtn.disabled = false; replayFastBtn.disabled = false;
+      replayFastBtn.disabled = false;
       if (!replaying) { lastTrace = snapshotTrace(false); runCaptured = true; }
       if ((mode === 'puzzle' || mode === 'create') && !replaying) gradePuzzle(true);
     } else {
@@ -882,10 +879,16 @@ function drawMarbleAt(c, cx, cy, r, col) {
 }
 
 // ─── Graph rendering ──────────────────────────────────────────────────────────
-function graphSpec() {
-  if (graphType === 'position') return { key: 'x', label: 'Position', unit: 'm' };
-  return { key: 'v', label: 'Velocity', unit: 'm/s' };
-}
+// The position-type axis can show Position / Distance / Displacement; the velocity-type axis Velocity / Speed.
+// (Puzzles always use plain Position / Velocity, so the choice is ignored there.)
+let posMode = 'x', velMode = 'v';
+const POS_SPECS = { x: { key: 'x', label: 'Position', unit: 'm' }, d: { key: 'd', label: 'Distance', unit: 'm' }, dx: { key: 'dx', label: 'Displacement', unit: 'm' } };
+const VEL_SPECS = { v: { key: 'v', label: 'Velocity', unit: 'm/s' }, sp: { key: 'sp', label: 'Speed', unit: 'm/s' } };
+function posSpec() { return POS_SPECS[activePuzzle() ? 'x' : posMode]; }
+function velSpec() { return VEL_SPECS[activePuzzle() ? 'v' : velMode]; }
+function graphSpec() { return graphType === 'position' ? posSpec() : velSpec(); }
+// value of a graph key for a sample (or live ball) o of trace b — dx and sp are derived from x and v
+function metricVal(b, o, key) { return key === 'dx' ? o.x - b.samples[0].x : key === 'sp' ? Math.abs(o.v) : o[key]; }
 
 function drawGraph() {
   const both = graphType === 'both';
@@ -919,7 +922,7 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    const gridStep = metric.key === 'x' ? 5 : yMax / 5;   // position: gridlines every 5 m (matches the world's ruler)
+    const gridStep = (metric.unit === 'm') ? 5 : yMax / 5;   // position: gridlines every 5 m (matches the world's ruler)
     for (let vv = 0; vv <= yMax + 1e-9; vv += gridStep) {
       const yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
@@ -939,7 +942,10 @@ function drawGraph() {
     // y-axis title
     gx.save(); gx.translate(14, (ty + by) / 2); gx.rotate(-Math.PI / 2);
     gx.textAlign = 'center'; gx.textBaseline = 'bottom';
-    gx.fillStyle = getCss('--muted'); gx.fillText(metric.label + ' (' + metric.unit + ')', 0, 0); gx.restore();
+    const title = metric.label + ' (' + metric.unit + ')' + (activePuzzle() ? '' : ' ▾');
+    gx.fillStyle = getCss('--muted'); gx.fillText(title, 0, 0);
+    const titleW = gx.measureText(title).width; gx.restore();
+    graphPanels[graphPanels.length - 1].titleHit = activePuzzle() ? null : { x0: 0, x1: 26, y0: (ty + by) / 2 - titleW / 2 - 4, y1: (ty + by) / 2 + titleW / 2 + 4 };
 
     // traces (clipped to the plot area). During replay the full completed curve
     // stays on screen (lastTrace) instead of rebuilding as the ball re-runs.
@@ -948,28 +954,35 @@ function drawGraph() {
     gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
     // The velocity axis starts at 0, so negative speeds can't be drawn: break the line there
     // and remember where it first went negative so we can flag it below.
-    const isV = metric.key === 'v';
+    const isNeg = metric.key === 'v' || metric.key === 'dx';   // axes start at 0, so a negative value can't be drawn
     let negT = null;
     for (const b of traces) {
       if (b.samples.length < 2) continue;
       gx.strokeStyle = b.color; gx.beginPath();
       // Segments touching the visible range are drawn (the plot clip trims them at the axis), so the
-      // steep line where velocity drops below / rises back above zero still shows; fully negative
+      // steep line where the value drops below / rises back above zero still shows; fully negative
       // stretches are skipped.
-      let prev = null;
+      let prev = null, pv = 0;
       for (const s of b.samples) {
-        if (isV && s.v < 0 && (negT === null || s.t < negT)) negT = s.t;
-        if (prev && !(isV && prev.v < 0 && s.v < 0)) { gx.moveTo(X(prev.t), Y(prev[metric.key])); gx.lineTo(X(s.t), Y(s[metric.key])); }
-        prev = s;
+        const sv = metricVal(b, s, metric.key);
+        if (isNeg && sv < -1e-9 && (negT === null || s.t < negT)) negT = s.t;
+        if (prev && !(isNeg && pv < -1e-9 && sv < -1e-9)) { gx.moveTo(X(prev.t), Y(pv)); gx.lineTo(X(s.t), Y(sv)); }
+        prev = s; pv = sv;
       }
       gx.stroke();
     }
     gx.restore();
 
-    if (negT !== null) {   // alert beside the vertical line where velocity first went negative
-      const lines = ['Velocity has', 'become negative -', 'graph not shown'];
-      gx.font = handFont(18, 700);
-      const lh = 22, aw = Math.max(...lines.map(l => gx.measureText(l).width)) + 24, ah = lines.length * lh + 12;
+    if (negT !== null) {   // alert beside the vertical line where the value first went negative
+      const what = metric.key === 'v' ? 'Velocity' : 'Displacement';
+      const lines = [what + ' has', 'become negative -', 'graph not shown'];
+      const compact = (by - ty) < 150;                    // 'both' view panels are short
+      const fs = compact ? 13 : 18, lh = compact ? 16 : 22, bh = compact ? 22 : 30;
+      const canSwitch = !activePuzzle();
+      const btnText = metric.key === 'v' ? 'Show Speed Instead' : 'Show Distance Instead';
+      gx.font = handFont(fs, 700);
+      const aw = Math.max(...lines.map(l => gx.measureText(l).width), canSwitch ? gx.measureText(btnText).width + 16 : 0) + 24;
+      const ah = lines.length * lh + 12 + (canSwitch ? bh + 8 : 0);
       const lx = X(negT);
       let ax = lx + 12;                                   // right of the line, else left of it
       if (ax + aw > x1 - 4) ax = lx - 12 - aw;
@@ -979,6 +992,12 @@ function drawGraph() {
       gx.strokeStyle = INK; gx.lineWidth = 2; gx.stroke();
       gx.fillStyle = '#4a0a0a'; gx.textAlign = 'center'; gx.textBaseline = 'middle';
       lines.forEach((l, i) => gx.fillText(l, ax + aw / 2, ay + 6 + lh / 2 + i * lh + 1));
+      if (canSwitch) {
+        const bx = ax + 8, bw = aw - 16, byy = ay + ah - bh - 6;
+        gx.fillStyle = getCss('--panel'); roundRect(gx, bx, byy, bw, bh, 7); gx.fill(); gx.stroke();
+        gx.fillStyle = INK; gx.fillText(btnText, bx + bw / 2, byy + bh / 2 + 1);
+        graphPanels[graphPanels.length - 1].altBtn = { x0: bx, x1: bx + bw, y0: byy, y1: byy + bh, set: metric.key === 'v' ? () => { velMode = 'sp'; } : () => { posMode = 'd'; } };
+      }
       gx.textBaseline = 'alphabetic';
     }
 
@@ -989,15 +1008,17 @@ function drawGraph() {
       for (const b of balls) {
         const last = b.samples[b.samples.length - 1];
         const cx = replaying ? Math.max(x0, Math.min(x1, X(t))) : X(last.t);
-        const val = replaying ? b[metric.key] : last[metric.key];
-        if (metric.key === 'v' && val < 0) continue;                 // off the velocity axis: no marble
+        const val = replaying ? metricVal(b, b, metric.key) : metricVal(b, last, metric.key);
+        if (isNeg && val < -1e-9) continue;                          // off the axis: no marble
         drawMarbleAt(gx, cx, Y(val), 6.5, b.color);                  // centered on the true value
       }
     } else if (!replaying && !(balls[0] && balls[0].samples.length >= 2)) {
       const mx = X(0);
       const launchV = parseInt(speedEl.value, 10) || 0;
-      const marks = [{ val: metric.key === 'v' ? launchV : launchX, color: getCss('--ball') }];
-      for (const sb of secondBalls) marks.push({ val: metric.key === 'v' ? 0 : sb.x, color: getCss('--ball2') });
+      const kk = metric.key, isVel = kk === 'v' || kk === 'sp';
+      const startVal = isVel ? launchV : kk === 'x' ? launchX : 0;       // distance / displacement start at 0
+      const marks = [{ val: startVal, color: getCss('--ball') }];
+      for (const sb of secondBalls) marks.push({ val: kk === 'x' ? sb.x : 0, color: getCss('--ball2') });
       for (const m of marks) drawMarbleAt(gx, mx, Y(m.val), 6.5, m.color);
     }
 
@@ -1032,8 +1053,8 @@ function drawGraph() {
     const panelH = (h - padT - botPad - 2 * numH - gap) / 2;
     const ty1 = padT, by1 = ty1 + panelH;
     const ty2 = by1 + numH + gap, by2 = ty2 + panelH;
-    drawPanel({ key: 'v', label: 'Velocity', unit: 'm/s', yMax: base.yv }, ty1, by1, { vgrid: true });
-    drawPanel({ key: 'x', label: 'Position', unit: 'm',  yMax: base.yd }, ty2, by2, { vgrid: true });
+    drawPanel({ ...velSpec(), yMax: base.yv }, ty1, by1, { vgrid: true });
+    drawPanel({ ...posSpec(), yMax: base.yd }, ty2, by2, { vgrid: true });
   } else {
     const spec = graphSpec();
     drawPanel({ key: spec.key, label: spec.label, unit: spec.unit, yMax: base.y }, 14, h - padB, { caption: true });
@@ -1063,10 +1084,33 @@ function drawGraphPoint() {
   gx.fillStyle = getCss('--ink'); gx.textAlign = 'left'; gx.fillText(label, bx + 6, by2);
   gx.restore();
 }
+// Menu opened by clicking an axis title: pick which quantity that axis graphs.
+const axisMenu = document.getElementById('axisMenu');
+function openAxisMenu(panel, cx, cy) {
+  const isPos = panel.unit === 'm';
+  const opts = isPos ? POS_SPECS : VEL_SPECS, cur = isPos ? posMode : velMode;
+  axisMenu.innerHTML = '';
+  for (const k of Object.keys(opts)) {
+    const b = document.createElement('button'); b.textContent = opts[k].label; b.className = k === cur ? 'on' : '';
+    b.addEventListener('click', ev => { ev.stopPropagation(); if (isPos) posMode = k; else velMode = k; graphPoint = null; closeAxisMenu(); drawGraph(); });
+    axisMenu.appendChild(b);
+  }
+  axisMenu.hidden = false;
+  axisMenu.style.left = Math.min(cx + 6, innerWidth - axisMenu.offsetWidth - 6) + 'px';
+  axisMenu.style.top = Math.min(cy, innerHeight - axisMenu.offsetHeight - 6) + 'px';
+}
+function closeAxisMenu() { axisMenu.hidden = true; }
+document.addEventListener('pointerdown', e => { if (!axisMenu.hidden && !axisMenu.contains(e.target)) closeAxisMenu(); }, true);
 graphC.addEventListener('click', e => {
   if (!graphGeom) return;
   const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
   const { x0, x1, tMax } = graphGeom;
+  for (const p of graphPanels) {
+    const a = p.altBtn;
+    if (a && mx >= a.x0 && mx <= a.x1 && my >= a.y0 && my <= a.y1) { a.set(); graphPoint = null; drawGraph(); return; }
+    const t = p.titleHit;
+    if (t && mx >= t.x0 && mx <= t.x1 && my >= t.y0 && my <= t.y1) { openAxisMenu(p, e.clientX, e.clientY); return; }
+  }
   const P = graphPanels.find(p => my >= p.ty - 6 && my <= p.by + 6); if (!P) return;
   const t = Math.round(clamp((mx - x0) / (x1 - x0), 0, 1) * tMax);
   const val = Math.min(Math.round(clamp((P.by - my) / (P.by - P.ty), 0, 1) * P.yMax), P.key === 'x' ? TRACK_LEN - 1 : 1e9);
@@ -1472,11 +1516,10 @@ document.getElementById('graphTabs').addEventListener('click', e => {
   drawGraph();
 });
 launchBtn.addEventListener('click', launch);
-replaySlowBtn.addEventListener('click', () => replay(0.5));
 replayFastBtn.addEventListener('click', () => replay(1));
 document.getElementById('resetBtn').addEventListener('click', () => {
   lastRun = null; lastTrace = null;                       // nothing to replay after a reset
-  replaySlowBtn.disabled = true; replayFastBtn.disabled = true;
+  replayFastBtn.disabled = true;
   resetRun();
 });
 document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); if (!running) resetRun(); else drawScene(); });
