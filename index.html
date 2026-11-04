@@ -264,10 +264,10 @@
             <span class="val" id="posVal">0 m</span>
           </div>
         </div>
-        <div class="ctrl" data-tip="How fast the ball starts, going right (0–12 m/s).">
+        <div class="ctrl" data-tip="How fast the ball starts, going right (0–10 m/s).">
           <label>Launch speed</label>
           <div class="row">
-            <input type="range" id="speed" min="0" max="12" step="1" value="6">
+            <input type="range" id="speed" min="0" max="10" step="1" value="6">
             <span class="val" id="speedVal">6 m/s</span>
           </div>
         </div>
@@ -392,7 +392,7 @@ const BALL_VR   = 0.35;       // drawn ball radius (m)
 // x snaps to 1 m). The wall body stands WALL_D further right, so the ball touches its face
 // instead of overlapping it. From the right the ball stops at x + 2*WALL_D.
 const WALL_D    = WALL_HW + BALL_VR;
-let   FRICTION_DECEL = 5;     // deceleration under friction (m/s^2) — dev-tunable
+let   FRICTION_DECEL = 2;     // deceleration under friction (m/s^2) — dev-tunable
 const BOOST_DV  = 4;          // speed change pad: starting value (m/s); the pad's ± buttons step it by TARGET_STEP
 const FRIC_LEN  = 2;          // friction patch length (m)
 const TARGET_STEP = 2;        // target-speed increment (m/s)
