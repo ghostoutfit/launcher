@@ -995,7 +995,7 @@ function drawGraph() {
       const compact = (by - ty) < 150;                    // 'both' view panels are short
       const fs = compact ? 13 : 18, lh = compact ? 16 : 22, bh = compact ? 22 : 30;
       const canSwitch = !activePuzzle();
-      const btnText = metric.key === 'v' ? 'Show Speed Instead' : 'Show Distance Instead';
+      const btnText = metric.key === 'v' ? 'Show Speed' : 'Show Distance';
       gx.font = handFont(fs, 700);
       const aw = Math.max(...lines.map(l => gx.measureText(l).width), canSwitch ? gx.measureText(btnText).width + 16 : 0) + 24;
       const ah = lines.length * lh + 12 + (canSwitch ? bh + 8 : 0);
