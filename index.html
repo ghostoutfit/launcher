@@ -247,7 +247,7 @@
   <div id="logoWrap"><img id="logoImg" src="harmony-ramp.png" alt="Harmony"><canvas id="logoBall" width="100" height="100"></canvas></div>
   <div id="brand">LAUNCHER</div>
   <button id="pzBack" hidden data-tip="Return to the list of puzzles.">Back to all puzzles</button>
-  <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match a target graph. Create: turn a run into a puzzle to share, or load one.">
+  <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match the graph. Create: turn a run into a puzzle to share, or load one.">
     <button data-mode="sandbox" class="on">Sandbox</button>
     <button data-mode="puzzle">Puzzle</button>
     <button data-mode="create">Create</button>
@@ -1068,9 +1068,6 @@ function drawGraph() {
         labelY = clampY(tgt.pts[tgt.pts.length - 1].x);
       }
       gx.stroke(); gx.setLineDash([]);
-      gx.fillStyle = getCss('--accent'); gx.font = handFont(11, 700);
-      gx.textAlign = 'right'; gx.textBaseline = 'bottom';
-      gx.fillText('target', x1 - 4, labelY - 3);
       gx.restore();
     }
   }
