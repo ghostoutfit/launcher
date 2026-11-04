@@ -1677,11 +1677,7 @@ document.getElementById('winNext').addEventListener('click', () => { const n = n
 function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left the screen) — treat its last value as held to 5 s
   const P = activePuzzle();
   const isTest = P && P === testPuzzle;
-  const alreadySolved = P && (isTest ? testSolved : solvedPuzzles.has(P.id));
-  if (puzzleGraded || !P || !P.target || alreadySolved) {
-    if (alreadySolved) puzzleGraded = true;
-    return;
-  }
+  if (puzzleGraded || !P || !P.target) return;   // graded once per run — even a puzzle solved before celebrates again
   const win = AXES.position.t;                         // grade once the 5 s window is filled
   const s = balls[0].samples.filter(p => p.t <= win);
   if (!s.length) return;
