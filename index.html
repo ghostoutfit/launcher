@@ -64,11 +64,14 @@
 
   /* Toolbar + world span the full width; the graph sits below with the track pieces to its right. */
   #stage { display: grid; grid-template-columns: minmax(0, 1fr) 190px; column-gap: 14px; align-items: start; }
+  #graphCard, #sidebar { align-self: stretch; }   /* track pieces are as tall as the graph window */
   #main { display: contents; }
   #controls, #sceneWrap, #createPanel, #puzzlePanel { grid-column: 1 / -1; }
   #graphCard { grid-column: 1; }
   #sidebar { grid-column: 2; display: flex; flex-direction: column; gap: 14px; }
-  #palette { padding: 11px; }
+  #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
+  #palette .chip { flex: 1; margin-bottom: 6px; }
+  #palette .chip:last-child { margin-bottom: 0; }
 
   /* Controls bar */
   #controls {
@@ -708,8 +711,8 @@ function drawScene() {
   }
 
   // where each piece sits, written below it (skipped on multiples of 5 — the ruler already says so)
-  sx.font = handFont(12, 700); sx.textAlign = 'center'; sx.fillStyle = getCss('--ink');
-  const posLabel = (m, px) => { if (Math.abs(m / 5 - Math.round(m / 5)) < 1e-6) return; sx.fillText(+m.toFixed(1) + ' m', px, gY + 46); };
+  sx.font = handFont(18, 700); sx.textAlign = 'center'; sx.fillStyle = getCss('--ink');   // 1.5× the old 12 px
+  const posLabel = (m, px) => { if (Math.abs(m / 5 - Math.round(m / 5)) < 1e-6) return; sx.fillText(+m.toFixed(1) + ' m', px, gY + 48); };
   for (const b of boosts) posLabel(b.x, mToPx(b.x));
   for (const g of targets) posLabel(g.x, mToPx(g.x));
   for (const w of walls) posLabel(w.x, mToPx(w.x + WALL_D));
