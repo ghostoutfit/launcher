@@ -334,7 +334,7 @@
           <button data-g="both">Both Position and Velocity</button>
         </div>
         <div id="puzzleStatus" hidden></div>
-        <div id="annotBar" hidden><span>Click and drag to circle where on the graph you need to focus.</span><button id="annotTry" class="primary">Try again</button></div>
+        <div id="annotBar" hidden><span>Click and drag to circle where on the graph you need to focus. Click the time axis to mark a moment.</span><button id="annotTry" class="primary">Try again</button></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
@@ -1110,30 +1110,71 @@ function drawGraph() {
 
 // ─── Click the graph to read off a coordinate (integer t and value); click again to clear ──
 let graphPanels = [], graphGeom = null;
-// ─── Annotate a missed puzzle: circle where on the graph to focus ──────────────
-let annotating = false, annotations = [], annotDrag = null;   // ellipses stored as fractions of the canvas
+// ─── Annotate a missed puzzle: one circle + one time marker (arrow with dots on both lines) ──
+// Both are stored in time (and panel-relative height), so they stay put when switching graph type.
+let annotating = false, annotCircle = null, annotTime = null, annotDrag = null;
 function endAnnotate() {
-  annotating = false; annotations = []; annotDrag = null;
+  const was = annotating;
+  annotating = false; annotCircle = null; annotTime = null; annotDrag = null;
   document.getElementById('annotBar').hidden = true; graphC.style.cursor = '';
+  if (was) {
+    document.getElementById('graphTabs').hidden = (mode === 'puzzle') || (mode === 'create' && !!testPuzzle);
+    const P = activePuzzle(); if (P) graphType = P.metric;
+    [...document.querySelectorAll('#graphTabs button')].forEach(btn => btn.classList.toggle('active', btn.dataset.g === graphType));
+  }
 }
 function startAnnotate() {
   document.getElementById('tryOverlay').hidden = true;
-  annotating = true; annotations = []; graphPoints = [];
+  annotating = true; annotCircle = null; annotTime = null; graphPoints = [];
   document.getElementById('annotBar').hidden = false; graphC.style.cursor = 'crosshair';
+  document.getElementById('graphTabs').hidden = false;      // let the student look at the other graph too
   drawGraph();
 }
+function annotTimeAt(mx) { const { x0, x1, tMax } = graphGeom; return clamp((mx - x0) / (x1 - x0), 0, 1) * tMax; }
 function drawAnnotations() {
-  const w = graphC.clientWidth, h = graphC.clientHeight;
-  const E = [...annotations.map(a => ({ x: a.cx * w, y: a.cy * h, rx: a.rx * w, ry: a.ry * h }))];
-  if (annotDrag) { const d = annotDrag; E.push({ x: (d.x0 + d.x1) / 2, y: (d.y0 + d.y1) / 2, rx: Math.abs(d.x1 - d.x0) / 2, ry: Math.abs(d.y1 - d.y0) / 2 }); }
-  gx.save(); gx.strokeStyle = '#e0245e'; gx.lineWidth = 3.5;
-  for (const e of E) { gx.beginPath(); gx.ellipse(e.x, e.y, Math.max(e.rx, 2), Math.max(e.ry, 2), 0, 0, Math.PI * 2); gx.stroke(); }
+  if (!annotating || !graphGeom) return;
+  const { x0, x1, tMax } = graphGeom, TX = tt => x0 + (tt / tMax) * (x1 - x0);
+  const pink = '#e0245e';
+  gx.save(); gx.strokeStyle = pink; gx.fillStyle = pink; gx.lineWidth = 3.5; gx.lineCap = 'round';
+  const ell = (cx, cy, rx, ry) => { gx.beginPath(); gx.ellipse(cx, cy, Math.max(rx, 2), Math.max(ry, 2), 0, 0, Math.PI * 2); gx.stroke(); };
+  if (annotCircle) {
+    const c = annotCircle, P = graphPanels.find(q => q.key === c.key) || graphPanels[0];
+    if (P) { const ya = P.ty + c.f0 * (P.by - P.ty), yb = P.ty + c.f1 * (P.by - P.ty);
+      ell((TX(c.t0) + TX(c.t1)) / 2, (ya + yb) / 2, Math.abs(TX(c.t1) - TX(c.t0)) / 2, Math.abs(yb - ya) / 2); }
+  }
+  if (annotDrag) { const d = annotDrag; ell((d.x0 + d.x1) / 2, (d.y0 + d.y1) / 2, Math.abs(d.x1 - d.x0) / 2, Math.abs(d.y1 - d.y0) / 2); }
+  if (annotTime !== null) {
+    const AP = activePuzzle(), xx = TX(annotTime);
+    for (const P of graphPanels) {
+      const Y = v => P.by + (v / P.yMax) * (P.ty - P.by);
+      const own = balls[0] && balls[0].samples.length > 1 ? sampleAt(balls[0].samples, P.key, annotTime) : null;
+      const dots = [];
+      if (own !== null) dots.push({ y: Y(own), c: balls[0].color });
+      if (AP && AP.target && AP.target.key === P.key) {
+        const tg = AP.target, tv = tg.kind === 'flat' ? tg.value : interpPoly(tg.pts, annotTime);
+        dots.push({ y: Y(tv), c: getCss('--accent') });
+      }
+      const clampY = y => Math.max(P.ty + 2, Math.min(P.by - 2, y));
+      const topY = dots.length ? Math.min(...dots.map(q => clampY(q.y))) : P.ty + 14;
+      const tip = Math.min(topY, P.by - 18);
+      gx.beginPath(); gx.moveTo(xx, P.by); gx.lineTo(xx, tip); gx.stroke();          // arrow shaft, pointing up
+      gx.beginPath(); gx.moveTo(xx, tip - 2); gx.lineTo(xx - 7, tip + 10); gx.lineTo(xx + 7, tip + 10); gx.closePath(); gx.fill();
+      for (const q of dots) {
+        gx.beginPath(); gx.arc(xx, clampY(q.y), 6, 0, Math.PI * 2); gx.fillStyle = q.c; gx.fill();
+        gx.strokeStyle = pink; gx.lineWidth = 2.5; gx.stroke(); gx.fillStyle = pink; gx.lineWidth = 3.5;
+      }
+    }
+  }
   gx.restore();
 }
+function panelAt(my) { return graphPanels.find(q => my >= q.ty - 6 && my <= q.by + 6); }
 graphC.addEventListener('pointerdown', e => {
-  if (!annotating) return;
-  const r = graphC.getBoundingClientRect(); graphC.setPointerCapture(e.pointerId);
-  annotDrag = { x0: e.clientX - r.left, y0: e.clientY - r.top, x1: e.clientX - r.left, y1: e.clientY - r.top };
+  if (!annotating || !graphGeom) return;
+  const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const ax = graphPanels.find(q => my > q.by + 6 && my <= q.by + 30);       // the time axis → place the time marker
+  if (ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) { annotTime = annotTimeAt(mx); drawGraph(); return; }
+  graphC.setPointerCapture(e.pointerId);
+  annotDrag = { x0: mx, y0: my, x1: mx, y1: my };
 });
 graphC.addEventListener('pointermove', e => {
   if (!annotating || !annotDrag) return;
@@ -1142,9 +1183,11 @@ graphC.addEventListener('pointermove', e => {
 graphC.addEventListener('pointerup', () => {
   if (!annotating || !annotDrag) return;
   const d = annotDrag; annotDrag = null;
-  const w = graphC.clientWidth, h = graphC.clientHeight;
-  if (Math.abs(d.x1 - d.x0) > 8 || Math.abs(d.y1 - d.y0) > 8)
-    annotations.push({ cx: (d.x0 + d.x1) / 2 / w, cy: (d.y0 + d.y1) / 2 / h, rx: Math.abs(d.x1 - d.x0) / 2 / w, ry: Math.abs(d.y1 - d.y0) / 2 / h });
+  const P = panelAt((d.y0 + d.y1) / 2) || graphPanels[0];
+  if (P && (Math.abs(d.x1 - d.x0) > 8 || Math.abs(d.y1 - d.y0) > 8)) {      // a new circle replaces the old one
+    const f = y => (y - P.ty) / (P.by - P.ty);
+    annotCircle = { key: P.key, t0: annotTimeAt(Math.min(d.x0, d.x1)), t1: annotTimeAt(Math.max(d.x0, d.x1)), f0: f(Math.min(d.y0, d.y1)), f1: f(Math.max(d.y0, d.y1)) };
+  }
   drawGraph();
 });
 const clearPointsBtn = document.getElementById('clearPoints');
@@ -1835,7 +1878,7 @@ function showWin() {
     if (confetti.length) confRaf = requestAnimationFrame(tick);
   })(last);
 }
-function tryAgain() { hideWin(); clearTrack(); resetRun(); }   // fresh graph with the goal showing, empty world
+function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) graphType = currentPuzzle.metric; resetRun(); }   // fresh graph with the goal showing, empty world
 document.getElementById('tryAnnotate').addEventListener('click', startAnnotate);
 document.getElementById('tryAgain').addEventListener('click', tryAgain);
 document.getElementById('annotTry').addEventListener('click', tryAgain);
