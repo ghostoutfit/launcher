@@ -334,7 +334,7 @@
           <button data-g="both">Both Position and Velocity</button>
         </div>
         <div id="puzzleStatus" hidden></div>
-        <div id="annotBar" hidden><span>Click and drag to circle where on the graph you need to focus. Click the time axis to mark a moment.</span><button id="annotTry" class="primary">Try again</button></div>
+        <div id="annotBar" hidden><span>Click and drag to circle where on the graph you need to focus. Drag up from the time axis to draw an arrow.</span><button id="annotTry" class="primary">Try again</button></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
@@ -1112,10 +1112,10 @@ function drawGraph() {
 let graphPanels = [], graphGeom = null;
 // ─── Annotate a missed puzzle: one circle + one time marker (arrow with dots on both lines) ──
 // Both are stored in time (and panel-relative height), so they stay put when switching graph type.
-let annotating = false, annotCircle = null, annotTime = null, annotDrag = null;
+let annotating = false, annotCircle = null, annotArrow = null, annotDrag = null;   // annotArrow: { t, key, f } f = height reached, as a fraction of the panel
 function endAnnotate() {
   const was = annotating;
-  annotating = false; annotCircle = null; annotTime = null; annotDrag = null;
+  annotating = false; annotCircle = null; annotArrow = null; annotDrag = null;
   document.getElementById('annotBar').hidden = true; graphC.style.cursor = '';
   if (was) {
     document.getElementById('graphTabs').hidden = (mode === 'puzzle') || (mode === 'create' && !!testPuzzle);
@@ -1125,7 +1125,7 @@ function endAnnotate() {
 }
 function startAnnotate() {
   document.getElementById('tryOverlay').hidden = true;
-  annotating = true; annotCircle = null; annotTime = null; graphPoints = [];
+  annotating = true; annotCircle = null; annotArrow = null; graphPoints = [];
   document.getElementById('annotBar').hidden = false; graphC.style.cursor = 'crosshair';
   document.getElementById('graphTabs').hidden = false;      // let the student look at the other graph too
   drawGraph();
@@ -1143,24 +1143,23 @@ function drawAnnotations() {
       ell((TX(c.t0) + TX(c.t1)) / 2, (ya + yb) / 2, Math.abs(TX(c.t1) - TX(c.t0)) / 2, Math.abs(yb - ya) / 2); }
   }
   if (annotDrag) { const d = annotDrag; ell((d.x0 + d.x1) / 2, (d.y0 + d.y1) / 2, Math.abs(d.x1 - d.x0) / 2, Math.abs(d.y1 - d.y0) / 2); }
-  if (annotTime !== null) {
-    const AP = activePuzzle(), xx = TX(annotTime);
-    for (const P of graphPanels) {
+  if (annotArrow) {
+    const AP = activePuzzle(), xx = TX(annotArrow.t);
+    const P = graphPanels.find(q => q.key === annotArrow.key) || graphPanels[0];
+    if (P) {
       const Y = v => P.by + (v / P.yMax) * (P.ty - P.by);
-      const own = balls[0] && balls[0].samples.length > 1 ? sampleAt(balls[0].samples, P.key, annotTime) : null;
+      const tip = P.by - annotArrow.f * (P.by - P.ty);
+      gx.beginPath(); gx.moveTo(xx, P.by); gx.lineTo(xx, tip + 6); gx.stroke();            // shaft up from the time axis
+      gx.beginPath(); gx.moveTo(xx, tip - 2); gx.lineTo(xx - 7, tip + 10); gx.lineTo(xx + 7, tip + 10); gx.closePath(); gx.fill();
       const dots = [];
+      const own = balls[0] && balls[0].samples.length > 1 ? sampleAt(balls[0].samples, P.key, annotArrow.t) : null;
       if (own !== null) dots.push({ y: Y(own), c: balls[0].color });
       if (AP && AP.target && AP.target.key === P.key) {
-        const tg = AP.target, tv = tg.kind === 'flat' ? tg.value : interpPoly(tg.pts, annotTime);
-        dots.push({ y: Y(tv), c: getCss('--accent') });
+        const tg = AP.target; dots.push({ y: Y(tg.kind === 'flat' ? tg.value : interpPoly(tg.pts, annotArrow.t)), c: getCss('--accent') });
       }
-      const clampY = y => Math.max(P.ty + 2, Math.min(P.by - 2, y));
-      const topY = dots.length ? Math.min(...dots.map(q => clampY(q.y))) : P.ty + 14;
-      const tip = Math.min(topY, P.by - 18);
-      gx.beginPath(); gx.moveTo(xx, P.by); gx.lineTo(xx, tip); gx.stroke();          // arrow shaft, pointing up
-      gx.beginPath(); gx.moveTo(xx, tip - 2); gx.lineTo(xx - 7, tip + 10); gx.lineTo(xx + 7, tip + 10); gx.closePath(); gx.fill();
       for (const q of dots) {
-        gx.beginPath(); gx.arc(xx, clampY(q.y), 6, 0, Math.PI * 2); gx.fillStyle = q.c; gx.fill();
+        if (q.y < tip - 1 || q.y > P.by + 1) continue;                                       // dot appears once the arrow reaches that line
+        gx.beginPath(); gx.arc(xx, q.y, 6, 0, Math.PI * 2); gx.fillStyle = q.c; gx.fill();
         gx.strokeStyle = pink; gx.lineWidth = 2.5; gx.stroke(); gx.fillStyle = pink; gx.lineWidth = 3.5;
       }
     }
@@ -1172,17 +1171,22 @@ graphC.addEventListener('pointerdown', e => {
   if (!annotating || !graphGeom) return;
   const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
   const ax = graphPanels.find(q => my > q.by + 6 && my <= q.by + 30);       // the time axis → place the time marker
-  if (ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) { annotTime = annotTimeAt(mx); drawGraph(); return; }
   graphC.setPointerCapture(e.pointerId);
+  if (ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) {            // drag up from the time axis → arrow
+    annotArrow = { t: annotTimeAt(mx), key: ax.key, f: 0 }; annotDrag = { arrow: ax }; drawGraph(); return;
+  }
   annotDrag = { x0: mx, y0: my, x1: mx, y1: my };
 });
 graphC.addEventListener('pointermove', e => {
   if (!annotating || !annotDrag) return;
-  const r = graphC.getBoundingClientRect(); annotDrag.x1 = e.clientX - r.left; annotDrag.y1 = e.clientY - r.top; drawGraph();
+  const r = graphC.getBoundingClientRect();
+  if (annotDrag.arrow) { const P = annotDrag.arrow; annotArrow.f = clamp((P.by - (e.clientY - r.top)) / (P.by - P.ty), 0, 1); drawGraph(); return; }
+  annotDrag.x1 = e.clientX - r.left; annotDrag.y1 = e.clientY - r.top; drawGraph();
 });
 graphC.addEventListener('pointerup', () => {
   if (!annotating || !annotDrag) return;
   const d = annotDrag; annotDrag = null;
+  if (d.arrow) { if (annotArrow && annotArrow.f * (d.arrow.by - d.arrow.ty) < 8) annotArrow = null; drawGraph(); return; }   // a bare click makes no arrow
   const P = panelAt((d.y0 + d.y1) / 2) || graphPanels[0];
   if (P && (Math.abs(d.x1 - d.x0) > 8 || Math.abs(d.y1 - d.y0) > 8)) {      // a new circle replaces the old one
     const f = y => (y - P.ty) / (P.by - P.ty);
