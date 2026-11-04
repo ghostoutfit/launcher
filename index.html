@@ -134,6 +134,7 @@
   #tryCard p { margin: 0; font-size: 18px; color: var(--muted); font-weight: 600; text-align: center; max-width: 420px; }
   #annotBar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 18px; font-weight: 800; }
   #annotBar[hidden] { display: none; }
+  #annotText { display: flex; flex-direction: column; gap: 2px; }
   #annotBar button { font-size: 16px; font-weight: 800; padding: 8px 16px; }
   #winCard .winBtns, #tryCard .winBtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
   #winCard button, #tryCard button { font-size: 20px; font-weight: 800; padding: 16px 26px; border-radius: 14px; }
@@ -334,7 +335,7 @@
           <button data-g="both">Both Position and Velocity</button>
         </div>
         <div id="puzzleStatus" hidden></div>
-        <div id="annotBar" hidden><span>Click and drag to circle where on the graph you need to focus. Drag up from the time axis to draw an arrow.</span><button id="annotTry" class="primary">Try again</button></div>
+        <div id="annotBar" hidden><div id="annotText"><div>Click and drag to circle where on the graph you need to focus.</div><div>Drag up from the time axis to draw an arrow.</div></div><button id="annotTry" class="primary">Try again</button></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
@@ -1112,11 +1113,13 @@ function drawGraph() {
 let graphPanels = [], graphGeom = null;
 // ─── Annotate a missed puzzle: one circle + one time marker (arrow with dots on both lines) ──
 // Both are stored in time (and panel-relative height), so they stay put when switching graph type.
+const ANNOT_TIP = 'Annotate: drag on the graph to circle where you need to focus (one circle). Press near the time axis and drag up to draw an arrow; a dot appears on each line the arrow reaches.';
 let annotating = false, annotCircle = null, annotArrow = null, annotDrag = null;   // annotArrow: { t, key, f } f = height reached, as a fraction of the panel
 function endAnnotate() {
   const was = annotating;
   annotating = false; annotCircle = null; annotArrow = null; annotDrag = null;
   document.getElementById('annotBar').hidden = true; graphC.style.cursor = '';
+  if (graphC.dataset.tipOrig) graphC.dataset.tip = graphC.dataset.tipOrig;
   if (was) {
     document.getElementById('graphTabs').hidden = (mode === 'puzzle') || (mode === 'create' && !!testPuzzle);
     const P = activePuzzle(); if (P) graphType = P.metric;
@@ -1125,7 +1128,9 @@ function endAnnotate() {
 }
 function startAnnotate() {
   document.getElementById('tryOverlay').hidden = true;
+  graphC.dataset.tipOrig = graphC.dataset.tipOrig || graphC.dataset.tip;
   annotating = true; annotCircle = null; annotArrow = null; graphPoints = [];
+  graphC.dataset.tip = ANNOT_TIP;
   document.getElementById('annotBar').hidden = false; graphC.style.cursor = 'crosshair';
   document.getElementById('graphTabs').hidden = false;      // let the student look at the other graph too
   drawGraph();
@@ -1170,7 +1175,7 @@ function panelAt(my) { return graphPanels.find(q => my >= q.ty - 6 && my <= q.by
 graphC.addEventListener('pointerdown', e => {
   if (!annotating || !graphGeom) return;
   const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-  const ax = graphPanels.find(q => my > q.by + 6 && my <= q.by + 30);       // the time axis → place the time marker
+  const ax = graphPanels.find(q => my > q.by - 22 && my <= q.by + 34);       // the time axis → place the time marker
   graphC.setPointerCapture(e.pointerId);
   if (ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) {            // drag up from the time axis → arrow
     annotArrow = { t: annotTimeAt(mx), key: ax.key, f: 0 }; annotDrag = { arrow: ax }; drawGraph(); return;
