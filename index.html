@@ -1870,7 +1870,7 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-setMode('puzzle');   // open on the puzzle menu (also resets the run)
+setMode('sandbox');   // open on Sandbox (also resets the run)
 requestAnimationFrame(frame);
 // redraw once the hand-drawn font has loaded so canvas labels pick it up
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawScene(); drawGraph(); });
