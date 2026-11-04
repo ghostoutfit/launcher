@@ -69,7 +69,7 @@
 
   /* Controls bar */
   #controls {
-    display: flex; flex-wrap: nowrap; align-items: center; gap: 14px;   /* sliders + buttons on one row */
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;   /* one row when it fits; otherwise wraps (never drops buttons) */
     padding: 9px 16px; margin-bottom: 10px;
   }
   .ctrl { display: flex; flex-direction: column; gap: 4px; }
@@ -78,7 +78,8 @@
   input[type=range] { width: 110px; accent-color: var(--accent); }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 52px; white-space: nowrap; }
   .spacer { flex: 1; }
-  .action-group { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+  .action-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  @media (max-width: 720px) { .action-group { gap: 6px; } #controls { gap: 8px 10px; } }
 
   button {
     font: inherit; font-size: 15px; color: var(--ink);
@@ -873,26 +874,32 @@ function drawGraph() {
     for (const b of traces) {
       if (b.samples.length < 2) continue;
       gx.strokeStyle = b.color; gx.beginPath();
-      let pen = false;
+      // Segments touching the visible range are drawn (the plot clip trims them at the axis), so the
+      // steep line where velocity drops below / rises back above zero still shows; fully negative
+      // stretches are skipped.
+      let prev = null;
       for (const s of b.samples) {
-        if (isV && s.v < 0) { pen = false; if (negT === null || s.t < negT) negT = s.t; continue; }
-        const xx = X(s.t), yy = Y(s[metric.key]);
-        pen ? gx.lineTo(xx, yy) : gx.moveTo(xx, yy); pen = true;
+        if (isV && s.v < 0 && (negT === null || s.t < negT)) negT = s.t;
+        if (prev && !(isV && prev.v < 0 && s.v < 0)) { gx.moveTo(X(prev.t), Y(prev[metric.key])); gx.lineTo(X(s.t), Y(s[metric.key])); }
+        prev = s;
       }
       gx.stroke();
     }
     gx.restore();
 
-    if (negT !== null) {   // alert where the velocity first went negative
-      const msg = 'Velocity has become negative - graph not shown';
-      gx.font = handFont(12, 700);
-      const aw = gx.measureText(msg).width + 16, ah = 22;
-      const ax = Math.max(x0 + 4, Math.min(x1 - aw - 4, X(negT) - aw / 2)), ay = by - ah - 12;
-      gx.fillStyle = getCss('--cut'); roundRect(gx, ax, ay, aw, ah, 6); gx.fill();
-      gx.strokeStyle = INK; gx.lineWidth = 1.6; gx.stroke();
+    if (negT !== null) {   // alert beside the vertical line where velocity first went negative
+      const lines = ['Velocity has', 'become negative -', 'graph not shown'];
+      gx.font = handFont(18, 700);
+      const lh = 22, aw = Math.max(...lines.map(l => gx.measureText(l).width)) + 24, ah = lines.length * lh + 12;
+      const lx = X(negT);
+      let ax = lx + 12;                                   // right of the line, else left of it
+      if (ax + aw > x1 - 4) ax = lx - 12 - aw;
+      ax = Math.max(x0 + 4, ax);
+      const ay = Math.max(ty + 4, by - ah - 8);
+      gx.fillStyle = getCss('--cut'); roundRect(gx, ax, ay, aw, ah, 9); gx.fill();
+      gx.strokeStyle = INK; gx.lineWidth = 2; gx.stroke();
       gx.fillStyle = '#4a0a0a'; gx.textAlign = 'center'; gx.textBaseline = 'middle';
-      gx.fillText(msg, ax + aw / 2, ay + ah / 2 + 1);
-      gx.beginPath(); gx.moveTo(X(negT), by); gx.lineTo(X(negT), ay + ah); gx.stroke();   // pointer to the spot
+      lines.forEach((l, i) => gx.fillText(l, ax + aw / 2, ay + 6 + lh / 2 + i * lh + 1));
       gx.textBaseline = 'alphabetic';
     }
 
