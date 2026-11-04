@@ -108,7 +108,22 @@
   .toggle button.on { background: var(--accent-2); color: #241c00; }
 
   /* Mode tabs (Sandbox / Puzzle) */
-  #modeTabs { margin: 0 0 10px; }
+  #tabRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 10px; }
+  #tabRow[hidden], #pzBack[hidden] { display: none; }
+  #modeTabs { margin: 0; }
+  #pzBack { font-size: 14px; font-weight: 700; padding: 7px 16px; }
+  body.pz-menu #controls, body.pz-menu #sceneWrap, body.pz-menu #graphCard, body.pz-menu #sidebar { display: none; }
+  /* solved celebration */
+  #winOverlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.35); }
+  #winOverlay[hidden] { display: none; }
+  #winCard { background: var(--panel); border: 3px solid var(--line); border-radius: 18px; padding: 24px 28px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); position: relative; z-index: 2; }
+  #winCard h2 { margin: 0; font-size: 28px; color: var(--boost); }
+  #winCard .winBtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  #winCard button { font-size: 20px; font-weight: 800; padding: 16px 26px; border-radius: 14px; }
+  #winCard button[hidden] { display: none; }
+  #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
   #modeTabs button { font-size: 14px; padding: 7px 18px; font-weight: 700; }
 
   /* Puzzle menu */
@@ -217,10 +232,13 @@
   <h1>LAUNCHER</h1>
   <div class="sub">Launch a ball along flat ground, drop track pieces in its path, and watch the motion graph build live.</div>
 
+  <div id="tabRow">
   <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match a target graph. Create: turn a run into a puzzle to share, or load one.">
     <button data-mode="sandbox" class="on">Sandbox</button>
     <button data-mode="puzzle">Puzzle</button>
     <button data-mode="create">Create</button>
+  </div>
+  <button id="pzBack" hidden data-tip="Return to the list of puzzles.">Back to all puzzles</button>
   </div>
 
   <div id="stage">
@@ -337,6 +355,16 @@
 </div>
 
 <div id="tip"></div>
+<div id="winOverlay" hidden>
+  <canvas id="confetti"></canvas>
+  <div id="winCard">
+    <h2>Puzzle solved!</h2>
+    <div class="winBtns">
+      <button id="winBack" class="primary">Back to all puzzles</button>
+      <button id="winNext" class="primary">Try the next puzzle</button>
+    </div>
+  </div>
+</div>
 <script>
 // ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
 const TRACK_LEN = 21;   // world is 21 m long; the ruler only labels up to 20
@@ -1521,11 +1549,59 @@ function updatePuzzleStatus() {
     + (solved ? '<span class="psSolved">✓ Solved</span>' : '');
 }
 
+// Puzzle tab: with no puzzle chosen only the menu shows; choosing one reveals the world + graph.
+function syncPuzzleView() {
+  const puzzle = mode === 'puzzle', menu = puzzle && !currentPuzzle;
+  document.getElementById('puzzlePanel').hidden = !menu;
+  document.body.classList.toggle('pz-menu', menu);
+  document.getElementById('pzBack').hidden = !(puzzle && currentPuzzle);
+}
 function selectPuzzle(p) {
   currentPuzzle = p; graphType = p.metric; puzzleGraded = false;
-  renderPuzzles(); updatePuzzleStatus();
+  hideWin(); syncPuzzleView(); renderPuzzles(); updatePuzzleStatus();
   resetRun();   // switching puzzles always starts from a clean track
 }
+function backToMenu() {
+  hideWin(); currentPuzzle = null; syncPuzzleView(); renderPuzzles(); updatePuzzleStatus(); resetRun();
+}
+document.getElementById('pzBack').addEventListener('click', backToMenu);
+
+// ─── Solved celebration: confetti + two big buttons over everything ───────────────────
+const winEl = document.getElementById('winOverlay'), confC = document.getElementById('confetti');
+let confetti = [], confRaf = 0;
+function nextPuzzle() {
+  const all = [...PUZZLES.position, ...PUZZLES.velocity];
+  const i = all.findIndex(p => currentPuzzle && p.id === currentPuzzle.id);
+  const n = all[i + 1];
+  if (!n) return null;
+  const list = PUZZLES[n.metric];
+  return puzzleUnlocked(list, list.indexOf(n)) ? n : null;
+}
+function hideWin() { winEl.hidden = true; cancelAnimationFrame(confRaf); confetti = []; }
+function showWin() {
+  const nx = nextPuzzle();
+  document.getElementById('winNext').hidden = !nx;
+  winEl.hidden = false;
+  const W = confC.width = window.innerWidth, H = confC.height = window.innerHeight, cx = confC.getContext('2d');
+  const cols = ['#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#ff9f43'];
+  confetti = Array.from({ length: 160 }, () => ({
+    x: Math.random() * W, y: -Math.random() * H * 0.8 - 10, w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+    vy: 120 + Math.random() * 160, vx: (Math.random() - 0.5) * 80, a: Math.random() * 6.28, va: (Math.random() - 0.5) * 8,
+    c: cols[(Math.random() * cols.length) | 0] }));
+  let last = performance.now();
+  (function tick(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    cx.clearRect(0, 0, W, H);
+    confetti = confetti.filter(p => p.y < H + 20);
+    for (const p of confetti) {
+      p.y += p.vy * dt; p.x += p.vx * dt + Math.sin(p.y / 30) * 0.6; p.a += p.va * dt;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.a); cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore();
+    }
+    if (confetti.length) confRaf = requestAnimationFrame(tick);
+  })(last);
+}
+document.getElementById('winBack').addEventListener('click', backToMenu);
+document.getElementById('winNext').addEventListener('click', () => { const n = nextPuzzle(); if (n) selectPuzzle(n); else backToMenu(); });
 
 function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left the screen) — treat its last value as held to 5 s
   const P = activePuzzle();
@@ -1556,22 +1632,25 @@ function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left
     if (isTest) { testSolved = true; }
     else { solvedPuzzles.add(P.id); savePuzzles(); renderPuzzles(); }
     updatePuzzleStatus();
+    if (!isTest && mode === 'puzzle') showWin();
   }
 }
 const PUZZLE_TOL = 0.9;   // max position deviation (m) allowed when matching a target line
 
 function setMode(m) {
   if (mode === 'create' && m !== 'create' && testPuzzle) exitTest();      // leaving Create ends a loaded puzzle
+  const prevMode = mode;
   mode = m;
+  if (m === 'puzzle' && prevMode !== 'puzzle') currentPuzzle = null;   // entering Puzzle always starts at the menu
+  hideWin();
   [...document.querySelectorAll('#modeTabs button')].forEach(b => b.classList.toggle('on', b.dataset.mode === m));
   const puzzle = m === 'puzzle', create = m === 'create';
-  document.getElementById('puzzlePanel').hidden = !puzzle;
+  syncPuzzleView();
   document.getElementById('createPanel').hidden = !create;
   document.getElementById('graphTabs').hidden = puzzle || (create && !!testPuzzle);
   if (puzzle) {
     renderPuzzles();
-    if (!currentPuzzle) selectPuzzle(PUZZLES.position[0]);
-    else { updatePuzzleStatus(); if (!running) resetRun(); else drawGraph(); }
+    updatePuzzleStatus(); if (!running) resetRun(); else drawGraph();
   } else {
     updatePuzzleStatus();
     [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType));
