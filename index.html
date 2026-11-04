@@ -135,8 +135,15 @@
   #puzzleStatus .psGoal { color: var(--muted); }
   #puzzleStatus .psSolved { color: var(--boost); font-weight: 800; }
   @media (max-width: 720px) { .pzRow { grid-template-columns: repeat(3, 1fr); } }
+  /* Create tab */
+  #createPanel { margin-bottom: 10px; padding: 12px 14px; }
+  #createPanel textarea { width: 100%; box-sizing: border-box; font: 12px/1.35 ui-monospace, Menlo, monospace; padding: 8px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel-2); color: var(--ink); resize: vertical; }
+  .cpRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; font-size: 13px; }
+  .cpRow label { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+  #cpMsg { font-size: 13px; font-weight: 700; }
+  #cpMsg.err { color: var(--cut); } #cpMsg.ok { color: var(--boost); }
   /* the hidden attribute must win over the display rules above */
-  #graphTabs[hidden], #puzzlePanel[hidden], #puzzleStatus[hidden] { display: none; }
+  #graphTabs[hidden], #puzzlePanel[hidden], #puzzleStatus[hidden], #createPanel[hidden], #cpBuild[hidden], #cpBack[hidden] { display: none; }
 
   /* Scene */
   #sceneWrap { padding: 0; margin-bottom: 10px; overflow: hidden; }
@@ -208,9 +215,10 @@
   <h1>LAUNCHER</h1>
   <div class="sub">Launch a ball along flat ground, drop track pieces in its path, and watch the motion graph build live.</div>
 
-  <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match a target graph.">
+  <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match a target graph. Create: turn a run into a puzzle to share, or load one.">
     <button data-mode="sandbox" class="on">Sandbox</button>
     <button data-mode="puzzle">Puzzle</button>
+    <button data-mode="create">Create</button>
   </div>
 
   <div id="stage">
@@ -242,6 +250,26 @@
 
       <div id="sceneWrap" class="panel">
         <canvas id="scene"></canvas>
+      </div>
+
+      <div id="createPanel" class="panel" hidden>
+        <div id="cpBuild">
+          <div class="pzLabel">Make a puzzle from a run</div>
+          <div class="cpRow">
+            <span>Build a track, press Launch, then pick which graph becomes the target:</span>
+            <label><input type="radio" name="cpMetric" value="position" checked> Position</label>
+            <label><input type="radio" name="cpMetric" value="velocity"> Velocity</label>
+            <button id="cpMake" data-tip="Turn the last run's graph into puzzle JSON.">Make puzzle</button>
+          </div>
+        </div>
+        <div class="pzLabel" style="margin-top:10px">Puzzle JSON — copy to share, or paste one here to play it</div>
+        <textarea id="cpJson" rows="5" spellcheck="false" placeholder='Paste puzzle JSON here, then press "Load &amp; play"'></textarea>
+        <div class="cpRow">
+          <button id="cpCopy" data-tip="Copy the JSON text to the clipboard.">Copy</button>
+          <button id="cpLoad" data-tip="Clear the track and play this puzzle yourself.">Load &amp; play</button>
+          <button id="cpBack" data-tip="Leave the puzzle and return to your own track." hidden>Back to building</button>
+          <span id="cpMsg"></span>
+        </div>
       </div>
 
       <div id="puzzlePanel" class="panel" hidden>
@@ -330,8 +358,13 @@ const MASS      = 1;          // kg (KE = ½·m·v²)
 let v0 = 6, launchX = 0, graphType = 'position';
 let playbackRate = 1;           // 1 = normal (rabbit), 0.5 = half speed (turtle)
 let lastRun = null;             // { v0, x0 } of the last launch, so replay repeats it
-let mode = 'sandbox';           // 'sandbox' | 'puzzle'
+let mode = 'sandbox';           // 'sandbox' | 'puzzle' | 'create'
 let currentPuzzle = null;       // the selected puzzle object in puzzle mode
+let testPuzzle = null;          // an imported puzzle being played in the Create tab (null = authoring)
+let testSolved = false;
+let authorState = null;         // the author's own track, parked while they play an imported puzzle
+// the puzzle currently being graded / drawn as a dashed target (puzzle tab, or a loaded puzzle in Create)
+function activePuzzle() { return mode === 'puzzle' ? currentPuzzle : mode === 'create' ? testPuzzle : null; }
 let puzzleGraded = false;       // whether the current run has been graded against the puzzle
 let replaying = false;          // true during a replay: show the full stored curve + a moving marble
 let lastTrace = null;           // [{color, samples}] — the completed run kept on screen during replay
@@ -556,13 +589,14 @@ function frame(now) {
       b.d = prev.d + Math.abs(b.x - prev.x);
       b.samples.push({ t, x: b.x, v: b.v, d: b.d });
     }
-    if (mode === 'puzzle' && !replaying) gradePuzzle();
+    if ((mode === 'puzzle' || mode === 'create') && !replaying) gradePuzzle();
     // marble left the screen: stop collecting data and freeze the graph where it ended
     // (no flat extension), leaving the replay buttons ready
     if (x > TRACK_LEN || x < 0) {
       running = false; launchBtn.disabled = false;
       replaySlowBtn.disabled = false; replayFastBtn.disabled = false;
       if (!replaying) { lastTrace = snapshotTrace(false); runCaptured = true; }
+      if ((mode === 'puzzle' || mode === 'create') && !replaying) gradePuzzle(true);
     } else {
       // free to relaunch once the ball is truly at rest (not merely held by a tube)
       if (ballStopped && !heldGate) {
@@ -923,8 +957,9 @@ function drawGraph() {
     }
 
     // puzzle target overlay: the goal graph the player is trying to match
-    if (mode === 'puzzle' && currentPuzzle && currentPuzzle.target && metric.key === currentPuzzle.target.key) {
-      const tgt = currentPuzzle.target;
+    const AP = activePuzzle();
+    if (AP && AP.target && metric.key === AP.target.key) {
+      const tgt = AP.target;
       const clampY = xv => Math.max(ty + 1, Math.min(by - 1, Y(xv)));
       gx.save();
       gx.strokeStyle = getCss('--accent'); gx.lineWidth = 2.4; gx.setLineDash([7, 5]);
@@ -1470,10 +1505,15 @@ function renderPuzzles() {
 
 function updatePuzzleStatus() {
   const el = document.getElementById('puzzleStatus');
-  if (mode !== 'puzzle' || !currentPuzzle) { el.hidden = true; return; }
+  const P = activePuzzle();
+  if (!P) { el.hidden = true; return; }
   el.hidden = false;
-  const solved = solvedPuzzles.has(currentPuzzle.id), playable = !!currentPuzzle.target;
-  el.innerHTML = '<span class="psStars">' + stars(currentPuzzle.stars) + '</span>'
+  if (P === testPuzzle) {
+    el.innerHTML = '<span class="psGoal">Loaded puzzle — match the dashed line.</span>' + (testSolved ? '<span class="psSolved">✓ Solved</span>' : '');
+    return;
+  }
+  const solved = solvedPuzzles.has(P.id), playable = !!P.target;
+  el.innerHTML = '<span class="psStars">' + stars(P.stars) + '</span>'
     + (playable ? '' : '<span class="psGoal">Coming soon — not built yet.</span>')
     + (solved ? '<span class="psSolved">✓ Solved</span>' : '');
 }
@@ -1484,44 +1524,127 @@ function selectPuzzle(p) {
   resetRun();   // switching puzzles always starts from a clean track
 }
 
-function gradePuzzle() {
-  if (puzzleGraded || !currentPuzzle || !currentPuzzle.target || solvedPuzzles.has(currentPuzzle.id)) {
-    if (currentPuzzle && solvedPuzzles.has(currentPuzzle.id)) puzzleGraded = true;
+function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left the screen) — treat its last value as held to 5 s
+  const P = activePuzzle();
+  const isTest = P && P === testPuzzle;
+  const alreadySolved = P && (isTest ? testSolved : solvedPuzzles.has(P.id));
+  if (puzzleGraded || !P || !P.target || alreadySolved) {
+    if (alreadySolved) puzzleGraded = true;
     return;
   }
   const win = AXES.position.t;                         // grade once the 5 s window is filled
   const s = balls[0].samples.filter(p => p.t <= win);
-  if (!s.length || s[s.length - 1].t < win - 0.05) return;
+  if (!s.length) return;
+  if (s[s.length - 1].t < win - 0.05) {
+    if (!runEnded) return;
+    const last = s[s.length - 1]; s.push({ t: win, x: last.x, v: last.v, d: last.d });
+  }
   puzzleGraded = true;
-  const tgt = currentPuzzle.target, key = tgt.key;
+  const tgt = P.target, key = tgt.key, tol = P.tol || PUZZLE_TOL;
   let pass = false, maxDev = 0;
   if (tgt.kind === 'flat') {                           // value stays near a constant
     for (const p of s) maxDev = Math.max(maxDev, Math.abs(p[key] - tgt.value));
-    pass = (maxDev <= PUZZLE_TOL);
+    pass = (maxDev <= tol);
   } else if (tgt.kind === 'poly') {                    // value tracks the target shape
     for (const p of s) maxDev = Math.max(maxDev, Math.abs(p[key] - interpPoly(tgt.pts, p.t)));
-    pass = (maxDev <= PUZZLE_TOL);
+    pass = (maxDev <= tol);
   }
-  if (pass) { solvedPuzzles.add(currentPuzzle.id); savePuzzles(); renderPuzzles(); updatePuzzleStatus(); }
+  if (pass) {
+    if (isTest) { testSolved = true; }
+    else { solvedPuzzles.add(P.id); savePuzzles(); renderPuzzles(); }
+    updatePuzzleStatus();
+  }
 }
 const PUZZLE_TOL = 0.9;   // max position deviation (m) allowed when matching a target line
 
 function setMode(m) {
+  if (mode === 'create' && m !== 'create' && testPuzzle) exitTest();      // leaving Create ends a loaded puzzle
   mode = m;
   [...document.querySelectorAll('#modeTabs button')].forEach(b => b.classList.toggle('on', b.dataset.mode === m));
-  const puzzle = m === 'puzzle';
+  const puzzle = m === 'puzzle', create = m === 'create';
   document.getElementById('puzzlePanel').hidden = !puzzle;
-  document.getElementById('graphTabs').hidden = puzzle;
+  document.getElementById('createPanel').hidden = !create;
+  document.getElementById('graphTabs').hidden = puzzle || (create && !!testPuzzle);
   if (puzzle) {
     renderPuzzles();
     if (!currentPuzzle) selectPuzzle(PUZZLES.position[0]);
     else { updatePuzzleStatus(); if (!running) resetRun(); else drawGraph(); }
   } else {
-    document.getElementById('puzzleStatus').hidden = true;
+    updatePuzzleStatus();
     [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType));
     if (!running) resetRun(); else drawGraph();
   }
 }
+
+// ─── Create tab: turn a run into a puzzle (JSON) and play pasted puzzles ──────────────
+const cpJson = document.getElementById('cpJson'), cpMsg = document.getElementById('cpMsg');
+function cpSay(text, cls) { cpMsg.textContent = text; cpMsg.className = cls || ''; }
+// value of `key` at time tt, linearly interpolated along a sample list
+function sampleAt(samples, key, tt) {
+  if (tt <= samples[0].t) return samples[0][key];
+  for (let i = 1; i < samples.length; i++) {
+    if (tt <= samples[i].t) { const a = samples[i - 1], b = samples[i]; return a[key] + (b[key] - a[key]) * (tt - a.t) / ((b.t - a.t) || 1); }
+  }
+  return samples[samples.length - 1][key];
+}
+function makePuzzleJson() {
+  if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first — the puzzle is made from its graph.', 'err'); return; }
+  const metric = document.querySelector('input[name=cpMetric]:checked').value, key = metric === 'velocity' ? 'v' : 'x';
+  const samples = lastTrace[0].samples, T = AXES.position.t, pts = [];
+  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? TRACK_LEN : 1e9).toFixed(2)]);
+  if (key === 'v' && Math.min(...pts.map(q => q[1])) < 0) { cpSay('That run\'s velocity goes negative, which the graph can\'t show. Try a different run.', 'err'); return; }
+  cpJson.value = JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts });
+  cpSay('Puzzle made — copy the JSON below.', 'ok');
+}
+// Validate pasted JSON and turn it into a puzzle object (or throw with a readable message).
+function parsePuzzleJson(text) {
+  let d; try { d = JSON.parse(text); } catch (e) { throw new Error('That isn\'t valid JSON.'); }
+  if (!d || d.format !== 'launcher-puzzle') throw new Error('That JSON isn\'t a Launcher puzzle.');
+  if (d.metric !== 'position' && d.metric !== 'velocity') throw new Error('Puzzle metric must be "position" or "velocity".');
+  const pts = d.target;
+  if (!Array.isArray(pts) || pts.length < 2 || !pts.every(q => Array.isArray(q) && q.length === 2 && isFinite(q[0]) && isFinite(q[1]))) throw new Error('Puzzle target must be a list of [time, value] pairs.');
+  for (let i = 1; i < pts.length; i++) if (!(pts[i][0] > pts[i - 1][0])) throw new Error('Target times must increase.');
+  const tol = d.tolerance == null ? PUZZLE_TOL : +d.tolerance;
+  if (!(tol > 0 && tol <= 5)) throw new Error('Tolerance must be between 0 and 5.');
+  return { id: 'imported', metric: d.metric, stars: 0, tol, target: { kind: 'poly', key: d.metric === 'velocity' ? 'v' : 'x', pts: pts.map(q => ({ t: q[0], x: q[1] })) } };
+}
+function snapshotTrack() { return JSON.stringify({ boosts, walls, targets, fricZones, secondBalls, pos: posEl.value, speed: speedEl.value }); }
+function restoreTrack(str) {
+  const d = JSON.parse(str);
+  boosts = d.boosts; walls = d.walls; targets = d.targets; fricZones = d.fricZones; secondBalls = d.secondBalls;
+  posEl.value = d.pos; speedEl.value = d.speed;
+  posEl.dispatchEvent(new Event('input')); speedEl.dispatchEvent(new Event('input'));
+  refreshBall2Chip();
+}
+function startTest(P) {
+  if (!testPuzzle) authorState = snapshotTrack();          // park the author's own track (only the first time)
+  testPuzzle = P; testSolved = false; puzzleGraded = false;
+  boosts = []; walls = []; targets = []; fricZones = []; secondBalls = []; refreshBall2Chip();
+  graphType = P.metric;
+  document.getElementById('graphTabs').hidden = true;
+  document.getElementById('cpBuild').hidden = true; document.getElementById('cpBack').hidden = false;
+  updatePuzzleStatus(); resetRun();
+}
+function exitTest() {
+  testPuzzle = null; testSolved = false;
+  if (authorState) { restoreTrack(authorState); authorState = null; }
+  document.getElementById('graphTabs').hidden = (mode === 'puzzle');
+  document.getElementById('cpBuild').hidden = false; document.getElementById('cpBack').hidden = true;
+  updatePuzzleStatus();
+  if (mode === 'create') { [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType)); resetRun(); }
+}
+document.getElementById('cpMake').addEventListener('click', makePuzzleJson);
+document.getElementById('cpCopy').addEventListener('click', async () => {
+  if (!cpJson.value) { cpSay('Nothing to copy yet.', 'err'); return; }
+  try { await navigator.clipboard.writeText(cpJson.value); }
+  catch (e) { cpJson.select(); document.execCommand('copy'); }
+  cpSay('Copied.', 'ok');
+});
+document.getElementById('cpLoad').addEventListener('click', () => {
+  try { startTest(parsePuzzleJson(cpJson.value)); cpSay('Puzzle loaded — build a track that matches the dashed line.', 'ok'); }
+  catch (e) { cpSay(e.message, 'err'); }
+});
+document.getElementById('cpBack').addEventListener('click', () => { exitTest(); cpSay('Back to your own track.', 'ok'); });
 document.getElementById('modeTabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (b) setMode(b.dataset.mode);
 });
