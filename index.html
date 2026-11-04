@@ -62,9 +62,12 @@
 
   .panel { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; }
 
-  #stage { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
-  #main { flex: 1; min-width: 320px; }
-  #sidebar { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+  /* Toolbar + world span the full width; the graph sits below with the track pieces to its right. */
+  #stage { display: grid; grid-template-columns: minmax(0, 1fr) 190px; column-gap: 14px; align-items: start; }
+  #main { display: contents; }
+  #controls, #sceneWrap, #createPanel, #puzzlePanel { grid-column: 1 / -1; }
+  #graphCard { grid-column: 1; }
+  #sidebar { grid-column: 2; display: flex; flex-direction: column; gap: 14px; }
   #palette { padding: 11px; }
 
   /* Controls bar */
@@ -175,7 +178,7 @@
   #graphRow { display: flex; gap: 14px; align-items: stretch; }
   #graphPlot { position: relative; flex: 1 1 auto; min-width: 0; }
   #graph { display: block; width: 100%; height: 250px; }
-  @media (max-width: 720px) { #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
+  @media (max-width: 720px) { #stage { grid-template-columns: minmax(0, 1fr); } #graphCard, #sidebar { grid-column: 1; margin-top: 0; } #sidebar { flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
   /* Palette */
   .ptitle { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
@@ -187,7 +190,9 @@
   }
   .chip:active { cursor: grabbing; }
   .chip.disabled { cursor: not-allowed; pointer-events: none; }
-  .chip.ball2.disabled .ico { color: var(--muted); }
+  .chip.ball2 .ico { background: none; border: none; width: 28px; height: 28px; padding: 0; }
+  .chip.ball2 canvas { width: 28px; height: 28px; display: block; }
+  .chip.ball2.disabled canvas { opacity: 0.4; }
   .chip.ball2.disabled .ctxt b { color: var(--muted); }
   .chip .ctxt b { white-space: nowrap; }
   .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
@@ -195,7 +200,6 @@
   .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
   .chip.wall .ico { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
   .chip.target .ico { background: var(--target); color: #231141; font-size: 16px; }
-  .chip.ball2 .ico { background: #1c2430; color: var(--ball2); font-size: 18px; }
   .chip .ctxt { font-size: 14px; line-height: 1.2; }
   .chip .ctxt b { display: block; font-size: 15px; }
   .chip .ctxt span { color: var(--muted); font-size: 12.5px; }
@@ -340,14 +344,14 @@
         </div>
         <div class="chip friction" data-piece="friction">
           <div class="ico">▦</div>
-          <div class="ctxt"><b>Friction</b></div>
+          <div class="ctxt"><b>Friction pad</b></div>
         </div>
         <div class="chip wall" data-piece="wall">
           <div class="ico">█</div>
-          <div class="ctxt"><b>Wall</b></div>
+          <div class="ctxt"><b>Wall / Bounce</b></div>
         </div>
         <div class="chip ball2" data-piece="ball2">
-          <div class="ico">●</div>
+          <div class="ico"><canvas id="ball2Icon" width="56" height="56"></canvas></div>
           <div class="ctxt"><b>Second ball</b></div>
         </div>
       </div>
@@ -1298,7 +1302,7 @@ function makeGhost(piece) {
   if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
   else if (piece === 'target') { g.textContent = '▶ 6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
-  else if (piece === 'ball2') { g.textContent = '● ball'; g.style.background = getCss('--ball'); g.style.color = '#2a0f0a'; }
+  else if (piece === 'ball2') { g.textContent = '● ball'; g.style.background = getCss('--ball2'); g.style.color = '#0a1f3a'; }
   else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
   document.body.appendChild(g); return g;
 }
@@ -1406,7 +1410,7 @@ sceneC.addEventListener('pointerdown', e => {
 const TIPS = {
   boost:    'Speed change: adds its value to the ball\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
   target:   'Target speed: sets the ball to the speed and direction shown. A timer holds the ball until that time.',
-  friction: 'Friction: slows the ball while it\'s on it. Drag its ends to resize.',
+  friction: 'Friction pad: slows the ball while it\'s on it. Drag its ends to resize.',
   wall:     'Wall: stops the ball. Click it to make it bouncy.',
   wallBouncy: 'Bouncy wall: reflects the ball at the same speed. Click it to make it a plain wall.',
   ball2:    'Second ball: waits at rest. When hit, it takes the first ball\'s speed and the first stops.',
@@ -1550,7 +1554,7 @@ applyTheme(theme);
 // ─── Delete confirmation (double-click a piece) ─────────────────────────────────
 const dcEl = document.getElementById('deleteConfirm');
 const dcName = document.getElementById('dcName');
-const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction', ball2: 'second ball' };
+const PIECE_NAMES = { boost: 'speed change', wall: 'wall', target: 'target speed', friction: 'friction pad', ball2: 'second ball' };
 function openDeleteConfirm(piece, el, cx, cy) {
   confirmPiece = { piece, el };
   dcName.textContent = (piece === 'wall' && el.bouncy) ? 'bouncy wall' : (PIECE_NAMES[piece] || 'piece');
@@ -1575,16 +1579,17 @@ window.addEventListener('pointerdown', e => {
 }, true);
 
 // The logo's red ball: the world ball's cartoon style (flat fill, shade crescent, bold outline, highlight).
-function drawLogoBall() {
-  const c = document.getElementById('logoBall').getContext('2d'), col = getCss('--ball'), R = 44, m = 50;
-  c.clearRect(0, 0, 100, 100);
+function drawCartoonBall(canvas, col) {
+  const c = canvas.getContext('2d'), S = canvas.width, R = S * 0.44, m = S / 2, k = S / 100;
+  c.clearRect(0, 0, S, S);
   c.beginPath(); c.arc(m, m, R, 0, 7); c.fillStyle = col; c.fill();
   c.save(); c.beginPath(); c.arc(m, m, R, 0, 7); c.clip();
   c.fillStyle = darken(col, 0.22); c.beginPath(); c.arc(m + R * 0.42, m + R * 0.42, R, 0, 7); c.fill(); c.restore();
-  c.beginPath(); c.arc(m, m, R, 0, 7); c.strokeStyle = INK; c.lineWidth = 7; c.stroke();
+  c.beginPath(); c.arc(m, m, R, 0, 7); c.strokeStyle = INK; c.lineWidth = 7 * k; c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.92)'; c.beginPath(); c.arc(m - R * 0.34, m - R * 0.34, R * 0.17, 0, 7); c.fill();
 }
-drawLogoBall();
+drawCartoonBall(document.getElementById('logoBall'), getCss('--ball'));
+drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // palette icon = the second ball as it appears
 
 // Hidden dev slider (type "dev") to tune friction deceleration.
 (function(){
