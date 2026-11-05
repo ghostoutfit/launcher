@@ -205,6 +205,7 @@
   .chip.disabled { cursor: not-allowed; pointer-events: none; }
   .chip.ball2 .ico { background: none; border: none; width: 28px; height: 28px; padding: 0; }
   .chip.ball2 canvas { width: 28px; height: 28px; display: block; }
+  .chip.ball2.gone { display: none; }
   .chip.ball2.disabled canvas { opacity: 0.4; }
   .chip.ball2.disabled .ctxt b { color: var(--muted); }
   .chip .ctxt b { white-space: nowrap; }
@@ -1477,7 +1478,7 @@ function overScene(cx, cy) {
 
 // Only one extra ball is allowed — dim the chip and block its drag once placed.
 const ball2Chip = document.querySelector('.chip.ball2');
-function refreshBall2Chip() { if (ball2Chip) ball2Chip.classList.toggle('disabled', secondBalls.length >= 1 || mode === 'puzzle'); }   // no puzzle uses two marbles
+function refreshBall2Chip() { if (!ball2Chip) return; ball2Chip.classList.toggle('disabled', secondBalls.length >= 1); ball2Chip.classList.toggle('gone', mode === 'puzzle'); }   // no puzzle uses two marbles
 
 // Start a drag from a palette chip (create new piece)
 document.querySelectorAll('.chip').forEach(chip => {
