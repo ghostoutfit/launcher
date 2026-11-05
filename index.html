@@ -1144,14 +1144,14 @@ function drawAnnotations() {
   gx.save(); gx.strokeStyle = pink; gx.fillStyle = pink; gx.lineWidth = 3.5; gx.lineCap = 'round';
   const ell = (cx, cy, rx, ry) => { gx.beginPath(); gx.ellipse(cx, cy, Math.max(rx, 2), Math.max(ry, 2), 0, 0, Math.PI * 2); gx.stroke(); };
   if (annotCircle) {
-    const c = annotCircle, P = graphPanels.find(q => q.key === c.key) || graphPanels[0];
+    const c = annotCircle, P = graphPanels.find(q => q.key === c.key);   // only on the graph it was drawn on
     if (P) { const ya = P.ty + c.f0 * (P.by - P.ty), yb = P.ty + c.f1 * (P.by - P.ty);
       ell((TX(c.t0) + TX(c.t1)) / 2, (ya + yb) / 2, Math.abs(TX(c.t1) - TX(c.t0)) / 2, Math.abs(yb - ya) / 2); }
   }
   if (annotDrag) { const d = annotDrag; ell((d.x0 + d.x1) / 2, (d.y0 + d.y1) / 2, Math.abs(d.x1 - d.x0) / 2, Math.abs(d.y1 - d.y0) / 2); }
   for (const arw of annotArrows) {
     const AP = activePuzzle(), xx = TX(arw.t);
-    const P = graphPanels.find(q => q.key === arw.key) || graphPanels[0];
+    const P = graphPanels.find(q => q.key === arw.key);                 // hidden when that graph isn't showing
     if (P) {
       const Y = v => P.by + (v / P.yMax) * (P.ty - P.by);
       const tip = P.by - arw.f * (P.by - P.ty);
@@ -1833,8 +1833,7 @@ function updatePuzzleStatus() {
   }
   if (P.id === 'shared') { el.hidden = true; return; }                                   // linked puzzle: no stars, no Solved
   const solved = solvedPuzzles.has(P.id), playable = !!P.target;
-  el.innerHTML = '<span class="psStars">' + stars(P.stars) + '</span>'
-    + (playable ? '' : '<span class="psGoal">Coming soon — not built yet.</span>')
+  el.innerHTML = (playable ? '' : '<span class="psGoal">Coming soon — not built yet.</span>')
     + (solved ? '<span class="psSolved">✓ Solved</span>' : '');
 }
 
