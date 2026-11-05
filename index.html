@@ -141,6 +141,7 @@
   #tryCard p { margin: 0; font-size: 18px; color: var(--muted); font-weight: 600; text-align: center; max-width: 420px; }
   #annotBar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 18px; font-weight: 800; }
   #annotBar[hidden] { display: none; }
+  #annotBtns { display: flex; gap: 10px; flex-wrap: wrap; }
   #annotText { display: flex; flex-direction: column; gap: 2px; }
   #annotBar button { font-size: 16px; font-weight: 800; padding: 8px 16px; }
   #winCard .winBtns, #tryCard .winBtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
@@ -344,7 +345,7 @@
           <button data-g="both">Both Position and Velocity</button>
         </div>
         <div id="puzzleStatus" hidden></div>
-        <div id="annotBar" hidden><div id="annotText"><div>Click to draw a circle around where you need to focus.</div><div>Click a time axis and draw upward to see differences between both graphs.</div></div><button id="annotTry" class="primary">Try again</button></div>
+        <div id="annotBar" hidden><div id="annotText"><div>Click to draw a circle around where you need to focus.</div><div>Click a time axis and draw upward to see differences between both graphs.</div></div><div id="annotBtns"><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
@@ -398,7 +399,7 @@
     <p>Take a moment: how is your graph different from the one you needed to match?</p>
     <div class="winBtns">
       <button id="tryAnnotate" class="primary">Annotate my graph</button>
-      <button id="tryAgain" class="primary">Try again</button>
+      <button id="tryAgain" class="primary">Start fresh</button>
     </div>
   </div>
 </div>
@@ -1912,6 +1913,7 @@ function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) graphType = cu
 document.getElementById('tryAnnotate').addEventListener('click', startAnnotate);
 document.getElementById('tryAgain').addEventListener('click', tryAgain);
 document.getElementById('annotTry').addEventListener('click', tryAgain);
+document.getElementById('annotRevise').addEventListener('click', () => { hideWin(); });   // keep the track, settings and graph exactly as they were
 document.getElementById('winBack').addEventListener('click', backToMenu);
 document.getElementById('winNext').addEventListener('click', () => { const n = nextPuzzle(); if (n) selectPuzzle(n); else backToMenu(); });
 
