@@ -114,6 +114,7 @@
   #pzBack { margin-left: auto; }
   #pzBack[hidden] + #modeTabs, #pzBack:not([hidden]) + #modeTabs { margin-left: 0; }
   #pzBack[hidden] + #modeTabs { margin-left: auto; }
+  #motionMapBtn.on { background: var(--accent); color: #06121c; border-color: var(--accent); }
   #pzBack { font-size: 14px; font-weight: 700; padding: 9px 12px; white-space: nowrap; }
   /* when the header is too narrow for logo + Back + tabs, the tabs stay put on the top row and Back drops below */
   @media (max-width: 1130px) { #modeTabs { order: 2; margin-left: auto !important; } #pzBack { order: 3; } }
@@ -287,6 +288,7 @@
           <button id="replayFastBtn" class="replay" data-tip="Replay the last run at the same speed." disabled aria-label="Replay"><span class="rsym">&#8634;</span></button>
           <button id="resetBtn" data-tip="Clear the run and graph and put the marble back at its start.">Reset</button>
           <button id="clearBtn" data-tip="Remove every track piece.">Clear</button>
+          <button id="motionMapBtn" aria-pressed="false" data-tip="Draw a dot on the world where the marble is at each whole second (0 s, 1 s, 2 s…).">Show Motion Map</button>
         </div>
       </div>
 
@@ -703,6 +705,9 @@ function fit(c) {
   return { w, h, dpr };
 }
 
+let motionMap = false;
+const motionMapBtn = document.getElementById('motionMapBtn');
+motionMapBtn.addEventListener('click', () => { motionMap = !motionMap; motionMapBtn.classList.toggle('on', motionMap); motionMapBtn.setAttribute('aria-pressed', motionMap); drawScene(); });
 function drawScene() {
   const { w, h, dpr } = fit(sceneC);
   sx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -848,6 +853,23 @@ function drawScene() {
   sx.strokeStyle = 'rgba(255,255,255,0.22)'; sx.setLineDash([5, 5]); sx.lineWidth = 1.5; sx.lineCap = 'round';
   sx.beginPath(); sx.moveTo(mToPx(0), gY - 70); sx.lineTo(mToPx(0), gY); sx.stroke();
   sx.setLineDash([]);
+
+  // motion map: a light dot at each whole second of the run, labelled 0s, 1s, 2s…
+  if (motionMap) {
+    const r0 = ballRadius(), traces = (replaying && lastTrace) ? lastTrace : balls;
+    sx.font = handFont(14, 700); sx.textAlign = 'center'; sx.textBaseline = 'middle';
+    for (const tr of traces) {
+      const sm = tr.samples; if (!sm || !sm.length) continue;
+      const tEnd = replaying ? Math.min(t, sm[sm.length - 1].t) : sm[sm.length - 1].t, placed = [];
+      for (let tt = 0; tt <= RUN_TIME_CAP + 1e-9 && tt <= tEnd + 1e-6; tt++) {
+        const px = mToPx(sampleAt(sm, 'x', tt)), stack = placed.filter(q => Math.abs(q - px) < 26).length; placed.push(px);
+        sx.beginPath(); sx.arc(px, gY - r0, 5, 0, Math.PI * 2);
+        sx.fillStyle = lighten(tr.color, 0.45); sx.globalAlpha = 0.9; sx.fill(); sx.globalAlpha = 1;
+        sx.strokeStyle = tr.color; sx.lineWidth = 1.5; sx.stroke();
+        sx.fillStyle = getCss('--ink'); sx.fillText(tt + 's', px, gY - 2 * r0 - 10 - stack * 16);
+      }
+    }
+  }
 
   // all balls, each in its own colour (resting ones drawn first, mover on top)
   for (const b of balls) if (!b.moving) drawBall(mToPx(b.x), gY, b.color);
