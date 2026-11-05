@@ -399,6 +399,7 @@
     <p>Take a moment: how is your graph different from the one you needed to match?</p>
     <div class="winBtns">
       <button id="tryAnnotate" class="primary">Annotate my graph</button>
+      <button id="tryRevise" class="primary">Revise my solution</button>
       <button id="tryAgain" class="primary">Start fresh</button>
     </div>
   </div>
@@ -1962,7 +1963,9 @@ function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) graphType = cu
 document.getElementById('tryAnnotate').addEventListener('click', startAnnotate);
 document.getElementById('tryAgain').addEventListener('click', tryAgain);
 document.getElementById('annotTry').addEventListener('click', tryAgain);
-document.getElementById('annotRevise').addEventListener('click', () => { hideWin(); });   // keep the track, settings and graph exactly as they were
+const revise = () => hideWin();
+document.getElementById('tryRevise').addEventListener('click', revise);
+document.getElementById('annotRevise').addEventListener('click', revise);   // keep the track, settings and graph exactly as they were
 document.getElementById('winBack').addEventListener('click', backToMenu);
 document.getElementById('winNext').addEventListener('click', () => { const n = nextPuzzle(); if (n) selectPuzzle(n); else backToMenu(); });
 
