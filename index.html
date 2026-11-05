@@ -1037,7 +1037,7 @@ function drawGraph() {
       let ax = lx + 12;                                   // right of the line, else left of it
       if (ax + aw > x1 - 4) ax = lx - 12 - aw;
       ax = Math.max(x0 + 4, ax);
-      const ay = Math.max(ty + 4, by - ah - 8);
+      const ay = Math.max(2, by - ah - 8);                // bottom rests just above the time axis (may rise above the panel top) so the button is always visible
       gx.fillStyle = getCss('--cut'); roundRect(gx, ax, ay, aw, ah, 9); gx.fill();
       gx.strokeStyle = INK; gx.lineWidth = 2; gx.stroke();
       gx.fillStyle = '#4a0a0a'; gx.textAlign = 'center'; gx.textBaseline = 'middle';
