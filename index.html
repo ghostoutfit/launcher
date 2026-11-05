@@ -1182,6 +1182,7 @@ graphC.addEventListener('pointerdown', e => {
     if (annotArrows.length >= 3) annotArrows.shift();                     // a 4th arrow replaces the oldest
     annotArrows.push({ t: annotTimeAt(mx), key: ax.key, f: 0 }); annotDrag = { arrow: ax }; drawGraph(); return;
   }
+  annotCircle = null;                                                         // the old circle goes the moment a new one starts
   annotDrag = { x0: mx, y0: my, x1: mx, y1: my };
 });
 graphC.addEventListener('pointermove', e => {
