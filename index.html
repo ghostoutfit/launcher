@@ -96,6 +96,8 @@
     #stage #palette .chip .ctxt b { white-space: normal; font-size: 13px; line-height: 1.15; }
     #stage .ptitle { font-size: 12px; margin-bottom: 6px; }
     #stage #controls .spacer { display: none; }
+    #stage #controls .ctrl label, #stage .ptitle { text-align: center; }
+    #stage #palette .chip .ctxt { flex: 1; text-align: center; }
     #stage #controls .replay { justify-content: center; }
     #stage #controls .action-group { flex-direction: column; align-items: stretch; gap: 8px; }
     #stage #sceneWrap { grid-column: 2; grid-row: 1; }
@@ -392,7 +394,7 @@
           <div class="ctxt"><b>Speed change</b></div>
         </div>
         <div class="chip target" data-piece="target">
-          <div class="ico">⇄</div>
+          <div class="ico"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#fff" stroke="#1a2230" stroke-width="1.8"/><path d="M10 10V4.5M10 10l3.5 1" fill="none" stroke="#1a2230" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           <div class="ctxt"><b>Target speed</b></div>
         </div>
         <div class="chip friction" data-piece="friction">
