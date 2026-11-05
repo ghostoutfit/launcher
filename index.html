@@ -83,7 +83,7 @@
     #stage { grid-template-rows: auto auto 1fr; }   /* spare height goes to the graph, not the gaps */
     #stage #sceneWrap { margin-bottom: 8px; }
     #stage { grid-template-columns: 150px minmax(0, 1fr) 140px; }
-    #stage #controls { grid-column: 1; grid-row: 1 / 4; align-self: start; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; margin-bottom: 0; }
+    #stage #controls { grid-column: 1; grid-row: 1 / 4; align-self: stretch; justify-content: space-evenly; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; margin-bottom: 0; }
     #stage #controls .ctrl .row { gap: 8px; }
     #stage #controls input[type=range] { flex: 1; min-width: 0; width: auto; }
     #stage #controls { padding: 8px; gap: 8px; }
@@ -110,6 +110,7 @@
     #stage #puzzlePanel { grid-column: 1 / -1; grid-row: 1; }
     /* Create tab: track pieces sit beside the puzzle box only; world and graph run full width */
     body.mode-create #stage #sidebar { grid-row: 2; }
+    body.mode-create #stage #controls { align-self: start; justify-content: flex-start; }
     body.mode-create #stage #sceneWrap { grid-column: 2 / 4; }
     body.mode-create #stage #graphCard { grid-column: 2 / 4; }
   }
