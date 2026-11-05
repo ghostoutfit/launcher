@@ -428,7 +428,7 @@ let   FRICTION_DECEL = 2;     // deceleration under friction (m/s^2) — dev-tun
 const BOOST_DV  = 4;          // speed change pad: starting value (m/s); the pad's ± buttons step it by TARGET_STEP
 const FRIC_LEN  = 2;          // friction patch length (m)
 const TARGET_STEP = 2;        // target-speed increment (m/s)
-const TARGET_MAX  = 12;       // max target-speed magnitude (m/s)
+const TARGET_MAX  = 12;       // max target speed in either direction (m/s); negative sends the marble back
 const MAX_TIME  = 60;         // hard safety cap (s)
 const RUN_TIME_CAP = 5;       // everything stops when the 5 s graph window is filled
 const MASS      = 1;          // kg (KE = ½·m·v²)
@@ -1392,8 +1392,8 @@ function hitTargetControl(mx, my) {
 }
 function applyTargetControl(c) {
   const g = c.g;
-  if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, TARGET_STEP, TARGET_MAX);
-  else if (c.kind === 'magPlus') g.mag = clamp(g.mag + TARGET_STEP, TARGET_STEP, TARGET_MAX);
+  if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, -TARGET_MAX, TARGET_MAX);
+  else if (c.kind === 'magPlus') g.mag = clamp(g.mag + TARGET_STEP, -TARGET_MAX, TARGET_MAX);
   else if (c.kind === 'timeToggle') g.time = (g.time == null) ? 2 : null;
   else if (c.kind === 'timeMinus') g.time = clamp(Math.round(g.time) - 1, 0, RUN_TIME_CAP - 1);
   else if (c.kind === 'timePlus') g.time = clamp(Math.round(g.time) + 1, 0, RUN_TIME_CAP - 1);
@@ -1556,7 +1556,7 @@ sceneC.addEventListener('pointerdown', e => {
 // ─── Hover tooltips: one brief line per element ───────────────────────────────
 const TIPS = {
   boost:    'Speed change: adds its value to the marble\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
-  target:   'Target speed: sets the marble to the speed shown. A timer holds the marble until that time.',
+  target:   'Target speed: sets the marble to the speed shown (use – to go negative, back toward the start). A timer holds the marble until that time.',
   friction: 'Friction pad: slows the marble while it\'s on it. Drag its ends to resize.',
   wall:     'Wall: stops the marble. Click it to make it bouncy.',
   wallBouncy: 'Bouncy wall: reflects the marble at the same speed. Click it to make it a plain wall.',
