@@ -75,6 +75,21 @@
     body.mode-create #graphCard { grid-column: 1 / -1; grid-row: 4; margin-top: 14px; align-self: start; }
   }
   #sidebar { grid-column: 2; display: flex; flex-direction: column; gap: 14px; }
+  /* Wide screens (Chromebook): controls down the left, world + graph in the middle, track pieces down the right */
+  @media (min-width: 1100px) {
+    #app { max-width: 1600px; }
+    #stage { grid-template-columns: 240px minmax(0, 1fr) 190px; }
+    #stage #controls { grid-column: 1; grid-row: 1 / 4; align-self: start; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; margin-bottom: 0; }
+    #stage #controls .ctrl .row { gap: 8px; }
+    #stage #controls input[type=range] { flex: 1; min-width: 0; width: auto; }
+    #stage #controls .spacer { display: none; }
+    #stage #controls .action-group { flex-direction: column; align-items: stretch; gap: 8px; }
+    #stage #sceneWrap { grid-column: 2; grid-row: 1; }
+    #stage #createPanel { grid-column: 2; grid-row: 2; }
+    #stage #graphCard { grid-column: 2; grid-row: 3; margin-top: 0; align-self: stretch; }
+    #stage #sidebar { grid-column: 3; grid-row: 1 / 4; }
+    #stage #puzzlePanel { grid-column: 1 / -1; grid-row: 1; }
+  }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
   #palette .chip { flex: 1; margin-bottom: 6px; }
   #palette .chip:last-child { margin-bottom: 0; }
