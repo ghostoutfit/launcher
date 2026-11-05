@@ -78,8 +78,9 @@
   /* Wide screens (Chromebook): controls down the left, world + graph in the middle, track pieces down the right */
   @media (min-width: 1100px) {
     #app { max-width: 1600px; padding-top: 8px; padding-bottom: 12px; }
-    #stage #scene { height: 150px; }
+    #stage #scene { height: 210px; }
     #stage #graph { height: 205px; }
+    #stage { grid-template-rows: auto auto 1fr; }   /* spare height goes to the graph, not the gaps */
     #stage #sceneWrap { margin-bottom: 8px; }
     #stage { grid-template-columns: 150px minmax(0, 1fr) 140px; }
     #stage #controls { grid-column: 1; grid-row: 1 / 4; align-self: start; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; margin-bottom: 0; }
