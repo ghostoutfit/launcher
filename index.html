@@ -108,10 +108,9 @@
     #stage #graphCard { grid-column: 2; grid-row: 3; margin-top: 0; align-self: stretch; }
     #stage #sidebar { grid-column: 3; grid-row: 1 / 4; }
     #stage #puzzlePanel { grid-column: 1 / -1; grid-row: 1; }
-    /* Create tab: track pieces sit beside the puzzle box only; world and graph run full width */
-    body.mode-create #stage #sidebar { grid-row: 2; }
+    /* Create tab: track pieces run from the header down past the puzzle box; graph runs full width below */
+    body.mode-create #stage #sidebar { grid-row: 1 / 3; }
     body.mode-create #stage #controls { align-self: start; justify-content: flex-start; }
-    body.mode-create #stage #sceneWrap { grid-column: 2 / 4; }
     body.mode-create #stage #graphCard { grid-column: 2 / 4; }
   }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
