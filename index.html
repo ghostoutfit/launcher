@@ -65,7 +65,7 @@
   /* Toolbar + world span the full width; the graph sits below with the track pieces to its right. */
   #stage { display: grid; grid-template-columns: minmax(0, 1fr) 190px; column-gap: 14px; align-items: start; }
   #graphCard, #sidebar { align-self: stretch; }   /* track pieces are as tall as the graph window */
-  #main { display: contents; }
+  #main, #scrollArea { display: contents; }
   #controls, #sceneWrap, #createPanel, #puzzlePanel { grid-column: 1 / -1; }
   #graphCard { grid-column: 1; }
   /* Create tab: the track pieces sit beside the 'Make a puzzle' panel, and the graph runs full width below */
@@ -109,9 +109,11 @@
     #stage #sidebar { grid-column: 3; grid-row: 1 / 4; }
     #stage #puzzlePanel { grid-column: 1 / -1; grid-row: 1; }
     /* Create tab: track pieces run from the header down past the puzzle box; graph runs full width below */
-    body.mode-create #stage #sidebar { grid-row: 1 / 3; }
-    body.mode-create #stage #controls { align-self: start; justify-content: flex-start; }
-    body.mode-create #stage #graphCard { grid-column: 2 / 4; }
+    /* Create tab: world, launch panel and track pieces stay put; only the puzzle maker + graph scroll */
+    body.mode-create #stage { grid-template-rows: auto minmax(0, 1fr); }
+    body.mode-create #stage #sidebar, body.mode-create #stage #controls { grid-row: 1 / 3; }
+    body.mode-create #stage #scrollArea { display: block; grid-column: 2; grid-row: 2; align-self: stretch; min-height: 0; overflow-y: auto; }
+    body.mode-create #stage #graphCard { margin-top: 0; }
   }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
   #palette .chip { flex: 1; margin-bottom: 6px; }
@@ -343,6 +345,7 @@
         <canvas id="scene"></canvas>
       </div>
 
+      <div id="scrollArea">
       <div id="createPanel" class="panel" hidden>
         <div id="cpBuild">
           <div class="pzLabel">Make a puzzle from a run</div>
@@ -392,6 +395,7 @@
             <canvas id="graph" data-tip="Motion graph: each marble's position or velocity against time."></canvas>
           </div>
         </div>
+      </div>
       </div>
     </div>
 
@@ -1729,7 +1733,14 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   resetRun();
 });
 document.getElementById('clearBtn').addEventListener('click', () => { boosts = []; fricZones = []; walls = []; targets = []; secondBalls = []; refreshBall2Chip(); closeDeleteConfirm(); worldChanged(); });
-window.addEventListener('resize', () => { drawScene(); drawGraph(); });
+// Create tab (wide): fix the stage to the viewport so only #scrollArea scrolls
+function fitStage() {
+  const st = document.getElementById('stage');
+  if (document.body.classList.contains('mode-create') && window.innerWidth >= 1100) {
+    st.style.height = Math.max(520, window.innerHeight - st.getBoundingClientRect().top - window.scrollY - 12) + 'px';
+  } else st.style.height = '';
+}
+window.addEventListener('resize', () => { fitStage(); drawScene(); drawGraph(); });
 
 // ─── Light / dark theme (light by default) ──────────────────────────────────────
 const themeBtn = document.getElementById('themeToggle');
@@ -2054,6 +2065,7 @@ function setMode(m) {
   syncPuzzleView();
   document.getElementById('createPanel').hidden = !create;
   document.body.classList.toggle('mode-create', create);
+  fitStage();
   document.getElementById('graphTabs').hidden = puzzle || (create && !!testPuzzle);
   if (puzzle) {
     renderPuzzles();
