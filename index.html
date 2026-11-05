@@ -341,7 +341,7 @@
           <button id="replayFastBtn" class="replay" data-tip="Replay the last run at the same speed." disabled aria-label="Replay"><span class="rsym">&#8634;</span></button>
           <button id="resetBtn" data-tip="Clear the run and graph and put the marble back at its start.">Reset</button>
           <button id="clearBtn" data-tip="Remove every track piece.">Clear</button>
-          <button id="motionMapBtn" aria-pressed="false" data-tip="Draw a dot on the world where the marble is at each whole second (0 s, 1 s, 2 s…).">Motion Map</button>
+          <button id="motionMapBtn" aria-pressed="false" data-tip="Draw a dot on the world where the marble is at each whole second (0 s, 1 s, 2 s…).">Position Map</button>
         </div>
       </div>
 
@@ -898,7 +898,7 @@ function drawScene() {
   sx.beginPath(); sx.moveTo(mToPx(0), gY - 70); sx.lineTo(mToPx(0), gY); sx.stroke();
   sx.setLineDash([]);
 
-  // motion map: a light dot at each whole second of the run, labelled 0s, 1s, 2s…
+  // position map: a light dot at each whole second of the run, labelled 0s, 1s, 2s…
   if (motionMap) {
     const traces = (replaying && lastTrace) ? lastTrace : balls;
     sx.font = handFont(14, 700); sx.textAlign = 'left'; sx.textBaseline = 'middle';
