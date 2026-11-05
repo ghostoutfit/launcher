@@ -1802,7 +1802,8 @@ const PUZZLES = {
     { id: 'pos7', metric: 'position', stars: 3,
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 1 }, { t: 3, x: 7 }, { t: 5, x: 1 }] } },
     { id: 'pos8', metric: 'position', stars: 3 },
-    { id: 'pos9', metric: 'position', stars: 3 },
+    { id: 'pos9', metric: 'position', stars: 3,   // forward at 2 m/s, pause at 4 m, dash to 11.5 m, then back to 0
+      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 0.25, x: 0.5 }, { t: 0.5, x: 1 }, { t: 0.75, x: 1.5 }, { t: 1, x: 2 }, { t: 1.25, x: 2.5 }, { t: 1.5, x: 3 }, { t: 1.75, x: 3.5 }, { t: 2, x: 4 }, { t: 2.25, x: 4 }, { t: 2.5, x: 4 }, { t: 2.75, x: 4 }, { t: 3, x: 4.02 }, { t: 3.25, x: 6.52 }, { t: 3.5, x: 9.02 }, { t: 3.75, x: 11.52 }, { t: 4, x: 10 }, { t: 4.25, x: 7.5 }, { t: 4.5, x: 5 }, { t: 4.75, x: 2.5 }, { t: 5, x: 0 }] } },
     { id: 'pos10', metric: 'position', stars: 3 },
   ],
   velocity: [
