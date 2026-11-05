@@ -853,17 +853,23 @@ function drawScene() {
   // motion map: a light dot at each whole second of the run, labelled 0s, 1s, 2s…
   if (motionMap) {
     const traces = (replaying && lastTrace) ? lastTrace : balls;
-    sx.font = handFont(14, 700); sx.textAlign = 'center'; sx.textBaseline = 'middle';
+    sx.font = handFont(14, 700); sx.textAlign = 'left'; sx.textBaseline = 'middle';
     for (const tr of traces) {
       const sm = tr.samples; if (!sm || !sm.length) continue;
-      const tEnd = replaying ? Math.min(t, sm[sm.length - 1].t) : sm[sm.length - 1].t, placed = [];
+      const tEnd = replaying ? Math.min(t, sm[sm.length - 1].t) : sm[sm.length - 1].t;
+      let row = 0, prevPx = null;
       for (let tt = 0; tt <= RUN_TIME_CAP + 1e-9 && tt <= tEnd + 1e-6; tt++) {
-        const px = mToPx(sampleAt(sm, 'x', tt)), stack = placed.filter(q => Math.abs(q - px) < 26).length; placed.push(px);
-        const dy = 16 + stack * 34;                                    // up near the top; repeats stack downward
+        const px = mToPx(sampleAt(sm, 'x', tt));
+        if (prevPx !== null && Math.abs(px - prevPx) < 26) row++;      // stalled: step down a row; later dots stay level with it
+        prevPx = px;
+        const dy = 14 + row * 17;                                      // up near the top
+        const label = tt + 's', lw = sx.measureText(label).width;
+        sx.fillStyle = 'rgba(255,255,255,0.5)';                         // 50% white field behind the label
+        roundRect(sx, px + 8, dy - 9, lw + 8, 18, 5); sx.fill();
         sx.beginPath(); sx.arc(px, dy, 5, 0, Math.PI * 2);
         sx.fillStyle = lighten(tr.color, 0.45); sx.globalAlpha = 0.9; sx.fill(); sx.globalAlpha = 1;
         sx.strokeStyle = tr.color; sx.lineWidth = 1.5; sx.stroke();
-        sx.fillStyle = getCss('--ink'); sx.fillText(tt + 's', px, dy + 15);
+        sx.fillStyle = getCss('--ink'); sx.fillText(label, px + 12, dy + 1);
       }
     }
   }
