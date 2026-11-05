@@ -318,15 +318,15 @@
         <div class="ctrl" data-tip="Where the marble starts (0–15 m).">
           <label>Launch position</label>
           <div class="row">
-            <input type="range" id="pos" min="0" max="15" step="1" value="0">
-            <span class="val" id="posVal">0 m</span>
+            <input type="range" id="pos" min="0" max="15" step="1" value="5">
+            <span class="val" id="posVal">5 m</span>
           </div>
         </div>
         <div class="ctrl" data-tip="How fast the marble starts, going right (0–10 m/s).">
           <label>Launch speed</label>
           <div class="row">
-            <input type="range" id="speed" min="0" max="10" step="1" value="6">
-            <span class="val" id="speedVal">6 m/s</span>
+            <input type="range" id="speed" min="0" max="10" step="1" value="2">
+            <span class="val" id="speedVal">2 m/s</span>
           </div>
         </div>
         <div class="spacer"></div>
@@ -475,7 +475,7 @@ const RUN_TIME_CAP = 5;       // everything stops when the 5 s graph window is f
 const MASS      = 1;          // kg (KE = ½·m·v²)
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let v0 = 6, launchX = 0, graphType = 'position';
+let v0 = 2, launchX = 5, graphType = 'position';
 let playbackRate = 1;           // 1 = normal (rabbit), 0.5 = half speed (turtle)
 let lastRun = null;             // { v0, x0 } of the last launch, so replay repeats it
 let mode = 'sandbox';           // 'sandbox' | 'puzzle' | 'create'
