@@ -97,6 +97,8 @@
     #stage #palette .chip .ctxt b { white-space: normal; font-size: 13px; line-height: 1.15; }
     #stage .ptitle { font-size: 12px; margin-bottom: 6px; }
     #stage #controls .spacer { display: none; }
+    #stage #controls .action-group { display: contents; }   /* so Launch can sit above the sliders */
+    #stage #controls #launchBtn { order: -1; }
     #stage #controls .ctrl label, #stage .ptitle { text-align: center; }
     #stage #palette .chip .ctxt { flex: 1; text-align: center; }
     #stage #controls .replay { justify-content: center; }
@@ -136,6 +138,8 @@
   }
   button:hover { border-color: var(--accent); }
   button.primary { background: var(--accent); color: #06121c; border-color: #1e6fa3; }
+  #launchBtn { background: #e5372f; color: #fff; border-color: #a31f19; }
+  #launchBtn:disabled { opacity: 0.5; }
   button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
 
   /* Replay button: circle-arrow (same speed) */
