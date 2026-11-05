@@ -68,6 +68,12 @@
   #main { display: contents; }
   #controls, #sceneWrap, #createPanel, #puzzlePanel { grid-column: 1 / -1; }
   #graphCard { grid-column: 1; }
+  /* Create tab: the track pieces sit beside the 'Make a puzzle' panel, and the graph runs full width below */
+  @media (min-width: 721px) {
+    body.mode-create #createPanel { grid-column: 1; grid-row: 3; margin-bottom: 0; }
+    body.mode-create #sidebar { grid-column: 2; grid-row: 3; }
+    body.mode-create #graphCard { grid-column: 1 / -1; grid-row: 4; margin-top: 14px; align-self: start; }
+  }
   #sidebar { grid-column: 2; display: flex; flex-direction: column; gap: 14px; }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
   #palette .chip { flex: 1; margin-bottom: 6px; }
@@ -1962,6 +1968,7 @@ function setMode(m) {
   refreshBall2Chip();
   syncPuzzleView();
   document.getElementById('createPanel').hidden = !create;
+  document.body.classList.toggle('mode-create', create);
   document.getElementById('graphTabs').hidden = puzzle || (create && !!testPuzzle);
   if (puzzle) {
     renderPuzzles();
