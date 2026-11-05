@@ -1966,7 +1966,7 @@ function makePuzzleJson() {
   for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? Math.floor(AXES.position.y) : 1e9).toFixed(2)]);
   if (key === 'v' && Math.min(...pts.map(q => q[1])) < 0) { cpSay('That run\'s velocity goes negative, which the graph can\'t show. Try a different run.', 'err'); return; }
   cpJson.value = '#' + encodeURIComponent(JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts }));
-  cpSay('Puzzle made — copy the code below and add it to the end of the page address.', 'ok');
+  cpSay('Copy the code above and paste it after the page url - this link will load your puzzle directly.', 'ok');
 }
 // Validate pasted JSON and turn it into a puzzle object (or throw with a readable message).
 // Accepts bare JSON or a link with the puzzle after a # or ? (raw, URL-encoded or base64) → the JSON text.
