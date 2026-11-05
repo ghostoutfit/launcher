@@ -780,24 +780,13 @@ function drawScene() {
     g._tube = { cx: gx2, cy: tcy, L, H, top: tubeTop };
 
     // the sign (fixed size), on a post down to the tube
-    const sw = 112, sh = 82, sbot = tubeTop - 6, sTop = sbot - sh, X = gx2 - sw / 2, Y = sTop;
+    const sw = 112, sh = 58, sbot = tubeTop - 6, sTop = sbot - sh, X = gx2 - sw / 2, Y = sTop;
     signPost(gx2, sbot, tubeTop + 2, tCol);
     panel3D(X, Y, sw, sh, 12, tCol);
     sx.textAlign = 'center'; sx.textBaseline = 'middle';
 
-    // Row A — direction (arrows only)
-    const dirW = 35, dirH = 22, dAy = Y + 7;
-    const dirL = { x: X + 6, y: dAy, w: dirW, h: dirH }, dirR = { x: X + sw - 6 - dirW, y: dAy, w: dirW, h: dirH };
-    for (const [z, on, arr] of [[dirL, g.dir < 0, '◀'], [dirR, g.dir > 0, '▶']]) {
-      sx.fillStyle = on ? lighten(tCol, 0.5) : darken(tCol, 0.1);
-      roundRect(sx, z.x, z.y, z.w, z.h, 6); sx.fill(); ink(1.6); sx.stroke();
-      sx.fillStyle = on ? INK : lighten(tCol, 0.3);
-      sx.font = handFont(14, 700);
-      sx.fillText(arr, z.x + z.w / 2, z.y + z.h / 2 + 1);
-    }
-
     // Row B — speed stepper (m/s next to the number)
-    const sy = Y + 46;
+    const sy = Y + 19;
     const minus = miniBtn(X + 14, sy, 9, '–', tCol, INK);
     const plus  = miniBtn(X + sw - 14, sy, 9, '+', tCol, INK);
     sx.fillStyle = '#fff'; sx.textBaseline = 'middle';
@@ -829,7 +818,7 @@ function drawScene() {
     sx.textBaseline = 'alphabetic';
     g._ui = { bounds: { x: X, y: Y, w: sw, h: sh }, gx: gx2, gTop: tubeTop,
               tube: { x: gx2 - L / 2, y: tubeTop, w: L, h: H },
-              dirL, dirR, minus, plus, tMinus, tPlus, tToggle, timed };
+              minus, plus, tMinus, tPlus, tToggle, timed };
   }
 
   // walls — a chunky brick wall standing on the surface (pink = bouncy)
@@ -862,17 +851,18 @@ function drawScene() {
 
   // motion map: a light dot at each whole second of the run, labelled 0s, 1s, 2s…
   if (motionMap) {
-    const r0 = ballRadius(), traces = (replaying && lastTrace) ? lastTrace : balls;
+    const traces = (replaying && lastTrace) ? lastTrace : balls;
     sx.font = handFont(14, 700); sx.textAlign = 'center'; sx.textBaseline = 'middle';
     for (const tr of traces) {
       const sm = tr.samples; if (!sm || !sm.length) continue;
       const tEnd = replaying ? Math.min(t, sm[sm.length - 1].t) : sm[sm.length - 1].t, placed = [];
       for (let tt = 0; tt <= RUN_TIME_CAP + 1e-9 && tt <= tEnd + 1e-6; tt++) {
         const px = mToPx(sampleAt(sm, 'x', tt)), stack = placed.filter(q => Math.abs(q - px) < 26).length; placed.push(px);
-        sx.beginPath(); sx.arc(px, gY - r0, 5, 0, Math.PI * 2);
+        const dy = 16 + stack * 34;                                    // up near the top; repeats stack downward
+        sx.beginPath(); sx.arc(px, dy, 5, 0, Math.PI * 2);
         sx.fillStyle = lighten(tr.color, 0.45); sx.globalAlpha = 0.9; sx.fill(); sx.globalAlpha = 1;
         sx.strokeStyle = tr.color; sx.lineWidth = 1.5; sx.stroke();
-        sx.fillStyle = getCss('--ink'); sx.fillText(tt + 's', px, gY - 2 * r0 - 10 - stack * 16);
+        sx.fillStyle = getCss('--ink'); sx.fillText(tt + 's', px, dy + 15);
       }
     }
   }
@@ -1391,8 +1381,6 @@ const inCircle = (mx, my, c) => c && Math.hypot(mx - c.cx, my - c.cy) <= c.r + 2
 function hitTargetControl(mx, my) {
   for (const g of targets) {
     const u = g._ui; if (!u) continue;
-    if (inBox(mx, my, u.dirL)) return { g, kind: 'dirL' };
-    if (inBox(mx, my, u.dirR)) return { g, kind: 'dirR' };
     if (inCircle(mx, my, u.minus)) return { g, kind: 'magMinus' };
     if (inCircle(mx, my, u.plus)) return { g, kind: 'magPlus' };
     if (inCircle(mx, my, u.tMinus)) return { g, kind: 'timeMinus' };
@@ -1403,9 +1391,7 @@ function hitTargetControl(mx, my) {
 }
 function applyTargetControl(c) {
   const g = c.g;
-  if (c.kind === 'dirL') g.dir = -1;
-  else if (c.kind === 'dirR') g.dir = 1;
-  else if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, TARGET_STEP, TARGET_MAX);
+  if (c.kind === 'magMinus') g.mag = clamp(g.mag - TARGET_STEP, TARGET_STEP, TARGET_MAX);
   else if (c.kind === 'magPlus') g.mag = clamp(g.mag + TARGET_STEP, TARGET_STEP, TARGET_MAX);
   else if (c.kind === 'timeToggle') g.time = (g.time == null) ? 2 : null;
   else if (c.kind === 'timeMinus') g.time = clamp(Math.round(g.time) - 1, 0, RUN_TIME_CAP - 1);
@@ -1461,7 +1447,7 @@ function makeGhost(piece) {
   const g = document.createElement('div'); g.id = 'dragGhost';
   if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
-  else if (piece === 'target') { g.textContent = '▶ 6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
+  else if (piece === 'target') { g.textContent = '6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
   else if (piece === 'ball2') { g.textContent = '● marble'; g.style.background = getCss('--ball2'); g.style.color = '#0a1f3a'; }
   else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
   document.body.appendChild(g); return g;
@@ -1569,7 +1555,7 @@ sceneC.addEventListener('pointerdown', e => {
 // ─── Hover tooltips: one brief line per element ───────────────────────────────
 const TIPS = {
   boost:    'Speed change: adds its value to the marble\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
-  target:   'Target speed: sets the marble to the speed and direction shown. A timer holds the marble until that time.',
+  target:   'Target speed: sets the marble to the speed shown. A timer holds the marble until that time.',
   friction: 'Friction pad: slows the marble while it\'s on it. Drag its ends to resize.',
   wall:     'Wall: stops the marble. Click it to make it bouncy.',
   wallBouncy: 'Bouncy wall: reflects the marble at the same speed. Click it to make it a plain wall.',
