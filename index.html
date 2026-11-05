@@ -463,6 +463,10 @@
   </div>
 </div>
 <script>
+// ═══ LAUNCHER — one file, no build step. Read top to bottom:
+//   constants → state → physics → run control → main loop → drawing (world, graph) → input
+//   (drag & drop, tooltips) → puzzle mode → Create tab → init. Each section below starts with a
+//   banner line like this one; README.md has a map with line numbers.
 // ─── Model constants (metres, seconds, m/s) ───────────────────────────────────
 const TRACK_LEN = 21;   // world is 21 m long; the ruler only labels up to 20
 const BALL_R    = 0.28;
@@ -481,6 +485,7 @@ const TARGET_MAX  = 12;       // max target speed in either direction (m/s); neg
 const MAX_TIME  = 60;         // hard safety cap (s)
 const RUN_TIME_CAP = 5;       // everything stops when the 5 s graph window is filled
 const MASS      = 1;          // kg (KE = ½·m·v²)
+const PUZZLE_TOL = 0.9;       // max deviation (m or m/s) allowed when matching a puzzle's target line
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let v0 = 2, launchX = 5, graphType = 'position';
@@ -649,6 +654,15 @@ function snapshotTrace(extend = true) {
     if (extend && last && last.t < RUN_TIME_CAP) s.push({ t: RUN_TIME_CAP, x: last.x, v: last.v, d: last.d });
     return { color: b.color, samples: s };
   });
+}
+
+// value of `key` at time tt, linearly interpolated along a sample list
+function sampleAt(samples, key, tt) {
+  if (tt <= samples[0].t) return samples[0][key];
+  for (let i = 1; i < samples.length; i++) {
+    if (tt <= samples[i].t) { const a = samples[i - 1], b = samples[i]; return a[key] + (b[key] - a[key]) * (tt - a.t) / ((b.t - a.t) || 1); }
+  }
+  return samples[samples.length - 1][key];
 }
 
 // Run the ball from (xLaunch, vLaunch) played back at `rate` (1 = normal, 0.5 = half).
@@ -1187,9 +1201,9 @@ function drawGraph() {
   drawAnnotations();
 }
 
-// ─── Click the graph to read off a coordinate (integer t and value); click again to clear ──
+// ─── Click the graph to mark a coordinate (t snaps to 0.5 s); click a point again to remove it ──
 let graphPanels = [], graphGeom = null;
-// ─── Annotate a missed puzzle: one circle + one time marker (arrow with dots on both lines) ──
+// ─── Annotate a missed puzzle: one circle + up to 3 time arrows (dots where each hits both lines) ──
 // Both are stored in time (and panel-relative height), so they stay put when switching graph type.
 const ANNOT_TIP = 'Annotate: drag on the graph to circle where you need to focus (one circle). Press near the time axis and drag up to draw an arrow (up to three); a dot appears on each line an arrow reaches.';
 let annotating = false, annotCircle = null, annotArrows = [], annotDrag = null;   // arrows: up to 3 of { t, key, f } (f = height reached, as a fraction of the panel)
@@ -1337,6 +1351,7 @@ graphC.addEventListener('click', e => {
   drawGraph();
 });
 
+// ─── Colour + hand-drawn cartoon helpers ────────────────────────────────────
 const cssCache = {};   // theme colours only change on the day/night toggle (applyTheme clears this), so read each once
 function getCss(name) { return name in cssCache ? cssCache[name] : (cssCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim()); }
 function roundRect(c, x, y, w, h, r) {
@@ -1346,7 +1361,6 @@ function roundRect(c, x, y, w, h, r) {
   c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
 
-// ─── Colour + hand-drawn cartoon helpers ────────────────────────────────────
 function hexRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
 function mixC(hex, target, t) { const [r, g, b] = hexRgb(hex); const f = c => Math.round(c + (target - c) * t); return `rgb(${f(r)},${f(g)},${f(b)})`; }
 const lighten = (hex, t) => mixC(hex, 255, t);
@@ -1792,6 +1806,7 @@ window.addEventListener('pointerdown', e => {
   closeDeleteConfirm();
 }, true);
 
+// ─── Logo + palette marble icons ────────────────────────────────────────────────
 // The logo's red ball: the world ball's cartoon style (flat fill, shade crescent, bold outline, highlight).
 function drawCartoonBall(canvas, col) {
   const c = canvas.getContext('2d'), S = canvas.width, R = S * 0.44, m = S / 2, k = S / 100;
@@ -1805,6 +1820,7 @@ function drawCartoonBall(canvas, col) {
 drawCartoonBall(document.getElementById('logoBall'), getCss('--ball'));
 drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // palette icon = the second ball as it appears
 
+// ─── Dev tools (type "dev"): puzzle gallery + hidden tuning panel ───────────────────
 // Dev: a gallery of mini target graphs for every stored puzzle (opened from the dev panel).
 function showPuzzleGallery() {
   let ov = document.getElementById('devGallery'); if (ov) ov.remove();
@@ -1988,7 +2004,7 @@ function backToMenu() {
 }
 document.getElementById('pzBack').addEventListener('click', backToMenu);
 
-// ─── Solved celebration: confetti + two big buttons over everything ───────────────────
+// ─── Puzzle results: solved celebration (confetti), miss pop-up, grading, and tab switching (setMode) ──
 const winEl = document.getElementById('winOverlay'), confC = document.getElementById('confetti');
 let confetti = [], confRaf = 0;
 function nextPuzzle() {
@@ -2062,8 +2078,6 @@ function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left
     if (!isTest && mode === 'puzzle') showWin();
   } else if (!isTest && mode === 'puzzle') tryEl.hidden = false;   // a beat to think before revising
 }
-const PUZZLE_TOL = 0.9;   // max position deviation (m) allowed when matching a target line
-
 function setMode(m) {
   if (mode === 'create' && m !== 'create' && testPuzzle) exitTest();      // leaving Create ends a loaded puzzle
   const prevMode = mode;
@@ -2091,14 +2105,6 @@ function setMode(m) {
 // ─── Create tab: turn a run into a puzzle (JSON) and play pasted puzzles ──────────────
 const cpJson = document.getElementById('cpJson'), cpMsg = document.getElementById('cpMsg');
 function cpSay(text, cls) { cpMsg.textContent = text; cpMsg.className = cls || ''; }
-// value of `key` at time tt, linearly interpolated along a sample list
-function sampleAt(samples, key, tt) {
-  if (tt <= samples[0].t) return samples[0][key];
-  for (let i = 1; i < samples.length; i++) {
-    if (tt <= samples[i].t) { const a = samples[i - 1], b = samples[i]; return a[key] + (b[key] - a[key]) * (tt - a.t) / ((b.t - a.t) || 1); }
-  }
-  return samples[samples.length - 1][key];
-}
 function makePuzzleJson() {
   if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first — the puzzle is made from its graph.', 'err'); return; }
   const metric = document.querySelector('input[name=cpMetric]:checked').value, key = metric === 'velocity' ? 'v' : 'x';
