@@ -1336,7 +1336,8 @@ graphC.addEventListener('click', e => {
   drawGraph();
 });
 
-function getCss(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+const cssCache = {};   // theme colours only change on the day/night toggle (applyTheme clears this), so read each once
+function getCss(name) { return name in cssCache ? cssCache[name] : (cssCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim()); }
 function roundRect(c, x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2);
   c.beginPath(); c.moveTo(x + r, y);
@@ -1748,6 +1749,7 @@ window.addEventListener('resize', () => { fitStage(); drawScene(); drawGraph(); 
 // ─── Light / dark theme (light by default) ──────────────────────────────────────
 const themeBtn = document.getElementById('themeToggle');
 function applyTheme(mode) {
+  for (const k in cssCache) delete cssCache[k];
   if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
   themeBtn.textContent = mode === 'dark' ? '☀️' : '🌙';
