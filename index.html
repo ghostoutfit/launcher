@@ -1484,7 +1484,7 @@ function nearestSlot(piece, want, self) {
 }
 function placePiece(type, m) {
   if (type !== 'friction') {
-    if (type === 'ball2' && (secondBalls.length >= 1 || mode === 'puzzle')) return;
+    if (type === 'ball2' && true) return;
     const x = nearestSlot(type, clamp(snap(type === 'wall' ? m - WALL_D : m), 0, TRACK_LEN), null);
     if (x === null) return;                         // no room: nothing is placed
     if (type === 'boost') boosts.push({ id: pieceId++, x, dv: BOOST_DV, used: false });
@@ -1502,14 +1502,14 @@ function overScene(cx, cy) {
 
 // Only one extra ball is allowed — dim the chip and block its drag once placed.
 const ball2Chip = document.querySelector('.chip.ball2');
-function refreshBall2Chip() { if (!ball2Chip) return; ball2Chip.classList.toggle('disabled', secondBalls.length >= 1); ball2Chip.classList.toggle('gone', mode === 'puzzle'); }   // no puzzle uses two marbles
+function refreshBall2Chip() { if (!ball2Chip) return; ball2Chip.classList.toggle('disabled', secondBalls.length >= 1); ball2Chip.classList.toggle('gone', true); }   // second marble removed from every tab
 
 // Start a drag from a palette chip (create new piece)
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('pointerdown', e => {
     e.preventDefault();
     const piece = chip.dataset.piece;
-    if (piece === 'ball2' && (secondBalls.length >= 1 || mode === 'puzzle')) return;  // one extra marble max; none in puzzles
+    if (piece === 'ball2' && true) return;  // one extra marble max; none in puzzles
     drag = { kind: 'new', piece, ghost: makeGhost(piece) };
     moveGhost(drag.ghost, e.clientX, e.clientY);
   });
