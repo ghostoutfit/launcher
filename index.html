@@ -110,10 +110,11 @@
     #stage #puzzlePanel { grid-column: 1 / -1; grid-row: 1; }
     /* Create tab: track pieces run from the header down past the puzzle box; graph runs full width below */
     /* Create tab: world, launch panel and track pieces stay put; only the puzzle maker + graph scroll */
-    body.mode-create #stage { grid-template-rows: auto minmax(0, 1fr); }
-    body.mode-create #stage #sidebar, body.mode-create #stage #controls { grid-row: 1 / 3; }
-    body.mode-create #stage #scrollArea { display: block; grid-column: 2; grid-row: 2; align-self: stretch; min-height: 0; overflow-y: auto; }
+    body.mode-create #stage { grid-template-rows: minmax(0, 1fr); }
+    body.mode-create #stage #sidebar, body.mode-create #stage #controls { grid-row: 1; }
+    body.mode-create #stage #scrollArea { display: block; grid-column: 2; grid-row: 1; align-self: stretch; min-height: 0; overflow-y: auto; }
     body.mode-create #stage #graphCard { margin-top: 0; }
+    body.mode-create.create-world-fixed #stage #sceneWrap { position: sticky; top: 0; z-index: 5; }   /* dev checkbox: world pinned while the rest scrolls */
   }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
   #palette .chip { flex: 1; margin-bottom: 6px; }
@@ -341,11 +342,10 @@
         </div>
       </div>
 
+      <div id="scrollArea">
       <div id="sceneWrap" class="panel">
         <canvas id="scene"></canvas>
       </div>
-
-      <div id="scrollArea">
       <div id="createPanel" class="panel" hidden>
         <div id="cpBuild">
           <div class="pzLabel">Make a puzzle from a run</div>
@@ -1865,6 +1865,11 @@ function showPuzzleGallery() {
       gal.style.cssText = 'padding:5px 8px;font-size:12px;align-self:flex-start';
       gal.addEventListener('click', showPuzzleGallery);
       box.appendChild(gal);
+      const fx = document.createElement('label'); fx.style.cssText = 'display:flex;gap:6px;align-items:center';
+      fx.innerHTML = '<input type="checkbox" id="devWorldFixed"> Create: keep world fixed (only puzzle maker + graph scroll)';
+      fx.firstChild.checked = document.body.classList.contains('create-world-fixed');
+      fx.firstChild.addEventListener('change', e => document.body.classList.toggle('create-world-fixed', e.target.checked));
+      box.appendChild(fx);
       document.body.appendChild(box);
       const s = box.querySelector('#devFric'), vlab = box.querySelector('#devFricV');
       s.addEventListener('input', () => { FRICTION_DECEL = parseFloat(s.value); vlab.textContent = FRICTION_DECEL.toFixed(1); worldChanged(); });
