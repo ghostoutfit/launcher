@@ -81,10 +81,20 @@
     #stage #scene { height: 150px; }
     #stage #graph { height: 205px; }
     #stage #sceneWrap { margin-bottom: 8px; }
-    #stage { grid-template-columns: 240px minmax(0, 1fr) 190px; }
+    #stage { grid-template-columns: 130px minmax(0, 1fr) 140px; }
     #stage #controls { grid-column: 1; grid-row: 1 / 4; align-self: start; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; margin-bottom: 0; }
     #stage #controls .ctrl .row { gap: 8px; }
     #stage #controls input[type=range] { flex: 1; min-width: 0; width: auto; }
+    #stage #controls { padding: 8px; gap: 8px; }
+    #stage #controls .ctrl label { font-size: 10px; letter-spacing: 0.04em; }
+    #stage #controls .ctrl .row { flex-wrap: wrap; gap: 2px 6px; }
+    #stage #controls .val { min-width: 0; font-size: 13px; }
+    #stage #controls button { font-size: 13px; padding: 4px 6px; border-radius: 9px; }
+    #stage #controls .action-group { gap: 5px; }
+    #stage #palette { padding: 8px; }
+    #stage #palette .chip { gap: 6px; padding: 5px; }
+    #stage #palette .chip .ctxt b { white-space: normal; font-size: 13px; line-height: 1.15; }
+    #stage .ptitle { font-size: 12px; margin-bottom: 6px; }
     #stage #controls .spacer { display: none; }
     #stage #controls .action-group { flex-direction: column; align-items: stretch; gap: 8px; }
     #stage #sceneWrap { grid-column: 2; grid-row: 1; }
