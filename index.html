@@ -899,13 +899,16 @@ function drawScene() {
     for (const tr of traces) {
       const sm = tr.samples; if (!sm || !sm.length) continue;
       const tEnd = replaying ? Math.min(t, sm[sm.length - 1].t) : sm[sm.length - 1].t;
-      let row = 0, prevPx = null;
+      let row = 0, prevPx = null; const placed = [];                   // placed: boxes already drawn, so a bounce back over old dots steps down instead of overlapping
       for (let tt = 0; tt <= RUN_TIME_CAP + 1e-9 && tt <= tEnd + 1e-6; tt++) {
         const px = mToPx(sampleAt(sm, 'x', tt));
         if (prevPx !== null && Math.abs(px - prevPx) < 26) row++;      // stalled: step down a row; later dots stay level with it
         prevPx = px;
-        const dy = 14 + row * 17;                                      // up near the top
         const label = tt + 's', lw = sx.measureText(label).width;
+        const x0 = px - 7, x1 = px + 8 + lw + 8;
+        while (placed.some(p => p.row === row && x0 < p.x1 && x1 > p.x0)) row++;
+        placed.push({ row, x0, x1 });
+        const dy = 14 + row * 17;                                      // up near the top
         sx.fillStyle = 'rgba(255,255,255,0.5)';                         // 50% white field behind the label
         roundRect(sx, px + 8, dy - 9, lw + 8, 18, 5); sx.fill();
         sx.beginPath(); sx.arc(px, dy, 5, 0, Math.PI * 2);
