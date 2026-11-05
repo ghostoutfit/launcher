@@ -105,6 +105,10 @@
     #stage #graphCard { grid-column: 2; grid-row: 3; margin-top: 0; align-self: stretch; }
     #stage #sidebar { grid-column: 3; grid-row: 1 / 4; }
     #stage #puzzlePanel { grid-column: 1 / -1; grid-row: 1; }
+    /* Create tab: track pieces sit beside the puzzle box only; world and graph run full width */
+    body.mode-create #stage #sidebar { grid-row: 2; }
+    body.mode-create #stage #sceneWrap { grid-column: 2 / 4; }
+    body.mode-create #stage #graphCard { grid-column: 2 / 4; }
   }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
   #palette .chip { flex: 1; margin-bottom: 6px; }
@@ -345,7 +349,7 @@
           </div>
         </div>
         <div class="pzLabel" style="margin-top:10px">Puzzle code — copy to share, or paste one here to play it</div>
-        <textarea id="cpJson" rows="5" spellcheck="false" placeholder='Paste a puzzle code or JSON here, then press "Load &amp; play"'></textarea>
+        <textarea id="cpJson" rows="3" spellcheck="false" placeholder='Paste a puzzle code or JSON here, then press "Load &amp; play"'></textarea>
         <div class="cpRow">
           <button id="cpCopy" data-tip="Copy the puzzle code to the clipboard.">Copy</button>
           <button id="cpLoad" data-tip="Clear the track and play this puzzle yourself.">Load &amp; play</button>
