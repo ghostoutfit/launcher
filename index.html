@@ -1787,6 +1787,7 @@ const PUZZLES = {
 };
 const solvedPuzzles = new Set();
 try { (JSON.parse(localStorage.getItem('launcher-puzzles') || '[]')).forEach(id => solvedPuzzles.add(id)); } catch (e) {}
+solvedPuzzles.delete('shared');
 function savePuzzles() { try { localStorage.setItem('launcher-puzzles', JSON.stringify([...solvedPuzzles])); } catch (e) {} }
 let devUnlockAll = false;   // dev mode (type "dev") opens every level
 function puzzleUnlocked(list, i) { return devUnlockAll || !!list[i].unlocked || i % 5 === 0 || solvedPuzzles.has(list[i - 1].id); }
@@ -1828,6 +1829,7 @@ function updatePuzzleStatus() {
     el.innerHTML = '<span class="psGoal">Loaded puzzle — match the dashed line.</span>' + (testSolved ? '<span class="psSolved">✓ Solved</span>' : '');
     return;
   }
+  if (P.id === 'shared') { el.hidden = true; return; }                                   // linked puzzle: no stars, no Solved
   const solved = solvedPuzzles.has(P.id), playable = !!P.target;
   el.innerHTML = '<span class="psStars">' + stars(P.stars) + '</span>'
     + (playable ? '' : '<span class="psGoal">Coming soon — not built yet.</span>')
