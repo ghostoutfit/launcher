@@ -109,6 +109,7 @@
     #stage #controls .ctrl label, #stage .ptitle { text-align: center; }
     #stage #palette .chip .ctxt { flex: 1; text-align: center; }
     #stage #controls .replay { justify-content: center; }
+    #stage #controls #replayFastBtn { margin: 5px 0; }   /* ~15% more whitespace above and below the replay button */
     #stage #controls #motionMapBtn { font-size: 17.5px; }
     #stage #controls .action-group { flex-direction: column; align-items: stretch; gap: 8px; }
     #stage #sceneWrap { grid-column: 2; grid-row: 1; }
@@ -330,14 +331,14 @@
         <div class="ctrl" data-tip="Where the marble starts (0–15 m).">
           <label>Launch position</label>
           <div class="row">
-            <input type="range" id="pos" min="0" max="15" step="1" value="5">
+            <input type="range" id="pos" min="0" max="15" step="1" value="5" autocomplete="off">
             <span class="val" id="posVal">5 m</span>
           </div>
         </div>
         <div class="ctrl" data-tip="How fast the marble starts, going right (0–10 m/s).">
           <label>Launch speed</label>
           <div class="row">
-            <input type="range" id="speed" min="0" max="10" step="1" value="2">
+            <input type="range" id="speed" min="0" max="10" step="1" value="2" autocomplete="off">
             <span class="val" id="speedVal">2 m/s</span>
           </div>
         </div>
@@ -1239,6 +1240,7 @@ function startAnnotate() {
   [...document.querySelectorAll('#graphTabs button')].forEach(btn => btn.classList.toggle('active', btn.dataset.g === graphType));   // highlight the graph actually showing
   drawGraph();
 }
+const snapT = tt => Math.round(tt * 4) / 4;   // arrows land on the nearest 0.25 s
 function annotTimeAt(mx) { const { x0, x1, tMax } = graphGeom; return clamp((mx - x0) / (x1 - x0), 0, 1) * tMax; }
 function drawAnnotations() {
   if (!annotating || !graphGeom) return;
@@ -1259,8 +1261,7 @@ function drawAnnotations() {
     if (P) {
       const Y = v => P.by + (v / P.yMax) * (P.ty - P.by);
       const tip = P.by - arw.f * (P.by - P.ty);
-      gx.beginPath(); gx.moveTo(xx, P.by); gx.lineTo(xx, tip + 6); gx.stroke();            // shaft up from the time axis
-      gx.beginPath(); gx.moveTo(xx, tip - 2); gx.lineTo(xx - 7, tip + 10); gx.lineTo(xx + 7, tip + 10); gx.closePath(); gx.fill();
+      gx.beginPath(); gx.moveTo(xx, P.by); gx.lineTo(xx, tip); gx.stroke();                // vertical line up from the time axis
       const dots = [];
       const own = balls[0] && balls[0].samples.length > 1 ? sampleAt(balls[0].samples, P.key, arw.t) : null;
       if (own !== null) dots.push({ y: Y(own), c: balls[0].color });
@@ -1282,7 +1283,9 @@ function drawAnnotations() {
 // target graph puts the ball) on the world.
 const ARROW_PAUSE = 1.5, LOOP_GAP = 0.5;
 const BLINK_PHASE = 0.4;   // seconds the rings stay on, then off
-let annotPlay = null;   // { t, hold, blink, mark, fired, last, restoreX } while looping
+// Velocity puzzles can't be read from a frozen spot, so at a pause both balls run at their velocities for VEL_LOOP seconds from the line, repeating for VEL_PAUSE seconds
+const VEL_LOOP = 1, VEL_PAUSE = 3;
+let annotPlay = null;   // { t, hold, blink, mark, moving, lt, fired, last, restoreX } while looping
 const annotReplayBtn = document.getElementById('annotReplay');
 function annotSpan() {
   if (!annotCircle) return [0, RUN_TIME_CAP];
@@ -1312,23 +1315,38 @@ function tickAnnotPlay(now) {
   p.blink += dt;
   if (p.hold > 0) {
     p.hold -= dt;
-    if (p.hold <= 0) { p.mark = null; if (p.t >= b - 1e-9) { p.t = a; p.fired.clear(); } }
+    if (p.moving && p.mark) p.lt = (p.lt + dt) % VEL_LOOP;
+    if (p.hold <= 0) { p.mark = null; p.moving = false; if (p.t >= b - 1e-9) { p.t = a; p.fired.clear(); } }
   } else {
     p.t = clamp(p.t, a, b);
     const nt = Math.min(b, p.t + dt);
     const hit = annotArrows.filter(r => r.t >= p.t - 1e-9 && r.t <= nt && !p.fired.has(r)).sort((u, w) => u.t - w.t)[0];
-    if (hit) { p.t = hit.t; p.fired.add(hit); p.mark = hit; p.hold = ARROW_PAUSE; p.blink = 0; }
+    if (hit) { p.t = hit.t; p.fired.add(hit); p.mark = hit; p.moving = velPuzzle(); p.lt = 0; p.hold = p.moving ? VEL_PAUSE : ARROW_PAUSE; p.blink = 0; }
     else { p.t = nt; if (nt >= b) p.hold = LOOP_GAP; }
   }
-  balls[0].x = sampleAt(runSamples(), 'x', p.t);
+  balls[0].x = sampleAt(runSamples(), 'x', p.mark && p.moving ? Math.min(RUN_TIME_CAP, p.mark.t + p.lt) : p.t);
   drawScene(); drawGraph();
 }
-// the blinking rings on the world (called at the end of drawScene)
+// The spots on the world: while a line is being drawn / dragged (steady), or at a replay pause (blinking; for a velocity puzzle the balls run instead).
+// Red ring = the student's ball, blue ring = where the target graph puts it. Where the student matched the target, one purple "nice!" ring instead.
+function velPuzzle() { const AP = activePuzzle(); return !!(AP && AP.target && AP.target.key === 'v'); }
+function replayMark() {   // { t: moment the rings sit at, at: the line's time (where "matched" is judged) } or null while blinked off
+  if (annotDrag && annotDrag.obj) return { t: annotDrag.obj.t, at: annotDrag.obj.t };
+  const p = annotPlay; if (!p || !p.mark) return null;
+  if (p.moving) return { t: Math.min(RUN_TIME_CAP, p.mark.t + p.lt), at: p.mark.t };
+  return Math.floor(p.blink / BLINK_PHASE) % 2 ? null : { t: p.t, at: p.t };
+}
 function drawReplayMarks() {
-  const p = annotPlay; if (!p || !p.mark || Math.floor(p.blink / BLINK_PHASE) % 2) return;
-  const AP = activePuzzle(), r = ballRadius() + 7, cy = groundY() - ballRadius();
-  const marks = [{ m: sampleAt(runSamples(), 'x', p.t), col: '#e5372f', label: 'you' }];
-  if (AP && AP.target) marks.push({ m: clamp(idealX(AP.target, p.t), 0, TRACK_LEN), col: '#2d8bd4', label: 'goal' });
+  if (!annotating) return;
+  const mk = replayMark(); if (!mk) return;
+  const AP = activePuzzle(), tg = AP && AP.target, r = ballRadius() + 7, cy = groundY() - ballRadius();
+  const mine = sampleAt(runSamples(), 'x', mk.t);
+  let marks = [{ m: mine, col: '#e5372f', label: 'you' }];
+  if (tg) {
+    const own = sampleAt(runSamples(), tg.key, mk.at), want = tg.kind === 'flat' ? tg.value : interpPoly(tg.pts, mk.at);
+    if (Math.abs(own - want) <= (AP.tol || PUZZLE_TOL)) marks = [{ m: mine, col: '#8e44ad', label: 'nice!' }];
+    else marks.push({ m: clamp(idealX(tg, mk.t), 0, TRACK_LEN), col: '#2d8bd4', label: 'goal' });   // (a velocity target starts from the launch spot, even where that is out of reach)
+  }
   sx.save(); sx.font = handFont(14, 700); sx.textAlign = 'center'; sx.textBaseline = 'bottom';
   for (const k of marks) {
     const px = mToPx(k.m);
@@ -1360,11 +1378,14 @@ graphC.addEventListener('pointerdown', e => {
     graphC.setPointerCapture(e.pointerId);
     annotDrag = { arrow: P, obj: arw, edit: true, sx: mx, sy: my, moved: false }; return;
   }
-  const ax = graphPanels.find(q => my > q.by - 22 && my <= q.by + 34);       // the time axis → place the time marker
+  const AP = activePuzzle(), only = AP && AP.target ? AP.target.key : null;     // in a puzzle, lines go on the puzzle's own graph only (not the other one in the Both view)
+  const strip = graphPanels.find(q => my > q.by - 22 && my <= q.by + 34);       // the time axis → place the time marker
+  const ax = strip && (!only || strip.key === only) ? strip : null;
+  if (strip && !ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) return;   // the other graph's axis: no line there (and no stray circle)
   graphC.setPointerCapture(e.pointerId);
   if (ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) {            // drag up from the time axis → arrow
     if (annotArrows.length >= 3) annotArrows.shift();                     // a 4th arrow replaces the oldest
-    const arw = { t: annotTimeAt(mx), key: ax.key, f: 0 };
+    const arw = { t: snapT(annotTimeAt(mx)), key: ax.key, f: 0 };
     annotArrows.push(arw); annotDrag = { arrow: ax, obj: arw }; drawGraph(); return;
   }
   annotCircle = null;                                                         // the old circle goes the moment a new one starts
@@ -1376,8 +1397,8 @@ graphC.addEventListener('pointermove', e => {
   if (!annotDrag) { graphC.style.cursor = arrowAt(e.clientX - r.left, e.clientY - r.top) >= 0 ? 'pointer' : 'crosshair'; return; }
   if (annotDrag.arrow) {
     const D = annotDrag, P = D.arrow, mx = e.clientX - r.left, my = e.clientY - r.top;
-    if (D.edit) { if (!D.moved && Math.hypot(mx - D.sx, my - D.sy) < 4) return; D.moved = true; D.obj.t = annotTimeAt(mx); }   // dragging an existing arrow also slides it in time
-    D.obj.f = clamp((P.by - my) / (P.by - P.ty), 0, 1); drawGraph(); return;
+    if (D.edit) { if (!D.moved && Math.hypot(mx - D.sx, my - D.sy) < 4) return; D.moved = true; D.obj.t = snapT(annotTimeAt(mx)); }   // dragging an existing arrow also slides it in time
+    D.obj.f = clamp((P.by - my) / (P.by - P.ty), 0, 1); drawScene(); drawGraph(); return;
   }
   annotDrag.x1 = e.clientX - r.left; annotDrag.y1 = e.clientY - r.top; drawGraph();
 });
@@ -1387,7 +1408,7 @@ graphC.addEventListener('pointerup', () => {
   if (d.arrow) {
     const i = annotArrows.indexOf(d.obj);
     if (i >= 0 && (d.edit && !d.moved || d.obj.f * (d.arrow.by - d.arrow.ty) < 8)) annotArrows.splice(i, 1);   // a plain click on an arrow, or one dragged down to the axis, deletes it; a bare click on the axis makes none
-    drawGraph(); return;
+    drawScene(); drawGraph(); return;
   }
   const P = panelAt((d.y0 + d.y1) / 2) || graphPanels[0];
   if (P && (Math.abs(d.x1 - d.x0) > 8 || Math.abs(d.y1 - d.y0) > 8)) {      // a new circle replaces the old one
@@ -2033,7 +2054,7 @@ const PUZZLES = {
     { id: 'pos10', metric: 'position', stars: 3 },
   ],
   velocity: [
-    { id: 'vel1', metric: 'velocity', stars: 2, target: { kind: 'flat', key: 'v', value: 2 } },
+    { id: 'vel1', metric: 'velocity', stars: 2, target: { kind: 'flat', key: 'v', value: 3 } },
     { id: 'vel2', metric: 'velocity', stars: 2,   // 5 m/s to 1.75 s, then drops to 1 m/s and holds
       target: { kind: 'poly', key: 'v', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 5 }, { t: 0.5, x: 5 }, { t: 0.75, x: 5 }, { t: 1, x: 5 }, { t: 1.25, x: 5 }, { t: 1.5, x: 5 }, { t: 1.75, x: 5 }, { t: 2, x: 1.53 }, { t: 2.25, x: 1 }, { t: 2.5, x: 1 }, { t: 2.75, x: 1 }, { t: 3, x: 1 }, { t: 3.25, x: 1 }, { t: 3.5, x: 1 }, { t: 3.75, x: 1 }, { t: 4, x: 1 }, { t: 4.25, x: 1 }, { t: 4.5, x: 1 }, { t: 4.75, x: 1 }, { t: 5, x: 1 }] } },
     { id: 'vel3', metric: 'velocity', stars: 3,   // 5 m/s steady to 2 s, then slowing to a stop at 4.5 s
@@ -2294,6 +2315,8 @@ document.getElementById('modeTabs').addEventListener('click', e => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+// Always start at the defaults (a browser reload would otherwise restore the last slider positions)
+posEl.value = 5; speedEl.value = 2; posVal.textContent = '5 m'; speedVal.textContent = '2 m/s';
 setMode('sandbox');   // open on Sandbox (also resets the run)
 // A puzzle code after the URL (…/#%7B…, raw JSON, or …/?puzzle=…) opens that puzzle on its own, in Puzzle mode
 // (also when the code is pasted into the address bar of an already-open page → hashchange).

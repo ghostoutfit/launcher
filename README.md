@@ -78,11 +78,13 @@ column, `#scrollArea` (350).
 - **1208 · Graph points** — `drawGraphPoint` (1303): clicking the graph pins a
   coordinate (time snaps to half seconds).
 - **1210 · Annotate** — after a missed puzzle, the student can circle a region and
-  draw up to three time arrows; `drawAnnotations` (1235) paints them.
+  draw up to three vertical time lines (in a puzzle, only on the puzzle's own graph); `drawAnnotations` (1235) paints them.
   **Replay** loops the saved run over the circle's time span (`startAnnotPlay`);
-  at each arrow it pauses and blinks a red ring (the student's ball) and a blue
+  at each line it pauses and blinks a red ring (the student's ball) and a blue
   ring (where the target graph puts the ball) on the world. It plays back saved
-  samples, so no physics runs.
+  samples, so no physics runs. In a velocity puzzle the pause isn't frozen: both
+  balls run at their velocities for 1 s from the line, repeating for 3 s (the goal
+  ball starts from the chosen launch position, even if that is out of reach).
 
 **1358–1453 · Colour + cartoon helpers.** `getCss` (1360) reads a theme color once
 and remembers it (cleared when the day/night toggle flips). The rest are small
