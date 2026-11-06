@@ -79,6 +79,10 @@ column, `#scrollArea` (350).
   coordinate (time snaps to half seconds).
 - **1210 · Annotate** — after a missed puzzle, the student can circle a region and
   draw up to three time arrows; `drawAnnotations` (1235) paints them.
+  **Replay** loops the saved run over the circle's time span (`startAnnotPlay`);
+  at each arrow it pauses and blinks a red ring (the student's ball) and a blue
+  ring (where the target graph puts the ball) on the world. It plays back saved
+  samples, so no physics runs.
 
 **1358–1453 · Colour + cartoon helpers.** `getCss` (1360) reads a theme color once
 and remembers it (cleared when the day/night toggle flips). The rest are small
