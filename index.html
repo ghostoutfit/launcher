@@ -18,6 +18,7 @@
     --muted: #867c67;
     --line: #d8c7a6;
     --accent: #2d8bd4;
+    --on-accent: #fbf5e9;   /* ivory text on blue buttons (white in dark mode) */
     --accent-2: #d9a328;
     --ground: #c7ab7a;
     /* Shared element colours (both themes) */
@@ -39,6 +40,7 @@
     --muted: #8a97a8;
     --line: #2a3442;
     --accent: #3fb6ff;
+    --on-accent: #ffffff;
     --accent-2: #ffce4a;
     --ground: #3a4656;
   }
@@ -88,7 +90,7 @@
     #stage #controls .ctrl .row { gap: 8px; }
     #stage #controls input[type=range] { flex: 1; min-width: 0; width: auto; }
     #stage #controls { padding: 8px; gap: 8px; }
-    #stage #controls .ctrl label { font-size: 12px; letter-spacing: 0.06em; white-space: nowrap; }
+    #stage #controls .ctrl label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; }
     #stage #controls .ctrl .row { flex-direction: column-reverse; align-items: stretch; gap: 0; }   /* readout above, slider full width */
     #stage #controls .val { min-width: 0; font-size: 17px; text-align: center; }
     #stage #controls button { font-size: 18px; font-weight: 700; padding: 4px 4px; white-space: nowrap; border-radius: 9px; }
@@ -99,7 +101,7 @@
     #stage #palette .chip.target .ico { font-size: 22px; }
     #stage #palette .chip.ball2 .ico, #stage #palette .chip.ball2 canvas { width: 40px; height: 40px; }
     #stage #palette .chip .ctxt b { white-space: normal; font-size: 16px; line-height: 1.15; }
-    #stage .ptitle { font-size: 12px; margin-bottom: 6px; }
+    #stage .ptitle { font-size: 18px; font-weight: 700; margin-bottom: 6px; white-space: nowrap; }
     #stage #controls .spacer { display: none; }
     #stage #controls .action-group { display: contents; }   /* so Launch can sit above the sliders */
     #stage #controls #launchBtn { order: -1; }
@@ -131,7 +133,7 @@
     padding: 9px 16px; margin-bottom: 10px;
   }
   .ctrl { display: flex; flex-direction: column; gap: 4px; }
-  .ctrl label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .ctrl label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
   .ctrl .row { display: flex; align-items: center; gap: 10px; }
   input[type=range] { width: 110px; accent-color: var(--accent); }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 52px; white-space: nowrap; }
@@ -145,7 +147,7 @@
     border-radius: 11px; padding: 7px 15px; cursor: pointer;
   }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); color: #06121c; border-color: #1e6fa3; }
+  button.primary { background: var(--accent); color: var(--on-accent); font-weight: 800; border-color: #1e6fa3; }
   #launchBtn { background: #e5372f; color: #fff; border-color: #a31f19; }
   #launchBtn:disabled { opacity: 0.5; }
   button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
@@ -168,7 +170,7 @@
   #pzBack { margin-left: auto; }
   #pzBack[hidden] + #modeTabs, #pzBack:not([hidden]) + #modeTabs { margin-left: 0; }
   #pzBack[hidden] + #modeTabs { margin-left: auto; }
-  #motionMapBtn.on { background: var(--accent); color: #06121c; border-color: var(--accent); }
+  #motionMapBtn.on { background: var(--accent); color: var(--on-accent); font-weight: 800; border-color: var(--accent); }
   #pzBack { font-size: 14px; font-weight: 700; padding: 9px 12px; white-space: nowrap; }
   /* when the header is too narrow for logo + Back + tabs, the tabs stay put on the top row and Back drops below */
   @media (max-width: 1130px) { #modeTabs { order: 2; margin-left: auto !important; } #pzBack { order: 3; } }
@@ -187,11 +189,11 @@
   #winCard h2 { margin: 0; font-size: 28px; color: var(--boost); }
   #tryCard h2 { margin: 0; font-size: 28px; color: var(--ink); }
   #tryCard p { margin: 0; font-size: 18px; color: var(--muted); font-weight: 600; text-align: center; max-width: 420px; }
-  #annotBar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 18px; font-weight: 800; }
+  #annotBar { margin-bottom: 8px; font-size: 15px; font-weight: 800; }
   #annotBar[hidden] { display: none; }
-  #annotBtns { display: flex; gap: 10px; flex-wrap: wrap; }
-  #annotText { display: flex; flex-direction: column; gap: 2px; }
-  #annotBar button { font-size: 16px; font-weight: 800; padding: 8px 16px; }
+  #annotBtns { display: flex; gap: 8px; margin-left: auto; }   /* sits at the right end of the graph-tabs row */
+  #annotBtns[hidden] { display: none; }
+  #annotBtns button { font-size: 14px; font-weight: 800; padding: 7px 14px; }
   #winCard .winBtns, #tryCard .winBtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
   #winCard button, #tryCard button { font-size: 20px; font-weight: 800; padding: 16px 26px; border-radius: 14px; }
   #winCard button[hidden] { display: none; }
@@ -241,7 +243,7 @@
   #graphCard { padding: 10px 14px 12px; }
   #graphTabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   #graphTabs button { padding: 7px 12px; font-size: 13px; }
-  #graphTabs button.active { background: var(--accent); color: #06121c; border-color: var(--accent); }
+  #graphTabs button.active { background: var(--accent); color: var(--on-accent); font-weight: 800; border-color: var(--accent); }
   #graphRow { display: flex; gap: 14px; align-items: stretch; }
   #clearPoints { position: absolute; top: 0; right: 0; z-index: 3; padding: 5px 10px; font-size: 13px; font-weight: 700; }
   #clearPoints[hidden] { display: none; }
@@ -250,7 +252,7 @@
   @media (max-width: 720px) { #stage { grid-template-columns: minmax(0, 1fr); } #graphCard, #sidebar { grid-column: 1; margin-top: 0; } #sidebar { flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
   /* Palette */
-  .ptitle { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .ptitle { font-size: 21px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
   .chip {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 9px; margin-bottom: 6px;
@@ -279,7 +281,7 @@
     padding: 5px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.25); }
   #axisMenu[hidden] { display: none; }
   #axisMenu button { text-align: left; padding: 6px 14px; font-size: 14px; font-weight: 700; }
-  #axisMenu button.on { background: var(--accent); color: #06121c; border-color: var(--accent); }
+  #axisMenu button.on { background: var(--accent); color: var(--on-accent); font-weight: 800; border-color: var(--accent); }
   #tip {
     position: fixed; z-index: 90; pointer-events: none; max-width: 220px; display: none;
     background: var(--ink); color: var(--panel, #fff); border-radius: 8px; padding: 6px 10px;
@@ -357,6 +359,7 @@
           <div class="cpRow">
             <span>Build a track, press Launch, then pick which graph becomes the target:</span>
             <label><input type="radio" name="cpMetric" value="position" checked> Position</label>
+            <label><input type="radio" name="cpMetric" value="distance"> Distance</label>
             <label><input type="radio" name="cpMetric" value="velocity"> Velocity</label>
             <button id="cpMake" data-tip="Turn the last run's graph into a shareable puzzle code.">Make puzzle</button>
           </div>
@@ -373,11 +376,11 @@
 
       <div id="puzzlePanel" class="panel" hidden>
         <div class="pzGroup">
-          <div class="pzLabel">Position graphs — simpler</div>
+          <div class="pzLabel">Distance graphs</div>
           <div class="pzRow" id="pzRow1"></div>
         </div>
         <div class="pzGroup">
-          <div class="pzLabel">Position graphs — harder</div>
+          <div class="pzLabel">Position graphs</div>
           <div class="pzRow" id="pzRow2"></div>
         </div>
         <div class="pzGroup">
@@ -391,9 +394,10 @@
           <button data-g="position" class="active">Position–time</button>
           <button data-g="velocity">Velocity–time</button>
           <button data-g="both">Both Position and Velocity</button>
+          <div id="annotBtns" data-tip="" hidden><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div>
         </div>
         <div id="puzzleStatus" hidden></div>
-        <div id="annotBar" hidden><div id="annotText"><div>Click to draw a circle around where you need to focus.</div><div>Click a time axis and draw upward to see differences between both graphs.</div></div><div id="annotBtns"><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div></div>
+        <div id="annotBar" hidden><div id="annotText">Draw a circle where you need to focus. Click time axis and drag up to annotate differences between graphs.</div></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
@@ -440,8 +444,8 @@
   </div>
 </div>
 
-<div id="tip"></div>
 <div id="axisMenu" hidden></div>
+<div id="tip"></div>
 <div id="tryOverlay" hidden>
   <div id="tryCard">
     <h2>Not quite yet</h2>
@@ -1021,13 +1025,15 @@ function drawMarbleAt(c, cx, cy, r, col) {
 }
 
 // ─── Graph rendering ──────────────────────────────────────────────────────────
-// The position-type axis can show Position / Distance; the velocity-type axis Velocity / Speed.
-// (Puzzles always use plain Position / Velocity, so the choice is ignored there.)
-let posMode = 'x', velMode = 'v';
+// The position-type axis can show Position / Distance; the velocity-type axis Velocity / Speed (click the axis title in Sandbox).
+// Puzzles and the Create tab force one graph instead: forcedGraph() is that graph's name, or null in the free Sandbox.
+let posMode = 'x', velMode = 'v', createMetric = 'position';   // createMetric: the Create tab's radio choice
 const POS_SPECS = { x: { key: 'x', label: 'Position', unit: 'm' }, d: { key: 'd', label: 'Distance', unit: 'm' } };
 const VEL_SPECS = { v: { key: 'v', label: 'Velocity', unit: 'm/s' }, sp: { key: 'sp', label: 'Speed', unit: 'm/s' } };
-function posSpec() { return POS_SPECS[activePuzzle() ? 'x' : posMode]; }
-function velSpec() { return VEL_SPECS[activePuzzle() ? 'v' : velMode]; }
+function forcedGraph() { const P = activePuzzle(); return P ? P.metric : mode === 'create' ? createMetric : null; }
+const graphTypeFor = metric => metric === 'velocity' ? 'velocity' : 'position';   // which graph tab shows a metric
+function posSpec() { const f = forcedGraph(); return POS_SPECS[f ? (f === 'distance' ? 'd' : 'x') : posMode]; }
+function velSpec() { return VEL_SPECS[forcedGraph() ? 'v' : velMode]; }
 function graphSpec() { return graphType === 'position' ? posSpec() : velSpec(); }
 // value of a graph key for a sample (or live ball) o of trace b — sp is derived from v
 function metricVal(b, o, key) { return key === 'sp' ? Math.abs(o.v) : o[key]; }
@@ -1064,7 +1070,7 @@ function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    const gridStep = (metric.unit === 'm') ? 5 : 2;   // position: gridlines every 5 m (matches the world's ruler)
+    const gridStep = (metric.unit === 'm') ? 5 : 3;   // position: gridlines every 5 m (matches the world's ruler); velocity every 3 m/s
     for (let vv = 0; vv <= yMax + 1e-9; vv += gridStep) {
       const yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
@@ -1084,10 +1090,10 @@ function drawGraph() {
     // y-axis title
     gx.save(); gx.translate(14, (ty + by) / 2); gx.rotate(-Math.PI / 2);
     gx.textAlign = 'center'; gx.textBaseline = 'bottom';
-    const title = metric.label + ' (' + metric.unit + ')' + (activePuzzle() ? '' : ' ▾');
+    const title = metric.label + ' (' + metric.unit + ')' + (forcedGraph() ? '' : ' ▾');
     gx.fillStyle = getCss('--muted'); gx.fillText(title, 0, 0);
     const titleW = gx.measureText(title).width; gx.restore();
-    graphPanels[graphPanels.length - 1].titleHit = activePuzzle() ? null : { x0: 0, x1: 26, y0: (ty + by) / 2 - titleW / 2 - 4, y1: (ty + by) / 2 + titleW / 2 + 4 };
+    graphPanels[graphPanels.length - 1].titleHit = forcedGraph() ? null : { x0: 0, x1: 26, y0: (ty + by) / 2 - titleW / 2 - 4, y1: (ty + by) / 2 + titleW / 2 + 4 };
 
     // traces (clipped to the plot area). During replay the full completed curve
     // stays on screen (lastTrace) instead of rebuilding as the ball re-runs.
@@ -1120,7 +1126,7 @@ function drawGraph() {
       const lines = [what + ' has', 'become negative -', 'graph not shown'];
       const compact = (by - ty) < 150;                    // 'both' view panels are short
       const fs = compact ? 13 : 18, lh = compact ? 16 : 22, bh = compact ? 22 : 30;
-      const canSwitch = !activePuzzle();
+      const canSwitch = !forcedGraph();
       const btnText = 'Show Speed';
       gx.font = handFont(fs, 700);
       const aw = Math.max(...lines.map(l => gx.measureText(l).width), canSwitch ? gx.measureText(btnText).width + 16 : 0) + 24;
@@ -1206,16 +1212,15 @@ function drawGraph() {
 let graphPanels = [], graphGeom = null;
 // ─── Annotate a missed puzzle: one circle + up to 3 time arrows (dots where each hits both lines) ──
 // Both are stored in time (and panel-relative height), so they stay put when switching graph type.
-const ANNOT_TIP = 'Annotate: drag on the graph to circle where you need to focus (one circle). Press near the time axis and drag up to draw an arrow (up to three); a dot appears on each line an arrow reaches.';
 let annotating = false, annotCircle = null, annotArrows = [], annotDrag = null;   // arrows: up to 3 of { t, key, f } (f = height reached, as a fraction of the panel)
 function endAnnotate() {
   const was = annotating;
   annotating = false; annotCircle = null; annotArrows = []; annotDrag = null;
-  document.getElementById('annotBar').hidden = true; graphC.style.cursor = '';
+  document.getElementById('annotBar').hidden = true; document.getElementById('annotBtns').hidden = true; graphC.style.cursor = '';
   if (graphC.dataset.tipOrig) graphC.dataset.tip = graphC.dataset.tipOrig;
   if (was) {
     document.getElementById('graphTabs').hidden = (mode === 'puzzle') || (mode === 'create' && !!testPuzzle);
-    const P = activePuzzle(); if (P) graphType = P.metric;
+    const P = activePuzzle(); if (P) graphType = graphTypeFor(P.metric);
     [...document.querySelectorAll('#graphTabs button')].forEach(btn => btn.classList.toggle('active', btn.dataset.g === graphType));
   }
 }
@@ -1223,8 +1228,8 @@ function startAnnotate() {
   document.getElementById('tryOverlay').hidden = true;
   graphC.dataset.tipOrig = graphC.dataset.tipOrig || graphC.dataset.tip;
   annotating = true; annotCircle = null; annotArrows = []; graphPoints = [];
-  graphC.dataset.tip = ANNOT_TIP;
-  document.getElementById('annotBar').hidden = false; graphC.style.cursor = 'crosshair';
+  graphC.dataset.tip = '';                                  // no hover tooltip while annotating
+  document.getElementById('annotBar').hidden = false; document.getElementById('annotBtns').hidden = false; graphC.style.cursor = 'crosshair';
   document.getElementById('graphTabs').hidden = false;      // let the student look at the other graph too
   drawGraph();
 }
@@ -1740,7 +1745,7 @@ posEl.addEventListener('input', () => {
   worldChanged();
 });
 document.getElementById('graphTabs').addEventListener('click', e => {
-  const btn = e.target.closest('button'); if (!btn) return;
+  const btn = e.target.closest('button'); if (!btn || !btn.dataset.g) return;   // (the annotate buttons live in this row too)
   graphType = btn.dataset.g;
   [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === btn));
   drawGraph();
@@ -1830,7 +1835,7 @@ function showPuzzleGallery() {
   const card = document.createElement('div');
   card.style.cssText = 'background:' + getCss('--panel') + ';color:' + getCss('--ink') + ';border:3px solid ' + getCss('--line') + ';border-radius:16px;padding:18px 22px;max-width:1100px;width:100%;align-self:flex-start;font-family:inherit';
   card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b style="font-size:20px">All puzzles</b><button id="devGalClose" style="padding:6px 12px;font-weight:700">Close</button></div>';
-  const rows = [['Position — simpler', PUZZLES.position.slice(0, 5)], ['Position — harder', PUZZLES.position.slice(5)], ['Velocity', PUZZLES.velocity]];
+  const rows = [['Distance', PUZZLES.distance], ['Position', PUZZLES.position], ['Velocity', PUZZLES.velocity]];
   for (const [title, list] of rows) {
     const h = document.createElement('div'); h.textContent = title; h.style.cssText = 'font-weight:800;margin:12px 0 6px;color:' + getCss('--muted');
     const grid = document.createElement('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px';
@@ -1844,7 +1849,7 @@ function showPuzzleGallery() {
       const X = tt => L + tt / tMax * (W - L - R), Y = v => H - B - v / yMax * (H - T - B);
       c.strokeStyle = getCss('--line'); c.lineWidth = 1; c.fillStyle = getCss('--muted'); c.font = '16px sans-serif';
       for (let tt = 0; tt <= tMax; tt++) { c.beginPath(); c.moveTo(X(tt), T); c.lineTo(X(tt), H - B); c.stroke(); c.textAlign = 'center'; c.fillText(tt, X(tt), H - 8); }
-      const step = P.metric === 'velocity' ? 4 : 5;
+      const step = P.metric === 'velocity' ? 3 : 5;
       for (let v = 0; v <= yMax; v += step) { c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(W - R, Y(v)); c.stroke(); c.textAlign = 'right'; c.fillText(v, L - 4, Y(v) + 5); }
       if (P.target) {
         c.strokeStyle = getCss('--accent'); c.lineWidth = 3.5; c.lineJoin = 'round'; c.beginPath();
@@ -1905,17 +1910,21 @@ function showPuzzleGallery() {
 })();
 
 // ─── Puzzle mode ────────────────────────────────────────────────────────────────
-// 5 simpler position + 5 harder position + 5 velocity challenges (three menu rows of five). No names or hints — the player just reads the
-// target line off the graph and matches it. Each target carries its own axis key
-// ('x' position or 'v' velocity). The rest are placeholders that unlock progressively.
+// 5 distance + 5 position + 5 velocity challenges (three menu rows of five, keyed by graph type). No names or hints — the player just
+// reads the target line off the graph and matches it. Each target carries its own axis key
+// ('d' distance, 'x' position or 'v' velocity). The rest are placeholders that unlock progressively.
+// (The position row keeps its old ids pos6–pos10 so players' saved progress still matches.)
 const PUZZLES = {
-  position: [   // first five = "simpler" row, last five = "harder" row
-    { id: 'pos1', metric: 'position', stars: 1, target: { kind: 'flat', key: 'x', value: 10 } },
-    { id: 'pos2', metric: 'position', stars: 1 },
-    { id: 'pos3', metric: 'position', stars: 1,
-      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 1, x: 3 }, { t: 5, x: 7 }] } },
-    { id: 'pos4', metric: 'position', stars: 2 },
-    { id: 'pos5', metric: 'position', stars: 2 },
+  distance: [   // distance starts at 0 whatever the launch position, so no flat target here
+    { id: 'dist1', metric: 'distance', stars: 1, target: { kind: 'poly', key: 'd', pts: [{ t: 0, x: 0 }, { t: 5, x: 15 }] } },   // steady 3 m/s: 15 m in 5 s
+    { id: 'dist2', metric: 'distance', stars: 1,   // same 3 m/s, but stops at 9 m (at 3 s) and stays there
+      target: { kind: 'poly', key: 'd', pts: [{ t: 0, x: 0 }, { t: 3, x: 9 }, { t: 5, x: 9 }] } },
+    { id: 'dist3', metric: 'distance', stars: 1,
+      target: { kind: 'poly', key: 'd', pts: [{ t: 0, x: 0 }, { t: 1, x: 3 }, { t: 5, x: 7 }] } },
+    { id: 'dist4', metric: 'distance', stars: 2 },
+    { id: 'dist5', metric: 'distance', stars: 2 },
+  ],
+  position: [
     { id: 'pos6', metric: 'position', stars: 2,   // up to 20 m at 2.5 s and back down to 0 (ping-pong)
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 0.25, x: 2 }, { t: 0.5, x: 4 }, { t: 0.75, x: 6 }, { t: 1, x: 8 }, { t: 1.25, x: 10 }, { t: 1.5, x: 12 }, { t: 1.75, x: 14 }, { t: 2, x: 16 }, { t: 2.25, x: 18 }, { t: 2.5, x: 19.99 }, { t: 2.75, x: 18.02 }, { t: 3, x: 16.02 }, { t: 3.25, x: 14.02 }, { t: 3.5, x: 12.02 }, { t: 3.75, x: 10.02 }, { t: 4, x: 8.02 }, { t: 4.25, x: 6.02 }, { t: 4.5, x: 4.02 }, { t: 4.75, x: 2.02 }, { t: 5, x: 0.02 }] } },
     { id: 'pos7', metric: 'position', stars: 3,
@@ -1953,10 +1962,9 @@ function interpPoly(pts, tt) {
 function stars(n) { return '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
 
 function renderPuzzles() {
-  for (const [key, from, rowId] of [['position', 0, 'pzRow1'], ['position', 5, 'pzRow2'], ['velocity', 0, 'pzRow3']]) {
+  for (const [key, rowId] of [['distance', 'pzRow1'], ['position', 'pzRow2'], ['velocity', 'pzRow3']]) {
     const row = document.getElementById(rowId); row.innerHTML = '';
-    PUZZLES[key].slice(from, from + 5).forEach((p, j) => {
-      const i = from + j;
+    PUZZLES[key].forEach((p, i) => {
       const unlocked = puzzleUnlocked(PUZZLES[key], i), solved = solvedPuzzles.has(p.id);
       const btn = document.createElement('button');
       btn.className = 'pzBtn' + (unlocked ? '' : ' locked') + (solved ? ' solved' : '')
@@ -1996,7 +2004,7 @@ function syncPuzzleView() {
 function clearTrack() { boosts = []; walls = []; targets = []; fricZones = []; secondBalls = []; refreshBall2Chip(); }
 function selectPuzzle(p) {
   clearTrack();
-  currentPuzzle = p; graphType = p.metric; puzzleGraded = false;
+  currentPuzzle = p; graphType = graphTypeFor(p.metric); puzzleGraded = false;
   hideWin(); syncPuzzleView(); renderPuzzles(); updatePuzzleStatus();
   resetRun();   // switching puzzles always starts from a clean track
 }
@@ -2010,7 +2018,7 @@ const winEl = document.getElementById('winOverlay'), confC = document.getElement
 let confetti = [], confRaf = 0;
 function nextPuzzle() {
   if (currentPuzzle && currentPuzzle.id === 'shared') return null;     // a linked puzzle has no "next"
-  const all = [...PUZZLES.position, ...PUZZLES.velocity];
+  const all = [...PUZZLES.distance, ...PUZZLES.position, ...PUZZLES.velocity];
   const i = all.findIndex(p => currentPuzzle && p.id === currentPuzzle.id);
   const n = all[i + 1];
   if (!n) return null;
@@ -2041,7 +2049,7 @@ function showWin() {
     if (confetti.length) confRaf = requestAnimationFrame(tick);
   })(last);
 }
-function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) graphType = currentPuzzle.metric; resetRun(); }   // fresh graph with the goal showing, empty world
+function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) graphType = graphTypeFor(currentPuzzle.metric); resetRun(); }   // fresh graph with the goal showing, empty world
 document.getElementById('tryAnnotate').addEventListener('click', startAnnotate);
 document.getElementById('tryAgain').addEventListener('click', tryAgain);
 document.getElementById('annotTry').addEventListener('click', tryAgain);
@@ -2104,13 +2112,14 @@ function setMode(m) {
 }
 
 // ─── Create tab: turn a run into a puzzle (JSON) and play pasted puzzles ──────────────
+const METRIC_KEY = { position: 'x', distance: 'd', velocity: 'v' };   // graph type → sample field
 const cpJson = document.getElementById('cpJson'), cpMsg = document.getElementById('cpMsg');
 function cpSay(text, cls) { cpMsg.textContent = text; cpMsg.className = cls || ''; }
 function makePuzzleJson() {
   if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first — the puzzle is made from its graph.', 'err'); return; }
-  const metric = document.querySelector('input[name=cpMetric]:checked').value, key = metric === 'velocity' ? 'v' : 'x';
+  const metric = document.querySelector('input[name=cpMetric]:checked').value, key = METRIC_KEY[metric];
   const samples = lastTrace[0].samples, T = AXES.position.t, pts = [];
-  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'x' ? 0 : -1e9, key === 'x' ? Math.floor(AXES.position.y) : 1e9).toFixed(2)]);
+  for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'v' ? -1e9 : 0, key === 'v' ? 1e9 : Math.floor(AXES.position.y)).toFixed(2)]);
   if (key === 'v' && Math.min(...pts.map(q => q[1])) < 0) { cpSay('That run\'s velocity goes negative, which the graph can\'t show. Try a different run.', 'err'); return; }
   cpJson.value = '#' + encodeURIComponent(JSON.stringify({ format: 'launcher-puzzle', version: 1, metric, tolerance: PUZZLE_TOL, target: pts }));
   cpSay('Copy the code above and paste it after the page url - this link will load your puzzle directly.', 'ok');
@@ -2132,13 +2141,13 @@ function parsePuzzleJson(input) {
   const text = puzzleTextFromInput(input);
   let d; try { d = JSON.parse(text); } catch (e) { throw new Error('That isn\'t valid JSON.'); }
   if (!d || d.format !== 'launcher-puzzle') throw new Error('That JSON isn\'t a Launcher puzzle.');
-  if (d.metric !== 'position' && d.metric !== 'velocity') throw new Error('Puzzle metric must be "position" or "velocity".');
+  if (!METRIC_KEY[d.metric]) throw new Error('Puzzle metric must be "position", "distance" or "velocity".');
   const pts = d.target;
   if (!Array.isArray(pts) || pts.length < 2 || !pts.every(q => Array.isArray(q) && q.length === 2 && isFinite(q[0]) && isFinite(q[1]))) throw new Error('Puzzle target must be a list of [time, value] pairs.');
   for (let i = 1; i < pts.length; i++) if (!(pts[i][0] > pts[i - 1][0])) throw new Error('Target times must increase.');
   const tol = d.tolerance == null ? PUZZLE_TOL : +d.tolerance;
   if (!(tol > 0 && tol <= 5)) throw new Error('Tolerance must be between 0 and 5.');
-  return { id: 'imported', metric: d.metric, stars: 0, tol, target: { kind: 'poly', key: d.metric === 'velocity' ? 'v' : 'x', pts: pts.map(q => ({ t: q[0], x: q[1] })) } };
+  return { id: 'imported', metric: d.metric, stars: 0, tol, target: { kind: 'poly', key: METRIC_KEY[d.metric], pts: pts.map(q => ({ t: q[0], x: q[1] })) } };
 }
 function snapshotTrack() { return JSON.stringify({ boosts, walls, targets, fricZones, secondBalls, pos: posEl.value, speed: speedEl.value }); }
 function restoreTrack(str) {
@@ -2152,7 +2161,7 @@ function startTest(P) {
   if (!testPuzzle) authorState = snapshotTrack();          // park the author's own track (only the first time)
   testPuzzle = P; testSolved = false; puzzleGraded = false;
   boosts = []; walls = []; targets = []; fricZones = []; secondBalls = []; refreshBall2Chip();
-  graphType = P.metric;
+  graphType = graphTypeFor(P.metric);
   document.getElementById('graphTabs').hidden = true;
   document.getElementById('cpBuild').hidden = true; document.getElementById('cpBack').hidden = false;
   updatePuzzleStatus(); resetRun();
@@ -2166,6 +2175,12 @@ function exitTest() {
   if (mode === 'create') { [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType)); resetRun(); }
 }
 document.getElementById('cpMake').addEventListener('click', makePuzzleJson);
+// The radio also decides which graph the Create tab shows (no axis menu there)
+document.querySelectorAll('input[name=cpMetric]').forEach(r => r.addEventListener('change', () => {
+  createMetric = r.value; graphType = graphTypeFor(r.value); graphPoints = [];
+  [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType));
+  drawGraph();
+}));
 document.getElementById('cpCopy').addEventListener('click', async () => {
   if (!cpJson.value) { cpSay('Nothing to copy yet.', 'err'); return; }
   try { await navigator.clipboard.writeText(cpJson.value); }
