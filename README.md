@@ -5,11 +5,13 @@ track pieces in its way (speed pads, target-speed gates, friction pads, walls),
 and watch its distance, position and velocity graphed against time. A **Puzzle**
 tab asks the student to build a track whose graph matches a target graph (a row
 of distance, position and velocity puzzles), and a **Create** tab turns any run
-into a shareable puzzle in whichever of the three graphs you pick. No build step, no dependencies —
-everything lives in `index.html`.
+into a shareable puzzle in whichever of the three graphs you pick. No build step
+and no dependencies — just `index.html`, `style.css`, and ES modules in `js/`
+that the browser loads directly.
 
 - **Run it:** serve the folder (`python3 -m http.server 8101`) and open
-  `http://localhost:8101`.
+  `http://localhost:8101`. It must be *served*, not opened as a `file://` path:
+  browsers refuse to load ES modules over `file://`.
 - **Share a puzzle:** paste a puzzle code after the page URL's `#` and it opens
   as its own puzzle.
 
@@ -25,107 +27,91 @@ Position and distance are different on purpose: `x` is where the marble is on th
 track (so it depends on the launch position), while `d` is how far it has
 travelled since launch (always starts at 0, and keeps growing after a bounce).
 
-## Code map — `index.html`
+## Code map
 
-Line numbers are approximate (they drift as the file is edited); the banner
-comments (`// ─── … ───`) in the file are the real landmarks.
+`index.html` is the markup, `style.css` the look (theme colours are variables at
+the top; the `@media (min-width: 1100px)` block is the wide-screen layout), and
+everything else is an ES module in `js/`. Banner comments (`// ─── … ───`) mark
+the sections inside the longer files.
 
-**11–307 · Styles (CSS).** The look of the page. Colors are variables at the top
-(light and dark themes). The grid at `#stage` (67) lays out the page; the
-`@media (min-width: 1100px)` block (80) is the wide-screen layout — launch controls
-down the left, world and graph in the middle, track pieces down the right.
+Modules are listed bottom-up: each mostly imports from the ones above it.
 
-**309–466 · Page markup (HTML).** The header tabs (315), then `#stage` (323):
-`#controls` (the left launch panel, 325), `#sceneWrap` (the world canvas, 351),
-`#createPanel` (354), `#puzzlePanel` (the puzzle menu, 375), `#graphCard`
-(390, with the Position / Velocity / Both graph tabs) and `#sidebar`
-(the track-piece palette, 408). Below it sit the overlays: delete confirm (436),
-the miss pop-up `#tryOverlay` (446) and the solved pop-up `#winOverlay` (457).
-In Create on a wide screen, the world, puzzle box and graph share one scrolling
-column, `#scrollArea` (350).
+**`constants.js`** — track length (`TRACK_LEN`), marble size, the 5 s run limit
+(`RUN_TIME_CAP`), the puzzle tolerance (`PUZZLE_TOL`), and `AXES`, which fixes
+the graph ranges. Imports nothing.
 
-**467–771 · The model (JavaScript starts here).** Everything the simulation is made of.
-- **468 · Overview comment** — how the script is ordered.
-- **472 · Model constants** — track length (`TRACK_LEN`), marble size, the 5 s
-  run limit (`RUN_TIME_CAP`) and the puzzle tolerance (`PUZZLE_TOL`).
-- **492 · State** — the live variables: `mode` (sandbox / puzzle / create),
-  `balls` (each marble and its saved samples), `running`, `t`, `x`, `v`, and the
-  lists of track pieces (`boosts`, `fricZones`, `walls`, `targets`, `secondBalls`).
-  `AXES` (518) fixes the graph ranges for each graph type.
-- **537 · Elements / 549 · Scene geometry** — handles to the page's canvases and
-  buttons, and `mToPx` / `pxToM`, which convert metres on the track to pixels.
-- **558 · Physics** — `step()` (594) moves the marble one small time step: friction
-  slows it, `firstWallHit` (572) stops or bounces it, and `firstBallHit` (583) handles
-  a collision with a second marble. Pieces fire when the marble crosses them.
-- **643 · Run control** — `doLaunch` (671) starts a run, `resetRun` (695) puts
-  everything back, `worldChanged` (708) is called after any edit (it clears the
-  graph and greys out replay), and `sampleAt` (662) reads a value at any time
-  from the saved samples.
-- **713 · Main loop** — `frame()` (714) runs every screen refresh: it advances the
-  physics while a run is going, saves a sample, then redraws. When nothing is
-  running it does no work.
+**`state.js`** — the state several modules share: which `mode` we are in, the
+selected puzzle, and the placed track pieces (`boosts`, `fricZones`, `walls`,
+`targets`, `secondBalls`). The piece lists are mutated in place — `clearPieces`,
+`loadPieces`, `removePiece` — so every module keeps pointing at the same array.
 
-**772–1357 · Drawing the world and graph.** Painting numbers as pixels on a canvas.
-- **772 · Scene rendering** — `drawScene()` (783) paints the ground, ruler, track
-  pieces, the Position Map dots (the whole-second dots near the top) and the
-  marbles. `drawPad` (960) draws a speed pad.
-- **1024 · Graph rendering** — `posMode` / `velMode` (1027) choose what each axis
-  shows: Position or Distance, Velocity or Speed (in Sandbox, click the axis title
-  to open the menu). `forcedGraph()` (1030) turns that menu off in Puzzle and
-  Create, where the puzzle's graph (or Create's Position / Distance / Velocity
-  radio) is used instead. `drawGraph()` (1038) paints the axes, grid, the target
-  line (puzzles) and the marble's curve.
-- **1208 · Graph points** — `drawGraphPoint` (1303): clicking the graph pins a
-  coordinate (time snaps to half seconds).
-- **1210 · Annotate** — after a missed puzzle, the student can circle a region and
-  draw up to three vertical time lines (in a puzzle, only on the puzzle's own graph); `drawAnnotations` (1235) paints them.
-  **Replay** loops the saved run over the circle's time span (`startAnnotPlay`);
-  at each line it pauses and blinks a red ring (the student's ball) and a blue
-  ring (where the target graph puts the ball) on the world. It plays back saved
-  samples, so no physics runs. In a velocity puzzle the pause isn't frozen: both
-  balls run at their velocities for 1 s from the line, repeating for 3 s (the goal
-  ball starts from the chosen launch position, even if that is out of reach).
+**`dom.js`** — handles to the page's canvases and sliders, plus the scene
+geometry: `mToPx` / `pxToM` convert metres on the track to pixels.
 
-**1358–1453 · Colour + cartoon helpers.** `getCss` (1360) reads a theme color once
-and remembers it (cleared when the day/night toggle flips). The rest are small
-drawing helpers for the chunky outlined look: `roundRect`, `lighten`, `ink`,
-`panel3D`, `signPost`, `drawTube`, `drawClock`.
+**`draw.js`** — `getCss` reads a theme colour once and remembers it (the cache is
+cleared when the day/night toggle flips). The rest are the chunky outlined
+cartoon helpers: `roundRect`, `panel3D`, `signPost`, `drawTube`, `drawClock`.
 
-**1454–1767 · Input.** How the student interacts.
-- **1454 · Drag & drop** — `hitPiece` (1495) finds what was clicked, `placePiece`
-  (1555) drops a new piece and snaps it to a free 1 m slot, and
-  `refreshBall2Chip` (1575) shows the Marble 2 chip only in Sandbox.
-- **1633 · Hover tooltips** — `TIPS` (1634) holds one short line per element.
-- **1736 · Wiring** — connects buttons and sliders to the simulation; `fitStage`
-  (1760) pins the Create layout to the window height.
+**`sim.js`** — the running simulation, and the owner of the live state `t`, `x`,
+`v`, `balls` and `running`. `step()` advances the marble one small time step
+(friction slows it, `firstWallHit` stops or bounces it, `firstBallHit` handles a
+collision with a second marble, and pieces fire as the marble crosses them).
+`launch` starts a run, `resetRun` puts everything back, `worldChanged` is called
+after any edit, `sampleAt` reads a value at any time from the saved samples, and
+`frame()` is the main loop — it advances the physics, saves a sample, then
+redraws, and does no work when nothing is running.
 
-**1768–1909 · Small features.**
-- **1768 · Light / dark theme** — `applyTheme` (1770).
-- **1786 · Delete confirmation** — double-click a piece to remove it.
-- **1813 · Logo + palette marble icons** — `drawCartoonBall`.
-- **1827 · Dev tools** — type `dev` anywhere: a panel with a friction slider,
-  logo tuning, "Clear level progress", **Show all puzzles** (`showPuzzleGallery`,
-  1829) and a checkbox for whether the Create world stays fixed while scrolling.
-  It also unlocks every puzzle.
+**`scene.js`** — `drawScene()` paints the ground, ruler, track pieces, the
+Position Map dots and the marbles.
 
-**1910–2110 · Puzzle mode.**
-- **1910 · Puzzle data** — `PUZZLES` (1915): three rows of five, keyed by graph type —
-  5 distance, 5 position and 5 velocity puzzles. Each has a target line (`flat` or
-  `poly`) on its own axis key (`d`, `x` or `v`); some are still placeholders with
-  no target. Opening a puzzle switches the graph to its type. `renderPuzzles` (1961)
-  draws the menu and `selectPuzzle` (2002) opens one.
-- **2013 · Puzzle results** — `gradePuzzle` (2059) compares the run to the target
-  (largest gap must be under `PUZZLE_TOL`), then shows the solved pop-up
-  (`showWin`, 2027) or the miss pop-up (Annotate / Revise / Start fresh).
-  `setMode` (2087) switches between the three tabs.
+**`graph.js`** — `drawGraph()` paints the axes, grid, the dashed target line and
+the marble's curve. `posMode` / `velMode` choose what each axis shows (Position
+or Distance, Velocity or Speed); in Sandbox you click the axis title to open that
+menu, and `forcedGraph()` turns it off in Puzzle and Create, where the puzzle's
+graph — or Create's Position / Distance / Velocity radio — decides instead.
+Clicking the graph also pins a coordinate (time snaps to half seconds).
 
-**2111–2195 · Create tab.** `makePuzzleJson` (2115) turns the last run into a
-puzzle code (`#` + URL-encoded JSON) using whichever graph is picked — Position,
-Distance or Velocity (`METRIC_KEY` maps that name to the sample field) —
-`parsePuzzleJson` (2137) checks one, and `startTest` (2157) lets you play it in place.
+**`annotate.js`** — after a missed puzzle the student can circle a region and draw
+up to three vertical time lines (in a puzzle, only on the puzzle's own graph).
+**Replay** loops the saved run over the circle's time span; at each line it
+pauses and blinks a red ring (the student's ball) and a blue ring (where the
+target graph puts the ball) on the world. It plays back saved samples, so no
+physics runs. In a velocity puzzle the pause isn't frozen: both balls run at
+their velocities for 1 s from the line, repeating for 3 s (the goal ball starts
+from the chosen launch position, even if that is out of reach).
 
-**2196–end · Init.** `loadPuzzleFromUrl` (2200) opens a puzzle code found in the
-page address (and again whenever the `#` part changes), then the frame loop starts.
+**`input.js`** — drag & drop (`hitPiece` finds what was clicked, `placePiece`
+snaps a new piece to a free 1 m slot), the hover tooltips in `TIPS`, and the
+double-click delete confirmation.
+
+**`puzzles.js`** — `PUZZLES` holds three rows of five, keyed by graph type: 5
+distance, 5 position and 5 velocity. Each has a target line (`flat` or `poly`) on
+its own axis key (`d`, `x` or `v`); some are still placeholders with no target.
+`renderPuzzles` draws the menu, `selectPuzzle` opens one, `gradePuzzle` compares
+the run to the target (largest gap must be under `PUZZLE_TOL`) and shows the
+solved pop-up or the miss pop-up, and `setMode` switches between the three tabs.
+
+**`create.js`** — `makePuzzleJson` turns the last run into a puzzle code (`#` plus
+URL-encoded JSON) using whichever graph is picked, `parsePuzzleJson` checks one,
+and `startTest` lets you play it in place.
+
+**`ui.js`** — control wiring, the light/dark theme (`applyTheme`), the logo and
+palette marble icons, and the dev panel: type **`dev`** for a friction slider,
+logo tuning, "Clear level progress" and **Show all puzzles**, which also unlocks
+every puzzle.
+
+**`main.js`** — the entry point. Every other module only *defines* things; all the
+start-up work happens here in order, so nothing runs before the module it depends
+on has loaded. It also opens a puzzle code found in the page address.
+
+### One thing to know about the modules
+
+An `import` is a **live binding**: a module can read `t`, `balls` or `mode` and see
+the current value, but only the module that declares it may assign to it —
+assigning to an import throws. That is why state several modules write goes
+through a setter (`setGraphType`, `setPuzzleGraded`, …) at the foot of `state.js`,
+and why the piece lists are mutated in place rather than reassigned.
+
 
 ## Puzzle codes
 
