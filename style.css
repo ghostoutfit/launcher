@@ -4,12 +4,16 @@
     --panel: #fbf5e9;
     --panel-2: #efe3cc;
     --ink: #262a30;
-    --muted: #867c67;
+    --muted: #6b6250;       /* ≥4.5:1 on both panel colours (WCAG AA) */
     --line: #d8c7a6;
     --accent: #2d8bd4;
     --on-accent: #fbf5e9;   /* ivory text on blue buttons (white in dark mode) */
+    --accent-fill: #1f6fb2; /* blue button background — darker than --accent so the text passes 4.5:1 */
     --on-accent-outline: -1px 0 rgba(0,0,0,0.5), 1px 0 rgba(0,0,0,0.5), 0 -1px rgba(0,0,0,0.5), 0 1px rgba(0,0,0,0.5);   /* light dark outline for contrast */
     --accent-2: #d9a328;
+    --star: #8f6508;        /* puzzle stars: amber dark enough for 4.5:1 on the cream panels */
+    --ok: #1a6e3c;          /* green text (solved ✓, messages) — the bright --boost fails contrast on cream */
+    --err: #b3261e;         /* red text — likewise for --cut */
     --ground: #c7ab7a;
     /* Shared element colours (both themes) */
     --ball: #ff6b57;
@@ -32,6 +36,9 @@
     --accent: #3fb6ff;
     --on-accent: #ffffff;
     --accent-2: #ffce4a;
+    --star: #ffce4a;
+    --ok: #4ade80;
+    --err: #ef5350;
     --ground: #3a4656;
   }
   * { box-sizing: border-box; }
@@ -138,8 +145,8 @@
     border-radius: 11px; padding: 7px 15px; cursor: pointer;
   }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: #1e6fa3; }
-  #launchBtn { background: #e5372f; color: #fff; border-color: #a31f19; }
+  button.primary { background: var(--accent-fill); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: #175a91; }
+  #launchBtn { background: #d6312a; color: #fff; border-color: #a31f19; }
   #launchBtn:disabled { opacity: 0.5; }
   button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
 
@@ -161,7 +168,7 @@
   #pzBack { margin-left: auto; }
   #pzBack[hidden] + #modeTabs, #pzBack:not([hidden]) + #modeTabs { margin-left: 0; }
   #pzBack[hidden] + #modeTabs { margin-left: auto; }
-  #motionMapBtn.on { background: var(--accent); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: var(--accent); }
+  #motionMapBtn.on { background: var(--accent-fill); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: var(--accent); }
   #pzBack { font-size: 14px; font-weight: 700; padding: 9px 12px; white-space: nowrap; }
   /* when the header is too narrow for logo + Back + tabs, the tabs stay put on the top row and Back drops below */
   @media (max-width: 1130px) { #modeTabs { order: 2; margin-left: auto !important; } #pzBack { order: 3; } }
@@ -177,7 +184,7 @@
   #winOverlay[hidden], #tryOverlay[hidden] { display: none; }
   #winCard, #tryCard { background: var(--panel); border: 3px solid var(--line); border-radius: 18px; padding: 24px 28px;
     display: flex; flex-direction: column; align-items: center; gap: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); position: relative; z-index: 2; }
-  #winCard h2 { margin: 0; font-size: 28px; color: var(--boost); }
+  #winCard h2 { margin: 0; font-size: 28px; color: var(--ok); }
   #tryCard h2 { margin: 0; font-size: 28px; color: var(--ink); }
   #tryCard p { margin: 0; font-size: 18px; color: var(--muted); font-weight: 600; text-align: center; max-width: 420px; }
   #annotBar { margin-bottom: 8px; font-size: 15px; font-weight: 800; }
@@ -202,7 +209,8 @@
     background: var(--panel-2); cursor: pointer; position: relative; min-height: 93px; justify-content: center; overflow: hidden;
   }
   .pzBtn .pzName { font-size: 12px; font-weight: 700; color: var(--ink); text-align: center; line-height: 1.1; }
-  .pzBtn .pzStars { font-size: 22px; color: var(--accent-2); letter-spacing: 1px; }
+  .pzBtn .pzStars { font-size: 24px;   /* 24 px = large text, so 3:1 is enough */ color: var(--star); letter-spacing: 1px; }
+  .pzBtn.locked:disabled { opacity: 0.6; }   /* the lock still reads at 3:1 */
   .pzBtn.locked { cursor: not-allowed; background: color-mix(in srgb, var(--panel-2) 70%, var(--line)); }
   .pzBtn .pzLock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     font-size: 40px; line-height: 1; filter: grayscale(1) brightness(0); }
@@ -210,20 +218,20 @@
   .pzBtn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--panel-2)); }
   .pzBtn.solved { border-color: var(--boost); }
   .pzBtn .pzMark { position: absolute; top: 4px; right: 6px; font-size: 11px; }
-  .pzBtn.solved .pzMark { color: var(--boost); }
+  .pzBtn.solved .pzMark { color: var(--ok); }
 
   #puzzleStatus { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: 14px; }
   #puzzleStatus .psName { font-weight: 800; }
-  #puzzleStatus .psStars { color: var(--accent-2); letter-spacing: 1px; }
+  #puzzleStatus .psStars { color: var(--star); letter-spacing: 1px; }
   #puzzleStatus .psGoal { color: var(--muted); }
-  #puzzleStatus .psSolved { color: var(--boost); font-weight: 800; }
+  #puzzleStatus .psSolved { color: var(--ok); font-weight: 800; }
   /* Create tab */
   #createPanel { margin-bottom: 10px; padding: 12px 14px; }
   #createPanel textarea { width: 100%; box-sizing: border-box; font: 12px/1.35 ui-monospace, Menlo, monospace; padding: 8px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel-2); color: var(--ink); resize: vertical; }
   .cpRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; font-size: 13px; }
   .cpRow label { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
   #cpMsg { font-size: 13px; font-weight: 700; }
-  #cpMsg.err { color: var(--cut); } #cpMsg.ok { color: var(--boost); }
+  #cpMsg.err { color: var(--err); } #cpMsg.ok { color: var(--ok); }
   /* the hidden attribute must win over the display rules above */
   #graphTabs[hidden], #puzzlePanel[hidden], #puzzleStatus[hidden], #createPanel[hidden], #cpBuild[hidden], #cpBack[hidden] { display: none; }
 
@@ -235,7 +243,7 @@
   #graphCard { padding: 10px 14px 12px; }
   #graphTabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   #graphTabs button { padding: 7px 12px; font-size: 13px; }
-  #graphTabs button.active { background: var(--accent); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: var(--accent); }
+  #graphTabs button.active { background: var(--accent-fill); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: var(--accent); }
   #graphRow { display: flex; gap: 14px; align-items: stretch; }
   #clearPoints { position: absolute; top: 0; right: 0; z-index: 3; padding: 5px 10px; font-size: 13px; font-weight: 700; }
   #clearPoints[hidden] { display: none; }
@@ -275,7 +283,7 @@
     padding: 5px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.25); }
   #axisMenu[hidden] { display: none; }
   #axisMenu button { text-align: left; padding: 6px 14px; font-size: 14px; font-weight: 700; }
-  #axisMenu button.on { background: var(--accent); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: var(--accent); }
+  #axisMenu button.on { background: var(--accent-fill); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: var(--accent); }
   #tip {
     position: fixed; z-index: 90; pointer-events: none; max-width: 220px; display: none;
     background: var(--ink); color: var(--panel, #fff); border-radius: 8px; padding: 6px 10px;
