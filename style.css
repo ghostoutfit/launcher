@@ -250,8 +250,10 @@
     padding: 6px 9px; margin-bottom: 6px;
     border: 2px solid var(--line); border-radius: 12px;
     background: var(--panel-2); cursor: grab;
+    touch-action: none;   /* a finger drag on a chip is a drag, never a page scroll */
   }
   .chip:active { cursor: grabbing; }
+  .chip.armed { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }   /* clicked: waiting for a click on the track */
   .chip.disabled { cursor: not-allowed; pointer-events: none; }
   .chip.ball2 .ico { background: none; border: none; width: 28px; height: 28px; padding: 0; }
   .chip.ball2 canvas { width: 28px; height: 28px; display: block; }
@@ -285,6 +287,7 @@
     border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700;
     box-shadow: 0 6px 18px rgba(0,0,0,0.5);
   }
+  #dragGhost.armed::after { content: 'click the track'; display: block; font-size: 10px; font-weight: 600; opacity: 0.75; text-align: center; }
 
   /* Delete-confirm popover */
   #deleteConfirm {

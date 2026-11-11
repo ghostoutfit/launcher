@@ -82,7 +82,17 @@ from the chosen launch position, even if that is out of reach).
 
 **`input.js`** — drag & drop (`hitPiece` finds what was clicked, `placePiece`
 snaps a new piece to a free 1 m slot), the hover tooltips in `TIPS`, and the
-double-click delete confirmation.
+double-click delete confirmation. Built so a touchpad (Chromebooks) never has to
+hold a button down:
+- **Click to place.** Clicking a palette chip without dragging *arms* it: its label
+  follows the cursor and the next click on the track places the piece. Esc, or
+  clicking the chip again, cancels.
+- **Selection.** The last-clicked (or just-placed) piece is `selected` (in
+  `state.js`). `scene.js` draws a dashed outline and a red × button on it.
+  Backspace/Delete removes it, ← → move it 1 m (hopping past spots too close to
+  another piece), and Esc or a press off the track deselects.
+- **Touch.** Chips have `touch-action: none`, and `pointercancel` cleans up a
+  drag the browser took over.
 
 **`puzzles.js`** — `PUZZLES` holds three rows of five, keyed by graph type: 5
 distance, 5 position and 5 velocity. Each has a target line (`flat` or `poly`) on

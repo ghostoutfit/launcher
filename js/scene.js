@@ -5,7 +5,7 @@ import { RUN_TIME_CAP, TRACK_LEN, WALL_D, WALL_HW } from './constants.js';
 import { PAD_L, PAD_R, ballRadius, groundY, mToPx, sceneC, sceneDims, sx } from './dom.js';
 import { INK, darken, drawClock, drawPieceSign, drawTube, getCss, handFont, ink, lighten, miniBtn, panel3D, panelShaded, roundRect, signPost } from './draw.js';
 import { balls, lastTrace, replaying, running, sampleAt, t } from './sim.js';
-import { boosts, fricZones, secondBalls, targets, walls } from './state.js';
+import { boosts, fricZones, secondBalls, selected, targets, walls } from './state.js';
 
 export function fit(c) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -190,7 +190,28 @@ export function drawScene() {
     if (running && g._shake > 0.02) { jx = (Math.random() * 2 - 1) * 8 * g._shake; jy = (Math.random() * 2 - 1) * 5 * g._shake; }
     drawTube(u.cx + jx, u.cy + jy, u.L, u.H, tCol);
   }
+  drawSelection();
   drawReplayMarks();   // annotate replay: blinking red / blue rings
+}
+
+// The selected piece: a dashed outline round its sign (or round the marble) and a × button on
+// its top-right corner. The button's hit circle is saved on the piece as _del.
+function drawSelection() {
+  if (!selected) return;
+  const { piece, el } = selected;
+  let b = piece === 'target' ? el._ui && el._ui.bounds : el._sign;
+  if (piece === 'ball2') { const r = ballRadius(), cx = mToPx(el.x), cy = groundY() - r; b = { x: cx - r, y: cy - r, w: 2 * r, h: 2 * r }; }
+  if (!b) return;
+  const P = 5, R = 10, { w } = sceneDims();
+  sx.save();
+  sx.setLineDash([6, 4]); sx.lineWidth = 2.5; sx.strokeStyle = getCss('--accent');
+  roundRect(sx, b.x - P, b.y - P, b.w + 2 * P, b.h + 2 * P, 12); sx.stroke();
+  sx.restore();
+  const cx = Math.min(w - R - 2, b.x + b.w + P), cy = Math.max(R + 2, b.y - P);
+  sx.beginPath(); sx.arc(cx, cy, R, 0, 7); sx.fillStyle = getCss('--cut'); sx.fill(); ink(2); sx.stroke();
+  sx.strokeStyle = '#fff'; sx.lineWidth = 2.5; sx.lineCap = 'round';
+  sx.beginPath(); sx.moveTo(cx - 4, cy - 4); sx.lineTo(cx + 4, cy + 4); sx.moveTo(cx + 4, cy - 4); sx.lineTo(cx - 4, cy + 4); sx.stroke();
+  el._del = { cx, cy, r: R };
 }
 
 // A push pad (speed change, +dv or −dv): a pad on the ground + a sign whose +/- row sits above the

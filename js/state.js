@@ -17,13 +17,14 @@ export const secondBalls = [];        // {id, x}  — stationary balls that get 
 
 // The track-piece lists are mutated in place, never reassigned, so every module
 // keeps pointing at the same array. These are the only ways they change.
-export function clearPieces() { for (const a of [boosts, fricZones, walls, targets, secondBalls]) a.length = 0; }
+export let selected = null;           // { piece, el } — the last-clicked track piece (× button, Delete key, arrow nudges)
+export function clearPieces() { for (const a of [boosts, fricZones, walls, targets, secondBalls]) a.length = 0; selected = null; }
 export function loadPieces(d) {
   clearPieces();
   boosts.push(...d.boosts); fricZones.push(...d.fricZones);
   walls.push(...d.walls); targets.push(...d.targets); secondBalls.push(...d.secondBalls);
 }
-export function removePiece(arr, el) { const i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); }
+export function removePiece(arr, el) { const i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); if (selected && selected.el === el) selected = null; }
 
 // Setters for the state above (modules may read an import, but only its own module may assign).
 export function setGraphType(g) { graphType = g; }
@@ -33,3 +34,4 @@ export function setTestPuzzle(p) { testPuzzle = p; }
 export function setTestSolved(b) { testSolved = b; }
 export function setAuthorState(s) { authorState = s; }
 export function setPuzzleGraded(b) { puzzleGraded = b; }
+export function setSelected(s) { selected = s; }

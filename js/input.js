@@ -1,17 +1,30 @@
-// Drag & drop of track pieces, hover tooltips, delete confirmation.
+// Drag & drop of track pieces (or click a chip, then click the track), selection (× button,
+// Delete / Backspace, arrow-key nudges), hover tooltips, delete confirmation.
 
 import { BALL_R, BOOST_DV, FRIC_LEN, RUN_TIME_CAP, TARGET_MAX, TARGET_STEP, TRACK_LEN, WALL_D } from './constants.js';
 import { PAD_L, PAD_R, ballRadius, clamp, groundY, mToPx, posEl, pxToM, sceneC, sceneDims } from './dom.js';
 import { getCss } from './draw.js';
+import { drawScene } from './scene.js';
 import { replaying, running, worldChanged, x } from './sim.js';
-import { boosts, fricZones, mode, removePiece, secondBalls, targets, walls } from './state.js';
+import { boosts, fricZones, mode, removePiece, secondBalls, selected, setSelected, targets, walls } from './state.js';
 
 let pieceId = 1;
-let drag = null;             // { kind:'new'|'move', piece, el?, ghost? }
+let drag = null;             // { kind:'new'|'armed'|'move'|'resize'|'ball', piece, el?, ghost? } — 'armed': a chip was clicked, the next click on the track places it
 let lastClick = null;        // { el, time } — used to detect a double-click on a piece
 let confirmPiece = null;     // { piece, el } awaiting delete confirmation
 const inBox = (mx, my, b) => b && mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
 const inCircle = (mx, my, c) => c && Math.hypot(mx - c.cx, my - c.cy) <= c.r + 2;
+
+// Selection: the last-clicked piece gets a × button (drawn by scene.js) and takes the keyboard.
+function select(piece, el) {
+  if (selected && selected.el === el) return;
+  setSelected({ piece, el });
+  const f = document.activeElement;                 // a focused slider would also take the arrow keys
+  if (f && f !== document.body && f.blur) f.blur();
+  drawScene();
+}
+function deselect() { if (!selected) return; setSelected(null); drawScene(); }
+const overDelBtn = (mx, my) => selected && inCircle(mx, my, { ...selected.el._del, r: (selected.el._del?.r || 0) + 4 });
 
 // Interactive controls on a target sign (direction / speed / timer). Checked before any drag.
 function hitTargetControl(mx, my) {
@@ -110,17 +123,42 @@ function nearestSlot(piece, want, self) {
   }
   return null;
 }
+// Adds a piece near m metres and returns it (null if there was no room).
 function placePiece(type, m) {
+  let el;
   if (type !== 'friction') {
-    if (type === 'ball2' && (secondBalls.length >= 1 || mode !== 'sandbox')) return;
+    if (type === 'ball2' && (secondBalls.length >= 1 || mode !== 'sandbox')) return null;
     const x = nearestSlot(type, clamp(snap(type === 'wall' ? m - WALL_D : m), 0, TRACK_LEN), null);
-    if (x === null) return;                         // no room: nothing is placed
-    if (type === 'boost') boosts.push({ id: pieceId++, x, dv: BOOST_DV, used: false });
-    else if (type === 'wall') walls.push({ id: pieceId++, x, bouncy: false });
-    else if (type === 'target') { const g = { id: pieceId++, x, mag: 6, dir: 1, time: null, used: false }; targets.push(g); return g; }
-    else { secondBalls.push({ id: pieceId++, x }); refreshBall2Chip(); }
+    if (x === null) return null;                    // no room: nothing is placed
+    if (type === 'boost') boosts.push(el = { id: pieceId++, x, dv: BOOST_DV, used: false });
+    else if (type === 'wall') walls.push(el = { id: pieceId++, x, bouncy: false });
+    else if (type === 'target') targets.push(el = { id: pieceId++, x, mag: 6, dir: 1, time: null, used: false });
+    else { secondBalls.push(el = { id: pieceId++, x }); refreshBall2Chip(); }
   }
-  else fricZones.push({ id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
+  else fricZones.push(el = { id: pieceId++, x: clamp(snap(m - FRIC_LEN / 2), 0, TRACK_LEN - FRIC_LEN), len: FRIC_LEN });
+  return el;
+}
+function placeAt(piece, clientX) {
+  const el = placePiece(piece, pxToM(clientX - sceneC.getBoundingClientRect().left));
+  if (el) setSelected({ piece, el });               // the new piece is selected, ready for arrow keys
+  worldChanged();
+}
+
+// Arrow keys: move the selected piece 1 m, hopping over any spot that is too close to another piece.
+function nudge(dir) {
+  const { piece, el } = selected;
+  if (piece === 'friction') {
+    const nx = clamp(el.x + dir, 0, TRACK_LEN - el.len);
+    if (nx === el.x) return;
+    el.x = nx;
+  } else {
+    const hi = piece === 'wall' ? TRACK_LEN - 1 : TRACK_LEN;
+    let nx = el.x + dir;
+    while (nx >= 0 && nx <= hi && !spacingOk(piece, nx, el)) nx += dir;
+    if (nx < 0 || nx > hi) return;
+    el.x = nx;
+  }
+  worldChanged();
 }
 
 function overScene(cx, cy) {
@@ -132,16 +170,29 @@ function overScene(cx, cy) {
 const ball2Chip = document.querySelector('.chip.ball2');
 export function refreshBall2Chip() { if (!ball2Chip) return; ball2Chip.classList.toggle('disabled', secondBalls.length >= 1); ball2Chip.classList.toggle('gone', mode !== 'sandbox'); }   // marble 2 only in Sandbox
 
-// Start a drag from a palette chip (create new piece)
+// Start a drag from a palette chip (create new piece). A click without dragging "arms" the chip
+// instead: its label follows the cursor and the next click on the track places it — no need to
+// hold the button down (hard on a touchpad).
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('pointerdown', e => {
     e.preventDefault();
     const piece = chip.dataset.piece;
     if (piece === 'ball2' && (secondBalls.length >= 1 || mode !== 'sandbox')) return;  // one extra marble max; Sandbox only
-    drag = { kind: 'new', piece, ghost: makeGhost(piece) };
+    drag = { kind: 'new', piece, chip, ghost: makeGhost(piece), downX: e.clientX, downY: e.clientY, moved: false };
     moveGhost(drag.ghost, e.clientX, e.clientY);
   });
 });
+function arm() { drag.kind = 'armed'; drag.chip.classList.add('armed'); drag.ghost.classList.add('armed'); }
+function cancelArmed() { if (!drag || drag.kind !== 'armed') return; drag.ghost.remove(); drag.chip.classList.remove('armed'); drag = null; }
+// While armed, the next press anywhere is handled here first: on the track it places the piece,
+// on the same chip it cancels, and anywhere else it cancels and then does whatever it normally does.
+window.addEventListener('pointerdown', e => {
+  if (!drag || drag.kind !== 'armed') return;
+  const piece = drag.piece, chip = e.target.closest && e.target.closest('.chip');
+  cancelArmed();
+  if (overScene(e.clientX, e.clientY)) { e.preventDefault(); e.stopPropagation(); placeAt(piece, e.clientX); }
+  else if (chip && chip.dataset.piece === piece) { e.preventDefault(); e.stopPropagation(); }
+}, true);
 
 // The ball waiting at the launch position can be dragged along the track to set it.
 function overStartBall(mx, my) {
@@ -157,11 +208,17 @@ function setLaunchFromPx(mx) {
 sceneC.addEventListener('pointerdown', e => {
   const r = sceneC.getBoundingClientRect();
   const mx = e.clientX - r.left, my = e.clientY - r.top;
-  // on-sign controls take priority over dragging
+  // the selected piece's × button comes first, then on-sign controls, then dragging
+  if (overDelBtn(mx, my)) {
+    e.preventDefault();
+    deletePiece(selected.piece, selected.el);
+    return;
+  }
   const ctl = hitTargetControl(mx, my);
   if (ctl) {
     e.preventDefault();
     applyTargetControl(ctl);
+    setSelected({ piece: 'target', el: ctl.g });
     worldChanged();
     return;
   }
@@ -169,11 +226,13 @@ sceneC.addEventListener('pointerdown', e => {
   if (bctl) {
     e.preventDefault();
     applyPadControl(bctl);
+    setSelected({ piece: 'boost', el: bctl.el });
     worldChanged();
     return;
   }
   const hit = hitPiece(mx, my);
   if (!hit) {
+    deselect();
     if (overStartBall(mx, my)) {            // grab the waiting ball to set the launch position
       e.preventDefault(); sceneC.setPointerCapture(e.pointerId);
       drag = { kind: 'ball' }; setLaunchFromPx(mx);
@@ -182,6 +241,7 @@ sceneC.addEventListener('pointerdown', e => {
   }
   e.preventDefault();
   sceneC.setPointerCapture(e.pointerId);
+  select(hit.type, hit.el);
   // grabbing a friction patch's end → resize; its middle → move
   const kind = (hit.type === 'friction' && hit.edge) ? 'resize' : 'move';
   drag = { kind, piece: hit.type, el: hit.el, edge: hit.edge, downX: e.clientX, downY: e.clientY, moved: false };
@@ -205,7 +265,7 @@ function showTip(text, cx, cy) {
   tipEl.style.top = (cy + 18 + h > innerHeight ? cy - h - 10 : cy + 18) + 'px';
 }
 // palette chips get their text from TIPS; any element with data-tip shows it on hover
-document.querySelectorAll('.chip').forEach(c => { c.dataset.tip = TIPS[c.dataset.piece]; });
+document.querySelectorAll('.chip').forEach(c => { c.dataset.tip = TIPS[c.dataset.piece] + ' Drag it onto the track, or click it and then click the track.'; });
 document.addEventListener('pointermove', e => {
   if (drag || e.target === sceneC) return;
   const el = e.target.closest && e.target.closest('[data-tip]');
@@ -216,8 +276,9 @@ sceneC.addEventListener('pointerleave', () => showTip(null));
 
 // Cursor hint when hovering placed pieces (resize vs grab) + tooltip
 sceneC.addEventListener('pointermove', e => {
-  if (drag) { showTip(null); return; }
+  if (drag) { showTip(null); if (drag.kind === 'armed') sceneC.style.cursor = 'copy'; return; }
   const r = sceneC.getBoundingClientRect();
+  if (overDelBtn(e.clientX - r.left, e.clientY - r.top)) { sceneC.style.cursor = 'pointer'; showTip('Delete this piece (or press Backspace)', e.clientX, e.clientY); return; }
   const hit = hitPiece(e.clientX - r.left, e.clientY - r.top);
   sceneC.style.cursor = !hit ? (overStartBall(e.clientX - r.left, e.clientY - r.top) ? 'grab' : 'default') : (hit.type === 'friction' && hit.edge) ? 'ew-resize' : 'grab';
   showTip(hit ? TIPS[hit.type === 'wall' && hit.el.bouncy ? 'wallBouncy' : hit.type] : null, e.clientX, e.clientY);
@@ -226,7 +287,8 @@ sceneC.addEventListener('pointermove', e => {
 window.addEventListener('pointermove', e => {
   if (!drag) return;
   if (drag.kind === 'ball') { setLaunchFromPx(e.clientX - sceneC.getBoundingClientRect().left); return; }
-  if (drag.kind === 'new') {
+  if (drag.kind === 'new' || drag.kind === 'armed') {
+    if (Math.hypot(e.clientX - drag.downX, e.clientY - drag.downY) > 6) drag.moved = true;
     moveGhost(drag.ghost, e.clientX, e.clientY);
   } else if (drag.kind === 'move') {
     if (Math.hypot(e.clientX - drag.downX, e.clientY - drag.downY) > 4) drag.moved = true;
@@ -254,14 +316,11 @@ window.addEventListener('pointermove', e => {
 });
 
 window.addEventListener('pointerup', e => {
-  if (!drag) return;
+  if (!drag || drag.kind === 'armed') return;
   if (drag.kind === 'new') {
+    if (!drag.moved && !overScene(e.clientX, e.clientY)) { arm(); return; }   // a click on the chip: wait for a click on the track
     drag.ghost.remove();
-    if (overScene(e.clientX, e.clientY)) {
-      const r = sceneC.getBoundingClientRect();
-      placePiece(drag.piece, pxToM(e.clientX - r.left));
-      worldChanged();
-    }
+    if (overScene(e.clientX, e.clientY)) placeAt(drag.piece, e.clientX);
   } else if (drag.kind === 'move') {
     if (!overScene(e.clientX, e.clientY)) {
       // drop off the track → delete
@@ -279,6 +338,32 @@ window.addEventListener('pointerup', e => {
     }
   }
   drag = null;
+});
+// The browser took the pointer over (on a touchscreen, usually a scroll or a long-press): drop
+// a new piece's ghost, and leave a moved piece where it is.
+window.addEventListener('pointercancel', () => {
+  if (!drag || drag.kind === 'armed') return;
+  if (drag.kind === 'new') drag.ghost.remove();
+  drag = null;
+});
+// A press anywhere off the track clears the selection.
+window.addEventListener('pointerdown', e => {
+  if (e.target !== sceneC && !dcEl.contains(e.target)) deselect();
+});
+
+// Keyboard: Esc cancels / closes / deselects; Delete or Backspace removes the selected piece;
+// ← → move it 1 m. Ignored while typing in a box or using a slider.
+window.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'Escape') {
+    if (drag && drag.kind === 'armed') cancelArmed();
+    else if (!dcEl.hidden) closeDeleteConfirm();
+    else deselect();
+    return;
+  }
+  if (!selected) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); closeDeleteConfirm(); deletePiece(selected.piece, selected.el); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); nudge(e.key === 'ArrowLeft' ? -1 : 1); }
 });
 
 function deletePiece(piece, el) {
