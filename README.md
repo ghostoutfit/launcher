@@ -57,6 +57,7 @@ style.css         the look: colours, sizes, layout, light and dark themes
 js/               the behaviour, one file ("module") per job — see below
   tips.js         ← the text of every hover tooltip, all in one place
   …               the other modules
+help/             pictures for the help pop-up (the ? button)
 favicon.png       browser-tab icon
 harmony-ramp.png  the logo
 README.md         this file
@@ -100,6 +101,7 @@ this point?").
 | I want to change… | Edit | Look for |
 |---|---|---|
 | A **tooltip's wording** | `js/tips.js` | the tip's key, e.g. `launch:` |
+| The **help pop-up** (the **?** button) | `index.html` | `#helpOverlay`, near the end; its pictures are in `help/` |
 | A **button or heading label** | `index.html` | the visible text |
 | A **pop-up or status message** | `index.html` (pop-ups), `js/puzzles.js` (puzzle status), `js/create.js` (`cpSay(…)` messages) | the sentence |
 | A **colour** | `style.css` | the variables at the top (`:root` = light theme, `[data-theme="dark"]` = dark) |

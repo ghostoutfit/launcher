@@ -155,6 +155,7 @@
   .replay .rsym { font-size: 20px; line-height: 1; margin-top: -2px; }
 
   #modeTabs #themeToggle { border-left: 2px solid var(--line); font-size: 22px; padding: 11px 18px; }
+  #modeTabs #helpBtn { border-left: 2px solid var(--line); font-size: 22px; font-weight: 800; padding: 11px 20px; color: var(--ink); }
   :root:not([data-theme="dark"]) #modeTabs #themeToggle { background: #1d2a4a; }   /* night-sky navy so the yellow moon stands out on the cream */
   :root:not([data-theme="dark"]) #modeTabs #themeToggle:hover { background: #2a3b63; }
 
@@ -198,6 +199,34 @@
   #winCard .winBtns, #tryCard .winBtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
   #winCard button, #tryCard button { font-size: 20px; font-weight: 800; padding: 16px 26px; border-radius: 14px; }
   #winCard button[hidden] { display: none; }
+  /* Help pop-up (the ? button) */
+  #helpOverlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.35); padding: 16px; }
+  #helpOverlay[hidden] { display: none; }
+  #helpCard { position: relative; background: var(--panel); border: 3px solid var(--line); border-radius: 18px;
+    padding: 22px 30px 26px; max-width: 760px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3); color: var(--ink); font-size: 17px; line-height: 1.45; }
+  #helpCard h2 { margin: 0 40px 4px 0; font-size: 28px; }
+  #helpCard h3 { margin: 22px 0 6px; font-size: 21px; padding-top: 14px; border-top: 2px solid var(--line); }
+  #helpCard p { margin: 6px 0; }
+  #helpCard ol { margin: 6px 0; padding-left: 24px; }
+  #helpCard li { margin: 3px 0; }
+  #helpClose { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; padding: 0; border-radius: 50%;
+    font-size: 26px; line-height: 1; font-weight: 800; }
+  .helpList { margin: 8px 0; }
+  .helpList dt { font-weight: 800; margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+  .helpList dd { margin: 3px 0 0 0; }
+  .helpList.pieces dd { margin-left: 38px; }   /* line up under the name, past the icon */
+  .helpIco.ball2 { background: none; border: none; padding: 0; }
+  .helpIco.ball2 canvas { width: 28px; height: 28px; display: block; }
+  .helpFig { margin: 10px 0 0; }
+  .helpFig img { width: 100%; height: auto; display: block; border: 2px solid var(--line); border-radius: 12px; }
+  .helpPic { display: block; width: 100%; max-width: 520px; height: auto; margin-top: 8px; border: 2px solid var(--line); border-radius: 12px; }
+  .helpFig figcaption { margin-top: 6px; font-size: 15px; color: var(--muted); font-weight: 600; }
+  .helpCode { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--bg); border: 2px solid var(--line);
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; overflow-wrap: anywhere; }
+  .helpCode b { color: var(--ink); }
+  @media (max-width: 600px) { #helpCard { padding: 18px 16px 20px; } .helpList.pieces dd { margin-left: 0; } }
   #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
   #modeTabs button { font-size: 22px; padding: 11px 29px; font-weight: 700; }
 
@@ -271,11 +300,11 @@
   .chip.ball2.disabled canvas { opacity: 0.4; }
   .chip.ball2.disabled .ctxt b { color: var(--muted); }
   .chip .ctxt b { white-space: nowrap; }
-  .chip .ico { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
-  .chip.boost .ico { background: var(--boost); color: #063; }
-  .chip.friction .ico { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
-  .chip.wall .ico { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
-  .chip.target .ico { background: var(--target); color: #231141; font-size: 16px; }
+  .chip .ico, .helpIco { width: 28px; height: 28px; border-radius: 8px; border: 2px solid #1a2230; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+  .chip.boost .ico, .helpIco.boost { background: var(--boost); color: #063; }
+  .chip.friction .ico, .helpIco.friction { background: var(--fric); color: #3a1c08; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 3px, transparent 3px 6px); }
+  .chip.wall .ico, .helpIco.wall { background: var(--wall); color: #1c242e; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 4px, transparent 4px 8px); }
+  .chip.target .ico, .helpIco.target { background: var(--target); color: #231141; font-size: 16px; }
   .chip .ctxt { font-size: 14px; line-height: 1.2; }
   .chip .ctxt b { display: block; font-size: 15px; }
   .chip .ctxt span { color: var(--muted); font-size: 12.5px; }

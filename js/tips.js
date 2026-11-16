@@ -24,6 +24,7 @@ export const TIPS = {
   // ── Top bar ──
   modeTabs:       'Sandbox: build any track. Puzzle: match the graph. Create: turn a run into a puzzle to share, or load one.',
   themeToggle:    'Switch between day and night.',
+  help:           'How to use Launcher: the controls, each track piece, and making your own puzzles.',
   backToPuzzles:  'Return to the list of puzzles.',
 
   // ── Launch controls (left panel) ──

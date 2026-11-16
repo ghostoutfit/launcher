@@ -21,6 +21,7 @@
     <button data-mode="puzzle">Puzzle</button>
     <button data-mode="create">Create</button>
     <button id="themeToggle" aria-label="Toggle light/dark" data-tip="themeToggle">&#x1F319;</button>
+    <button id="helpBtn" aria-label="How to use Launcher" aria-haspopup="dialog" data-tip="help">?</button>
   </div>
   </div>
 
@@ -167,6 +168,68 @@
       <button id="winBack" class="primary">Back to all puzzles</button>
       <button id="winNext" class="primary">Try the next puzzle</button>
     </div>
+  </div>
+</div>
+<!-- ── Help (the ? button) — all the wording is here, for easy review and editing ── -->
+<div id="helpOverlay" hidden>
+  <div id="helpCard" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <button id="helpClose" aria-label="Close help">&#xD7;</button>
+    <h2 id="helpTitle">How to use Launcher</h2>
+
+    <h3>Launching the marble</h3>
+    <dl class="helpList">
+      <dt>Launch position</dt>
+      <dd>Where the marble starts on the track. Slide it anywhere from 0 to 15 meters (m).</dd>
+      <dt>Launch speed</dt>
+      <dd>How fast the marble starts. Slide it from 0 to 10 meters per second (m/s). The marble always starts out rolling to the right.</dd>
+    </dl>
+    <figure class="helpFig">
+      <img src="help/launch.png" alt="The Launch position slider set to 5 m and the Launch speed slider set to 2 m/s. On the track, the marble sits at the 5 m mark, with an arrow pointing right for its speed.">
+    </figure>
+    <p>Press <b>Launch</b> to let the marble go.</p>
+
+    <h3>Track pieces</h3>
+    <p>Drag a piece from the <b>Track pieces</b> box onto the track, or click a piece and then click the track.
+      Drag a piece to move it. Click a piece and press the red <b>&#xD7;</b> (or the Backspace key) to take it off.</p>
+    <dl class="helpList pieces">
+      <dt><span class="helpIco boost" aria-hidden="true">&#xB1;</span>Speed change</dt>
+      <dd>Adds to the marble&#x2019;s speed or takes some away. Use the <b>&#x2212;</b> and <b>+</b> buttons on its sign to change the amount. Each click changes it by 2.</dd>
+      <dt><span class="helpIco target" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="#fff" stroke="#1a2230" stroke-width="1.8"/><path d="M10 10V4.5M10 10l3.5 1" fill="none" stroke="#1a2230" stroke-width="1.8" stroke-linecap="round"/></svg></span>Target speed</dt>
+      <dd>Sets the marble to the speed on its sign. Use <b>&#x2212;</b> and <b>+</b> to choose the speed. A speed below zero sends the marble back toward the start.
+        You can also turn on its <b>timer</b>: the marble waits inside until that time. Use the timer&#x2019;s <b>&#x2212;</b> and <b>+</b> to change the time.
+        <img class="helpPic" src="help/target-speed.png" alt="A target speed sign. The top row has minus and plus buttons around 4 m/s for the speed. The bottom row has minus and plus buttons for the time, and a clock you click to turn the timer on or off."></dd>
+      <dt><span class="helpIco friction" aria-hidden="true">&#x25A6;</span>Friction pad</dt>
+      <dd>A rough patch on the track. Drag either end of it to make it longer or shorter.
+        <img class="helpPic" src="help/friction-pad.png" alt="A friction pad on the track with arrows at both ends: drag either end to make the pad longer or shorter."></dd>
+      <dt><span class="helpIco wall" aria-hidden="true">&#x2588;</span>Wall / Bounce</dt>
+      <dd>Stops the marble. Click the wall to change it to a bouncy wall, and click it again to change it back.</dd>
+      <dt><span class="helpIco ball2" aria-hidden="true"><canvas id="helpBall2Icon" width="56" height="56"></canvas></span>Marble 2 (M2)</dt>
+      <dd>A second marble that sits still until the first marble hits it. You can only put one on the track.</dd>
+    </dl>
+
+    <h3>Position map</h3>
+    <p>Press <b>Position Map</b> to put a dot on the track where the marble is at each whole second: 0&#xA0;s, 1&#xA0;s, 2&#xA0;s, and so on.</p>
+    <figure class="helpFig">
+      <img src="help/position-map.png" alt="A position map: dots labeled 0 s to 5 s above the track. The marble starts at 0 m at 2 m/s and passes a +4 speed change at 6 m.">
+      <figcaption>Example: the marble starts at 0&#xA0;m at 2&#xA0;m/s, and there is a +4 speed change at 6&#xA0;m.</figcaption>
+    </figure>
+
+    <h3>Making your own puzzles</h3>
+    <ol>
+      <li>Open the <b>Create</b> tab. Build a track and press <b>Launch</b>.</li>
+      <li>Choose which graph the puzzle uses: <b>Position</b>, <b>Distance</b> or <b>Velocity</b>.</li>
+      <li>Press <b>Make puzzle</b>. A puzzle code appears in the box.</li>
+    </ol>
+    <p>There are two ways to play a puzzle code:</p>
+    <dl class="helpList">
+      <dt>Paste it in the box</dt>
+      <dd>Press <b>Copy</b> and send the code to someone. They open the <b>Create</b> tab, paste the code into the box,
+        and press <b>Load &amp; play</b>. When they&#x2019;re done, <b>Back to building</b> brings back their own track.</dd>
+      <dt>Add it to the web address</dt>
+      <dd>Paste the code onto the end of this page&#x2019;s address in the browser&#x2019;s address bar, then press Enter.
+        The puzzle opens right away. You can share that whole address as a link.
+        <div class="helpCode">this-page&#x2019;s-address<b>#%7B%22format%22%3A%22launcher-puzzle%22&#x2026;</b></div></dd>
+    </dl>
   </div>
 </div>
 <script type="module" src="js/main.js"></script>

@@ -35,6 +35,7 @@ import { applyTheme, drawCartoonBall, theme } from './ui.js';
 applyTheme(theme);
 drawCartoonBall(document.getElementById('logoBall'), getCss('--ball'));
 drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // palette icon = the second ball as it appears
+drawCartoonBall(document.getElementById('helpBall2Icon'), getCss('--ball2')); // …and the same in the help
 refreshBall2Chip();
 
 // Always start at the defaults (a browser reload would otherwise restore the last slider positions)

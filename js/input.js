@@ -8,6 +8,7 @@ import { drawScene } from './scene.js';
 import { replaying, running, worldChanged, x } from './sim.js';
 import { boosts, fricZones, mode, removePiece, secondBalls, selected, setSelected, targets, walls } from './state.js';
 import { tipText } from './tips.js';
+import { helpOpen } from './ui.js';
 
 let pieceId = 1;
 let drag = null;             // { kind:'new'|'armed'|'move'|'resize'|'ball', piece, el?, ghost? } — 'armed': a chip was clicked, the next click on the track places it
@@ -349,6 +350,7 @@ window.addEventListener('pointerdown', e => {
 // ← → move it 1 m. Ignored while typing in a box or using a slider.
 window.addEventListener('keydown', e => {
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable || e.ctrlKey || e.metaKey) return;
+  if (helpOpen()) return;   // keys don't reach the track while the help is open
   if (e.key === 'Escape') {
     if (drag && drag.kind === 'armed') cancelArmed();
     else if (!dcEl.hidden) closeDeleteConfirm();

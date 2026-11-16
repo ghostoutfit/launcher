@@ -58,6 +58,17 @@ themeBtn.addEventListener('click', () => {
   applyTheme(theme);
 });
 
+// ─── Help pop-up (the ? button) — its wording is all in index.html, #helpOverlay ───
+const helpOverlay = document.getElementById('helpOverlay');
+const helpBtn = document.getElementById('helpBtn');
+export const helpOpen = () => !helpOverlay.hidden;
+function openHelp() { helpOverlay.hidden = false; helpOverlay.querySelector('#helpCard').scrollTop = 0; document.getElementById('helpClose').focus(); }
+function closeHelp() { helpOverlay.hidden = true; helpBtn.focus(); }
+helpBtn.addEventListener('click', openHelp);
+document.getElementById('helpClose').addEventListener('click', closeHelp);
+helpOverlay.addEventListener('click', e => { if (e.target === helpOverlay) closeHelp(); });   // click outside the card
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && helpOpen()) { e.stopImmediatePropagation(); closeHelp(); } }, true);
+
 // The logo's red ball: the world ball's cartoon style (flat fill, shade crescent, bold outline, highlight).
 export function drawCartoonBall(canvas, col) {
   const c = canvas.getContext('2d'), S = canvas.width, R = S * 0.44, m = S / 2, k = S / 100;
