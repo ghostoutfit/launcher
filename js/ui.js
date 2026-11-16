@@ -33,9 +33,10 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 });
 document.getElementById('clearBtn').addEventListener('click', () => { clearPieces(); refreshBall2Chip(); closeDeleteConfirm(); worldChanged(); });
 // Create tab (wide): fix the stage to the viewport so only #scrollArea scrolls
+const wideLayout = matchMedia('(min-width: 1100px) and (min-aspect-ratio: 16/9)');   // = the three-column layout in style.css
 export function fitStage() {
   const st = document.getElementById('stage');
-  if (document.body.classList.contains('mode-create') && window.innerWidth >= 1100) {
+  if (document.body.classList.contains('mode-create') && wideLayout.matches) {
     st.style.height = Math.max(520, window.innerHeight - st.getBoundingClientRect().top - window.scrollY - 12) + 'px';
   } else st.style.height = '';
 }

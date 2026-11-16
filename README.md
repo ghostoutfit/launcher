@@ -106,7 +106,7 @@ this point?").
 | A **button or heading label** | `index.html` | the visible text |
 | A **pop-up or status message** | `index.html` (pop-ups), `js/puzzles.js` (puzzle status), `js/create.js` (`cpSay(…)` messages) | the sentence |
 | A **colour** | `style.css` | the variables at the top (`:root` = light theme, `[data-theme="dark"]` = dark) |
-| **Sizes / layout** | `style.css` | the element's `#id` or `.class`; the `@media (min-width: 1100px)` block is the wide-screen layout |
+| **Sizes / layout** | `style.css` | the element's `#id` or `.class`. Two layouts: the `@media (min-width: 1100px) and (min-aspect-ratio: 16/9)` block is the three-column wide layout; the `@media not all and …` block is the one-column layout for narrower or taller windows (launch controls, then track pieces, then the rest) |
 | The **puzzles** | `js/puzzles.js` | `PUZZLES` |
 | **Physics numbers** (track length, friction, run length, puzzle tolerance) | `js/constants.js` | the named constant |
 | What a **track piece does** to the marble | `js/sim.js` | `step()` |

@@ -62,21 +62,15 @@
 
   .panel { background: var(--panel); border: 2px solid var(--line); border-radius: 16px; }
 
-  /* Toolbar + world span the full width; the graph sits below with the track pieces to its right. */
-  #stage { display: grid; grid-template-columns: minmax(0, 1fr) 190px; column-gap: 14px; align-items: start; }
-  #graphCard, #sidebar { align-self: stretch; }   /* track pieces are as tall as the graph window */
+  /* Two layouts. Wide windows (at least 1100 px, and wider than 16:9 — a Chromebook's browser
+     window is about 2:1, so this is ~15% narrower than that): three columns. Anything narrower or
+     taller: one column, see "Narrow / tall windows" below. ui.js (fitStage) uses the same test. */
+  #stage { display: grid; column-gap: 14px; align-items: start; }
   #main, #scrollArea { display: contents; }
-  #controls, #sceneWrap, #createPanel, #puzzlePanel { grid-column: 1 / -1; }
-  #graphCard { grid-column: 1; }
-  /* Create tab: the track pieces sit beside the 'Make a puzzle' panel, and the graph runs full width below */
-  @media (min-width: 721px) {
-    body.mode-create #createPanel { grid-column: 1; grid-row: 3; margin-bottom: 0; }
-    body.mode-create #sidebar { grid-column: 2; grid-row: 3; }
-    body.mode-create #graphCard { grid-column: 1 / -1; grid-row: 4; margin-top: 14px; align-self: start; }
-  }
-  #sidebar { grid-column: 2; display: flex; flex-direction: column; gap: 14px; }
-  /* Wide screens (Chromebook): controls down the left, world + graph in the middle, track pieces down the right */
-  @media (min-width: 1100px) {
+  #sidebar { display: flex; flex-direction: column; gap: 14px; }
+  /* Wide: controls down the left, world + graph in the middle, track pieces down the right */
+  @media (min-width: 1100px) and (min-aspect-ratio: 16/9) {
+    #graphCard, #sidebar { align-self: stretch; }   /* track pieces are as tall as the graph window */
     #app { max-width: 1600px; padding-top: 8px; padding-bottom: 12px; }
     #stage #scene { height: 210px; }
     #stage #graph { height: 205px; }
@@ -119,11 +113,23 @@
     body.mode-create #stage #sidebar, body.mode-create #stage #controls { grid-row: 1; }
     body.mode-create #stage #scrollArea { display: block; grid-column: 2; grid-row: 1; align-self: stretch; min-height: 0; overflow-y: auto; }
     body.mode-create #stage #graphCard { margin-top: 0; }
+    body.mode-create #stage #createPanel { margin-bottom: 0; }
     body.mode-create.create-world-fixed #stage #sceneWrap { position: sticky; top: 0; z-index: 5; }   /* dev checkbox: world pinned while the rest scrolls */
   }
   #palette { padding: 11px; flex: 1; display: flex; flex-direction: column; }
   #palette .chip { flex: 1; margin-bottom: 6px; }
   #palette .chip:last-child { margin-bottom: 0; }
+  /* Narrow / tall windows: one column. Launch controls on top, the track pieces in a row under
+     them, then the world, the puzzle or Create panel and the graph, scrolling below. */
+  @media not all and (min-width: 1100px) and (min-aspect-ratio: 16/9) {
+    #stage { grid-template-columns: minmax(0, 1fr); }
+    #controls { order: 1; }
+    #sidebar { order: 2; margin-bottom: 10px; }
+    #sceneWrap, #createPanel, #puzzlePanel, #graphCard { order: 3; }
+    #palette { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 8px; padding: 8px 10px; }
+    #palette .ptitle { align-self: center; margin: 0 4px 0 2px; font-size: 17px; white-space: nowrap; }
+    #palette .chip { flex: 1 1 130px; margin-bottom: 0; padding: 5px 8px; }
+  }
 
   /* Controls bar */
   #controls {
@@ -280,7 +286,6 @@
   #clearPoints[hidden] { display: none; }
   #graphPlot { position: relative; flex: 1 1 auto; min-width: 0; }
   #graph { display: block; width: 100%; height: 250px; }
-  @media (max-width: 720px) { #stage { grid-template-columns: minmax(0, 1fr); } #graphCard, #sidebar { grid-column: 1; margin-top: 0; } #sidebar { flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
   /* Palette */
   .ptitle { font-size: 21px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }

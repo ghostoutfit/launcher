@@ -35,11 +35,36 @@ export function startAnnotate() {
   drawGraph();
 }
 const snapT = tt => Math.round(tt * 4) / 4;   // arrows land on the nearest 0.25 s
+// The time axis where lines start glows and pulses (steady for anyone who asks their computer
+// for less motion) until the student first draws a line from it; after that it stays plain for
+// the rest of the session (this browser tab, reloads included). While it pulses, the main loop
+// (sim.js) redraws the graph every frame.
+const AXIS_PULSE = 1.6;   // s per pulse
+const lessMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let axisLearned = false;
+try { axisLearned = sessionStorage.getItem('launcher-axis-learned') === '1'; } catch (e) {}
+function learnAxis() { axisLearned = true; try { sessionStorage.setItem('launcher-axis-learned', '1'); } catch (e) {} }
+export const axisPulsing = () => annotating && !axisLearned && !annotDrag && !annotPlay && !lessMotion.matches;
+function drawAxisGlow(color) {
+  if (axisLearned) return;
+  const { x0, x1 } = graphGeom, AP = activePuzzle(), only = AP && AP.target ? AP.target.key : null;
+  const k = axisPulsing() ? 0.5 + 0.5 * Math.sin(performance.now() / 1000 * 2 * Math.PI / AXIS_PULSE) : 0.5;
+  gx.save();
+  gx.globalCompositeOperation = 'destination-over';   // behind what's drawn (a target line along 0 stays on top)
+  gx.strokeStyle = color; gx.shadowColor = color; gx.lineCap = 'round';
+  gx.globalAlpha = 0.3 + 0.5 * k; gx.shadowBlur = 6 + 14 * k; gx.lineWidth = 5 + 3 * k;
+  for (const P of graphPanels) {
+    if (only && P.key !== only) continue;   // lines go on the puzzle's own graph only
+    gx.beginPath(); gx.moveTo(x0, P.by); gx.lineTo(x1, P.by); gx.stroke();
+  }
+  gx.restore();
+}
 function annotTimeAt(mx) { const { x0, x1, tMax } = graphGeom; return clamp((mx - x0) / (x1 - x0), 0, 1) * tMax; }
 export function drawAnnotations() {
   if (!annotating || !graphGeom) return;
   const { x0, x1, tMax } = graphGeom, TX = tt => x0 + (tt / tMax) * (x1 - x0);
   const pink = '#e0245e';
+  drawAxisGlow(pink);
   gx.save(); gx.strokeStyle = pink; gx.fillStyle = pink; gx.lineWidth = 3.5; gx.lineCap = 'round';
   if (annotPlay) { const px = TX(annotPlay.t), P0 = graphPanels[0], P1 = graphPanels[graphPanels.length - 1]; gx.lineWidth = 2; gx.setLineDash([5, 4]); gx.beginPath(); gx.moveTo(px, P0.ty); gx.lineTo(px, P1.by); gx.stroke(); gx.setLineDash([]); gx.lineWidth = 3.5; }   // replay playhead
   for (const arw of annotArrows) {
@@ -182,5 +207,6 @@ graphC.addEventListener('pointerup', () => {
   const d = annotDrag; annotDrag = null;
   const i = annotArrows.indexOf(d.obj);
   if (i >= 0 && (d.edit && !d.moved || d.obj.f * (d.arrow.by - d.arrow.ty) < 8)) annotArrows.splice(i, 1);   // a plain click on an arrow, or one dragged down to the axis, deletes it; a bare click on the axis makes none
+  else if (!d.edit) learnAxis();                                              // a new line was drawn: the axis has done its job
   drawScene(); drawGraph();
 });

@@ -1,6 +1,6 @@
 // The running simulation: live state, physics, run control, main loop.
 
-import { annotPlay, endAnnotate, tickAnnotPlay } from './annotate.js';
+import { annotPlay, axisPulsing, endAnnotate, tickAnnotPlay } from './annotate.js';
 import { BALL_R, CREEP_TIME, FRICTION_DECEL, MASS, MAX_TIME, RUN_TIME_CAP, TRACK_LEN, WALL_D } from './constants.js';
 import { launchBtn, posEl, replayFastBtn, speedEl } from './dom.js';
 import { getCss } from './draw.js';
@@ -181,6 +181,7 @@ export function worldChanged() {
 // ─── Main loop ────────────────────────────────────────────────────────────────
 export function frame(now) {
   if (annotPlay && !running) tickAnnotPlay(now);
+  else if (!running && axisPulsing()) drawGraph();   // the annotate time axis's pulse
   if (running) {
     const dt = Math.max(0, Math.min(0.05, (now - lastFrame) / 1000)) * playbackRate;   // rAF's timestamp can precede lastFrame (set at click) → never run backwards
     lastFrame = now;
