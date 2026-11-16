@@ -44,7 +44,7 @@ export const TIPS = {
 
   // ── Graph ──
   graphTabs:      'Choose which graph to show.',
-  graph:          'Motion graph: each marble\'s position or velocity against time.',
+  graph:          'Motion graph: each marble\'s position or speed against time.',
 
   // ── Track pieces, on the track ──
   ...PIECES,

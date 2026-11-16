@@ -9,10 +9,11 @@ import { balls, resetRun, running, sampleAt } from './sim.js';
 import { activePuzzle, clearPieces, currentPuzzle, graphType, mode, puzzleGraded, setCurrentPuzzle, setGraphType, setModeValue, setPuzzleGraded, setTestSolved, testPuzzle, testSolved } from './state.js';
 import { fitStage } from './ui.js';
 
-// 5 distance + 5 position + 5 velocity challenges (three menu rows of five, keyed by graph type). No names or hints — the player just
+// 5 distance + 5 position + 5 speed challenges (three menu rows of five, keyed by graph type). No names or hints — the player just
 // reads the target line off the graph and matches it. Each target carries its own axis key
-// ('d' distance, 'x' position or 'v' velocity). Each row unlocks one puzzle at a time. Most targets were
-// made in the Create tab, so they're sampled every 0.25 s.
+// ('d' distance, 'x' position or 'sp' speed). Each row unlocks one puzzle at a time. Most targets were
+// made in the Create tab, so they're sampled every 0.25 s; an instant jump in speed is two points at
+// the same time (before and after), drawn as a vertical step.
 // (The position row keeps its old ids pos6–pos10 so players' saved progress still matches.)
 export const PUZZLES = {
   distance: [   // distance starts at 0 whatever the launch position, so no flat target here
@@ -38,20 +39,21 @@ export const PUZZLES = {
     { id: 'pos10', metric: 'position', stars: 3,   // from 5 m out to 15 m at 5 m/s, waits there, then back at 10 m/s to 5 m
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 6.25 }, { t: 0.5, x: 7.5 }, { t: 0.75, x: 8.75 }, { t: 1, x: 10 }, { t: 1.25, x: 11.25 }, { t: 1.5, x: 12.5 }, { t: 1.75, x: 13.75 }, { t: 2, x: 15 }, { t: 2.25, x: 15 }, { t: 2.5, x: 15 }, { t: 2.75, x: 15 }, { t: 3, x: 15 }, { t: 3.25, x: 15 }, { t: 3.5, x: 15 }, { t: 3.75, x: 15 }, { t: 4, x: 14.83 }, { t: 4.25, x: 12.33 }, { t: 4.5, x: 9.83 }, { t: 4.75, x: 7.33 }, { t: 5, x: 5 }] } },
   ],
-  velocity: [
-    { id: 'vel1', metric: 'velocity', stars: 2, target: { kind: 'flat', key: 'v', value: 3 } },
-    { id: 'vel2', metric: 'velocity', stars: 2,   // 5 m/s into a wall at 2 s, then stopped
-      target: { kind: 'poly', key: 'v', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 5 }, { t: 0.5, x: 5 }, { t: 0.75, x: 5 }, { t: 1, x: 5 }, { t: 1.25, x: 5 }, { t: 1.5, x: 5 }, { t: 1.75, x: 5 }, { t: 2, x: 5 }, { t: 2.25, x: 0 }, { t: 2.5, x: 0 }, { t: 2.75, x: 0 }, { t: 3, x: 0 }, { t: 3.25, x: 0 }, { t: 3.5, x: 0 }, { t: 3.75, x: 0 }, { t: 4, x: 0 }, { t: 4.25, x: 0 }, { t: 4.5, x: 0 }, { t: 4.75, x: 0 }, { t: 5, x: 0 }] } },
-    { id: 'vel3', metric: 'velocity', stars: 3,   // 5 m/s steady to 2 s, then slowing to a stop at 4.5 s
-      target: { kind: 'poly', key: 'v', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 5 }, { t: 0.5, x: 5 }, { t: 0.75, x: 5 }, { t: 1, x: 5 }, { t: 1.25, x: 5 }, { t: 1.5, x: 5 }, { t: 1.75, x: 5 }, { t: 2, x: 5 }, { t: 2.25, x: 4.5 }, { t: 2.5, x: 4 }, { t: 2.75, x: 3.5 }, { t: 3, x: 3 }, { t: 3.25, x: 2.5 }, { t: 3.5, x: 2 }, { t: 3.75, x: 1.5 }, { t: 4, x: 1 }, { t: 4.25, x: 0.5 }, { t: 4.5, x: 0 }, { t: 4.75, x: 0 }, { t: 5, x: 0 }] } },
-    { id: 'vel4', metric: 'velocity', stars: 2,   // 1 m/s, a jump to 5 m/s at 3 s, then to 9 m/s at 4 s
-      target: { kind: 'poly', key: 'v', pts: [{ t: 0, x: 1 }, { t: 0.25, x: 1 }, { t: 0.5, x: 1 }, { t: 0.75, x: 1 }, { t: 1, x: 1 }, { t: 1.25, x: 1 }, { t: 1.5, x: 1 }, { t: 1.75, x: 1 }, { t: 2, x: 1 }, { t: 2.25, x: 1 }, { t: 2.5, x: 1 }, { t: 2.75, x: 1 }, { t: 3, x: 1.6 }, { t: 3.25, x: 5 }, { t: 3.5, x: 5 }, { t: 3.75, x: 5 }, { t: 4, x: 5.61 }, { t: 4.25, x: 9 }, { t: 4.5, x: 9 }, { t: 4.75, x: 9 }, { t: 5, x: 9 }] } },
-    { id: 'vel5', metric: 'velocity', stars: 3,   // 2 m/s, a jump to 5.5 m/s at 2 s, then slowing to a stop at 5 s
-      target: { kind: 'poly', key: 'v', pts: [{ t: 0, x: 2 }, { t: 0.25, x: 2 }, { t: 0.5, x: 2 }, { t: 0.75, x: 2 }, { t: 1, x: 2 }, { t: 1.25, x: 2 }, { t: 1.5, x: 2 }, { t: 1.75, x: 2 }, { t: 2, x: 2.26 }, { t: 2.25, x: 5.5 }, { t: 2.5, x: 5 }, { t: 2.75, x: 4.5 }, { t: 3, x: 4 }, { t: 3.25, x: 3.5 }, { t: 3.5, x: 3 }, { t: 3.75, x: 2.5 }, { t: 4, x: 2 }, { t: 4.25, x: 1.5 }, { t: 4.5, x: 1 }, { t: 4.75, x: 0.5 }, { t: 5, x: 0.01 }] } },
+  speed: [
+    { id: 'spd1', metric: 'speed', stars: 2, target: { kind: 'flat', key: 'sp', value: 3 } },
+    { id: 'spd2', metric: 'speed', stars: 2,   // 5 m/s into a wall: stops dead at 2 s
+      target: { kind: 'poly', key: 'sp', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 5 }, { t: 0.5, x: 5 }, { t: 0.75, x: 5 }, { t: 1, x: 5 }, { t: 1.25, x: 5 }, { t: 1.5, x: 5 }, { t: 1.75, x: 5 }, { t: 2, x: 5 }, { t: 2, x: 0 }, { t: 2.25, x: 0 }, { t: 2.5, x: 0 }, { t: 2.75, x: 0 }, { t: 3, x: 0 }, { t: 3.25, x: 0 }, { t: 3.5, x: 0 }, { t: 3.75, x: 0 }, { t: 4, x: 0 }, { t: 4.25, x: 0 }, { t: 4.5, x: 0 }, { t: 4.75, x: 0 }, { t: 5, x: 0 }] } },
+    { id: 'spd3', metric: 'speed', stars: 3,   // 5 m/s steady to 2 s, then slowing to a stop at 4.5 s
+      target: { kind: 'poly', key: 'sp', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 5 }, { t: 0.5, x: 5 }, { t: 0.75, x: 5 }, { t: 1, x: 5 }, { t: 1.25, x: 5 }, { t: 1.5, x: 5 }, { t: 1.75, x: 5 }, { t: 2, x: 5 }, { t: 2.25, x: 4.5 }, { t: 2.5, x: 4 }, { t: 2.75, x: 3.5 }, { t: 3, x: 3 }, { t: 3.25, x: 2.5 }, { t: 3.5, x: 2 }, { t: 3.75, x: 1.5 }, { t: 4, x: 1 }, { t: 4.25, x: 0.5 }, { t: 4.5, x: 0 }, { t: 4.75, x: 0 }, { t: 5, x: 0 }] } },
+    { id: 'spd4', metric: 'speed', stars: 2,   // 1 m/s, a jump to 5 m/s at 3 s, then to 9 m/s at 4 s
+      target: { kind: 'poly', key: 'sp', pts: [{ t: 0, x: 1 }, { t: 0.25, x: 1 }, { t: 0.5, x: 1 }, { t: 0.75, x: 1 }, { t: 1, x: 1 }, { t: 1.25, x: 1 }, { t: 1.5, x: 1 }, { t: 1.75, x: 1 }, { t: 2, x: 1 }, { t: 2.25, x: 1 }, { t: 2.5, x: 1 }, { t: 2.75, x: 1 }, { t: 3, x: 1 }, { t: 3, x: 5 }, { t: 3.25, x: 5 }, { t: 3.5, x: 5 }, { t: 3.75, x: 5 }, { t: 4, x: 5 }, { t: 4, x: 9 }, { t: 4.25, x: 9 }, { t: 4.5, x: 9 }, { t: 4.75, x: 9 }, { t: 5, x: 9 }] } },
+    { id: 'spd5', metric: 'speed', stars: 3,   // 2 m/s, a jump to 6 m/s at 2 s, then slowing to a stop at 5 s
+      target: { kind: 'poly', key: 'sp', pts: [{ t: 0, x: 2 }, { t: 0.25, x: 2 }, { t: 0.5, x: 2 }, { t: 0.75, x: 2 }, { t: 1, x: 2 }, { t: 1.25, x: 2 }, { t: 1.5, x: 2 }, { t: 1.75, x: 2 }, { t: 2, x: 2 }, { t: 2, x: 6 }, { t: 2.25, x: 5.5 }, { t: 2.5, x: 5 }, { t: 2.75, x: 4.5 }, { t: 3, x: 4 }, { t: 3.25, x: 3.5 }, { t: 3.5, x: 3 }, { t: 3.75, x: 2.5 }, { t: 4, x: 2 }, { t: 4.25, x: 1.5 }, { t: 4.5, x: 1 }, { t: 4.75, x: 0.5 }, { t: 5, x: 0.03 }] } },
   ],
 };
 export const solvedPuzzles = new Set();
-try { (JSON.parse(localStorage.getItem('launcher-puzzles') || '[]')).forEach(id => solvedPuzzles.add(id)); } catch (e) {}
+// (the speed row was the velocity row, ids vel1–vel5: saved progress under those ids carries over)
+try { (JSON.parse(localStorage.getItem('launcher-puzzles') || '[]')).forEach(id => solvedPuzzles.add(id.replace(/^vel(\d)$/, 'spd$1'))); } catch (e) {}
 solvedPuzzles.delete('shared');
 export function savePuzzles() { try { localStorage.setItem('launcher-puzzles', JSON.stringify([...solvedPuzzles])); } catch (e) {} }
 let devUnlockAll = false;   // dev mode (type "dev") opens every level
@@ -67,7 +69,7 @@ export function interpPoly(pts, tt) {
 function stars(n) { return '\u2605\u2605\u2605'.slice(0, n) + '\u2606\u2606\u2606'.slice(0, 3 - n); }
 
 export function renderPuzzles() {
-  for (const [key, rowId] of [['distance', 'pzRow1'], ['position', 'pzRow2'], ['velocity', 'pzRow3']]) {
+  for (const [key, rowId] of [['distance', 'pzRow1'], ['position', 'pzRow2'], ['speed', 'pzRow3']]) {
     const row = document.getElementById(rowId); row.innerHTML = '';
     PUZZLES[key].forEach((p, i) => {
       const unlocked = puzzleUnlocked(PUZZLES[key], i), solved = solvedPuzzles.has(p.id);
@@ -123,7 +125,7 @@ const winEl = document.getElementById('winOverlay'), confC = document.getElement
 let confetti = [], confRaf = 0;
 function nextPuzzle() {
   if (currentPuzzle && currentPuzzle.id === 'shared') return null;     // a linked puzzle has no "next"
-  const all = [...PUZZLES.distance, ...PUZZLES.position, ...PUZZLES.velocity];
+  const all = [...PUZZLES.distance, ...PUZZLES.position, ...PUZZLES.speed];
   const i = all.findIndex(p => currentPuzzle && p.id === currentPuzzle.id);
   const n = all[i + 1];
   if (!n) return null;
@@ -166,6 +168,7 @@ document.getElementById('winNext').addEventListener('click', () => { const n = n
 
 const GRADE_STEP  = 0.25;     // s — how often a run is checked against the target (= the Create tab's sampling)
 const GRADE_SLACK = 1 / 60;   // s — a check may match up to one frame either side
+const JUMP_CHECK  = 0.1;      // s — an instant jump in the target is also checked this long before and after it
 export function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.g. left the screen) — treat its last value as held to 5 s
   const P = activePuzzle();
   const isTest = P && P === testPuzzle;
@@ -175,19 +178,27 @@ export function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.
   if (!s.length) return;
   if (s[s.length - 1].t < win - 0.05) {
     if (!runEnded) return;
-    const last = s[s.length - 1]; s.push({ t: win, x: last.x, v: last.v, d: last.d });
+    const last = s[s.length - 1]; s.push({ t: win, x: last.x, v: last.v, sp: last.sp, d: last.d });
   }
   setPuzzleGraded(true);
   const tgt = P.target, key = tgt.key, tol = P.tol || PUZZLE_TOL;
   const want = tt => tgt.kind === 'flat' ? tgt.value : interpPoly(tgt.pts, tt);
   // Checked at the moments the Create tab records a target: every GRADE_STEP from 0 to 5 s.
   // At each check the run may match anywhere within GRADE_SLACK either side, so an instant
-  // jump in velocity that lands right on a check time still matches. (Checking every frame
+  // jump in speed that lands right on a check time still matches. (Checking every frame
   // against straight lines between 0.25 s points can't follow an instant jump, which made
-  // velocity puzzles with one impossible to pass — even by the run that made them.)
+  // speed puzzles with one impossible to pass — even by the run that made them.)
+  // A target's instant jump (two points at one time) is also checked just before and after
+  // it, so the run's jump must come within about JUMP_CHECK of it — not just somewhere
+  // between two 0.25 s checks.
+  const checks = [];
+  for (let i = 0; i <= Math.round(win / GRADE_STEP); i++) checks.push(i * GRADE_STEP);
+  if (tgt.kind === 'poly') tgt.pts.forEach((q, i) => {
+    if (i && q.t === tgt.pts[i - 1].t) checks.push(Math.max(0, q.t - JUMP_CHECK), Math.min(win, q.t + JUMP_CHECK));
+  });
   let maxDev = 0;
-  for (let i = 0; i <= Math.round(win / GRADE_STEP); i++) {
-    const tt = i * GRADE_STEP, w = want(tt);
+  for (const tt of checks) {
+    const w = want(tt);
     let lo = Infinity, hi = -Infinity;                 // the run's range of values around tt
     for (let k = -4; k <= 4; k++) {
       const val = sampleAt(s, key, Math.min(win, Math.max(0, tt + k * GRADE_SLACK / 4)));

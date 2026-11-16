@@ -63,7 +63,7 @@
             <span>Build a track, press Launch, then pick which graph becomes the target:</span>
             <label><input type="radio" name="cpMetric" value="position" checked> Position</label>
             <label><input type="radio" name="cpMetric" value="distance"> Distance</label>
-            <label><input type="radio" name="cpMetric" value="velocity"> Velocity</label>
+            <label><input type="radio" name="cpMetric" value="speed"> Speed</label>
             <button id="cpMake" data-tip="makePuzzle">Make puzzle</button>
           </div>
         </div>
@@ -87,7 +87,7 @@
           <div class="pzRow" id="pzRow2"></div>
         </div>
         <div class="pzGroup">
-          <div class="pzLabel">Velocity graphs</div>
+          <div class="pzLabel">Speed graphs</div>
           <div class="pzRow" id="pzRow3"></div>
         </div>
       </div>
@@ -95,12 +95,12 @@
       <div id="graphCard" class="panel">
         <div id="graphTabs" data-tip="graphTabs">
           <button data-g="position" class="active">Position&#x2013;time</button>
-          <button data-g="velocity">Velocity&#x2013;time</button>
-          <button data-g="both">Both Position and Velocity</button>
+          <button data-g="speed">Speed&#x2013;time</button>
+          <button data-g="both">Both Position and Speed</button>
           <div id="annotBtns" data-tip="" hidden><button id="annotReplay" class="primary">&#x25B6; Replay</button><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div>
         </div>
         <div id="puzzleStatus" hidden></div>
-        <div id="annotBar" hidden><div id="annotText">Draw a circle where you need to focus. Click time axis and drag up to annotate differences between graphs.</div></div>
+        <div id="annotBar" hidden><div id="annotText">Click the time axis and drag up to annotate differences between graphs.</div></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
@@ -217,7 +217,7 @@
     <h3>Making your own puzzles</h3>
     <ol>
       <li>Open the <b>Create</b> tab. Build a track and press <b>Launch</b>.</li>
-      <li>Choose which graph the puzzle uses: <b>Position</b>, <b>Distance</b> or <b>Velocity</b>.</li>
+      <li>Choose which graph the puzzle uses: <b>Position</b>, <b>Distance</b> or <b>Speed</b>.</li>
       <li>Press <b>Make puzzle</b>. A puzzle code appears in the box.</li>
     </ol>
     <p>There are two ways to play a puzzle code:</p>

@@ -89,7 +89,7 @@ function showPuzzleGallery() {
   const card = document.createElement('div');
   card.style.cssText = 'background:' + getCss('--panel') + ';color:' + getCss('--ink') + ';border:3px solid ' + getCss('--line') + ';border-radius:16px;padding:18px 22px;max-width:1100px;width:100%;align-self:flex-start;font-family:inherit';
   card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b style="font-size:20px">All puzzles</b><button id="devGalClose" style="padding:6px 12px;font-weight:700">Close</button></div>';
-  const rows = [['Distance', PUZZLES.distance], ['Position', PUZZLES.position], ['Velocity', PUZZLES.velocity]];
+  const rows = [['Distance', PUZZLES.distance], ['Position', PUZZLES.position], ['Speed', PUZZLES.speed]];
   for (const [title, list] of rows) {
     const h = document.createElement('div'); h.textContent = title; h.style.cssText = 'font-weight:800;margin:12px 0 6px;color:' + getCss('--muted');
     const grid = document.createElement('div'); grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px';
@@ -99,11 +99,11 @@ function showPuzzleGallery() {
       const cap = document.createElement('div'); cap.textContent = P.id + (P.target ? '' : ' \u2014 no target yet'); cap.style.cssText = 'font-size:12px;font-weight:700;margin-top:2px';
       cell.append(cv, cap); grid.appendChild(cell);
       const c = cv.getContext('2d'), W = 400, H = 240, L = 34, R = 10, T = 10, B = 26;
-      const yMax = P.metric === 'velocity' ? AXES.velocity.y : AXES.position.y, tMax = 5;
+      const yMax = P.metric === 'speed' ? AXES.speed.y : AXES.position.y, tMax = 5;
       const X = tt => L + tt / tMax * (W - L - R), Y = v => H - B - v / yMax * (H - T - B);
       c.strokeStyle = getCss('--line'); c.lineWidth = 1; c.fillStyle = getCss('--muted'); c.font = '16px sans-serif';
       for (let tt = 0; tt <= tMax; tt++) { c.beginPath(); c.moveTo(X(tt), T); c.lineTo(X(tt), H - B); c.stroke(); c.textAlign = 'center'; c.fillText(tt, X(tt), H - 8); }
-      const step = P.metric === 'velocity' ? 3 : 5;
+      const step = P.metric === 'speed' ? 3 : 5;
       for (let v = 0; v <= yMax; v += step) { c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(W - R, Y(v)); c.stroke(); c.textAlign = 'right'; c.fillText(v, L - 4, Y(v) + 5); }
       if (P.target) {
         c.strokeStyle = getCss('--accent'); c.lineWidth = 3.5; c.lineJoin = 'round'; c.beginPath();

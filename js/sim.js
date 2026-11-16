@@ -114,7 +114,7 @@ function buildBalls(launchV, x0) {
   balls = [{ launcher: true, x: x0 || 0, v: launchV, moving: false, color: getCss('--ball'), d: 0, samples: [] }];
   for (const b of secondBalls) balls.push({ launcher: false, x: b.x, v: 0, moving: false, color: getCss('--ball2'), d: 0, samples: [] });
 }
-function seedSamples() { for (const b of balls) b.samples = [{ t: 0, x: b.x, v: b.v, d: 0 }]; }
+function seedSamples() { for (const b of balls) b.samples = [{ t: 0, x: b.x, v: b.v, sp: Math.abs(b.v), d: 0 }]; }
 // Snapshot the current trajectories as the static curve to keep on screen during
 // replay, flat-extended to the right edge so the curve spans the whole time axis.
 function snapshotTrace(extend = true) {
@@ -206,10 +206,10 @@ export function frame(now) {
       let prev = b.samples[b.samples.length - 1];
       if (bounceAt !== null && b === movingBall) {   // a reflection passes through v = 0: speed dips to 0 and back
         const dd = prev.d + Math.abs(bounceAt - prev.x);
-        prev = { t: (prev.t + t) / 2, x: bounceAt, v: 0, d: dd }; b.samples.push(prev);
+        prev = { t: (prev.t + t) / 2, x: bounceAt, v: 0, sp: 0, d: dd }; b.samples.push(prev);
       }
       b.d = prev.d + Math.abs(b.x - prev.x);
-      b.samples.push({ t, x: b.x, v: b.v, d: b.d });
+      b.samples.push({ t, x: b.x, v: b.v, sp: Math.abs(b.v), d: b.d });
     }
     bounceAt = null;
     if ((mode === 'puzzle' || mode === 'create') && !replaying) gradePuzzle();

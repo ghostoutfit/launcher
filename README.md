@@ -3,13 +3,13 @@
 A physics sandbox that runs in the browser. Students launch a marble along a
 21 m track, put track pieces in its way (speed changes, target-speed launchers,
 friction pads, walls, a second marble), and watch its position, distance and
-velocity graphed against time.
+speed graphed against time.
 
 It has three tabs:
 
 - **Sandbox** — build any track and experiment.
 - **Puzzle** — build a track whose graph matches a target graph. There are three
-  rows of five puzzles: distance, position and velocity.
+  rows of five puzzles: distance, position and speed.
 - **Create** — turn any run into a puzzle code you can share, or paste a code in
   to play it.
 
@@ -69,7 +69,8 @@ README.md         this file
 
 **The one idea.** The marble has a position `x`, a distance travelled `d` and a
 velocity `v`. Many times a second the simulation moves it forward a tiny step in
-time (`step()` in `sim.js`) and saves a **sample**, `{t, x, v, d}`. The graph is
+time (`step()` in `sim.js`) and saves a **sample**, `{t, x, v, sp, d}` (`sp` is
+the speed, `|v|`). The graph is
 just those samples drawn as a line. Everything else is either a track piece that
 changes `v` when the marble reaches it, or code that draws things.
 
@@ -158,19 +159,20 @@ and × button.
 **`graph.js`** — `drawGraph()` paints the axes, grid, the dashed target line and
 each marble's curve.
 - In Sandbox, clicking the y-axis title (or the big triangle beside it) opens a
-  menu to switch Position ↔ Distance or Velocity ↔ Speed (`posMode` / `velMode`).
+  menu to switch Position ↔ Distance or Speed ↔ Velocity (`posMode` / `velMode`).
+  Speed is the default; this menu is the only place velocity is graphed.
 - In Puzzle and Create the puzzle decides the graph instead (`forcedGraph()`),
   and the triangle is hidden.
 - Clicking the graph pins a coordinate; time snaps to half seconds.
 
-**`annotate.js`** — after a missed puzzle the student can circle part of the
-graph and draw up to three vertical time lines.
-- **Replay** loops the saved run over the circled time span.
+**`annotate.js`** — after a missed puzzle the student can draw up to three
+vertical time lines on the graph.
+- **Replay** loops the saved run (the whole 5 s).
 - At each line it pauses and blinks two rings on the world: red where the
   student's marble was, blue where the target graph says it should be.
 - It plays back saved samples, so no physics runs.
-- In a velocity puzzle the pause keeps moving: both marbles run at their
-  velocities for 1 s from the line, repeating for 3 s.
+- In a speed puzzle the pause keeps moving: both marbles run at their
+  speeds for 1 s from the line, repeating for 3 s.
 
 **`input.js`** — everything the pointer and keyboard do on the track:
 - **Placing pieces.** Drag a chip from the *Track pieces* palette onto the
@@ -298,9 +300,12 @@ A puzzle code is `#` followed by URL-encoded JSON:
 { format: "launcher-puzzle", version: 1, metric, tolerance, target }
 ```
 
-- `metric` is `"position"`, `"distance"` or `"velocity"`, and it decides which
-  graph the puzzle opens in.
-- `target` is a list of `[time, value]` points, one every 0.25 s.
+- `metric` is `"position"`, `"distance"` or `"speed"`, and it decides which
+  graph the puzzle opens in. (Older codes that say `"velocity"` load as speed
+  puzzles.)
+- `target` is a list of `[time, value]` points, one every 0.25 s. On the speed
+  graph an instant jump is two points at the same time (before and after), drawn
+  as a vertical step; the grader also checks the run 0.1 s either side of it.
 
 To play one, add it to the page address after the `#`, or paste it into the
 Create tab's box.

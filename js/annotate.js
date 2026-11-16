@@ -1,4 +1,4 @@
-// Annotating a missed puzzle: the circle, the time lines, and the replay loop.
+// Annotating a missed puzzle: the time lines and the replay loop.
 
 import { PUZZLE_TOL, RUN_TIME_CAP, TRACK_LEN } from './constants.js';
 import { ballRadius, clamp, graphC, groundY, gx, mToPx, sx } from './dom.js';
@@ -9,13 +9,13 @@ import { drawScene } from './scene.js';
 import { balls, lastTrace, launchX, sampleAt, v } from './sim.js';
 import { activePuzzle, graphType, mode, setGraphType, testPuzzle } from './state.js';
 
-// ─── Annotate a missed puzzle: one circle + up to 3 time arrows (dots where each hits both lines) ──
-// Both are stored in time (and panel-relative height), so they stay put when switching graph type.
-export let annotating = false, annotCircle = null, annotArrows = [], annotDrag = null;   // arrows: up to 3 of { t, key, f } (f = height reached, as a fraction of the panel)
+// ─── Annotate a missed puzzle: up to 3 time arrows (dots where each hits both lines) ──
+// Stored in time (and panel-relative height), so they stay put when switching graph type.
+export let annotating = false, annotArrows = [], annotDrag = null;   // arrows: up to 3 of { t, key, f } (f = height reached, as a fraction of the panel)
 export function endAnnotate() {
   stopAnnotPlay();
   const was = annotating;
-  annotating = false; annotCircle = null; annotArrows = []; annotDrag = null;
+  annotating = false; annotArrows = []; annotDrag = null;
   document.getElementById('annotBar').hidden = true; document.getElementById('annotBtns').hidden = true; graphC.style.cursor = '';
   if (graphC.dataset.tipOrig) graphC.dataset.tip = graphC.dataset.tipOrig;
   if (was) {
@@ -27,7 +27,7 @@ export function endAnnotate() {
 export function startAnnotate() {
   document.getElementById('tryOverlay').hidden = true;
   graphC.dataset.tipOrig = graphC.dataset.tipOrig || graphC.dataset.tip;
-  annotating = true; annotCircle = null; annotArrows = []; clearGraphPoints();
+  annotating = true; annotArrows = []; clearGraphPoints();
   graphC.dataset.tip = '';                                  // no hover tooltip while annotating
   document.getElementById('annotBar').hidden = false; document.getElementById('annotBtns').hidden = false; graphC.style.cursor = 'crosshair';
   document.getElementById('graphTabs').hidden = false;      // let the student look at the other graph too
@@ -41,14 +41,7 @@ export function drawAnnotations() {
   const { x0, x1, tMax } = graphGeom, TX = tt => x0 + (tt / tMax) * (x1 - x0);
   const pink = '#e0245e';
   gx.save(); gx.strokeStyle = pink; gx.fillStyle = pink; gx.lineWidth = 3.5; gx.lineCap = 'round';
-  const ell = (cx, cy, rx, ry) => { gx.beginPath(); gx.ellipse(cx, cy, Math.max(rx, 2), Math.max(ry, 2), 0, 0, Math.PI * 2); gx.stroke(); };
-  if (annotCircle) {
-    const c = annotCircle, P = graphPanels.find(q => q.key === c.key);   // only on the graph it was drawn on
-    if (P) { const ya = P.ty + c.f0 * (P.by - P.ty), yb = P.ty + c.f1 * (P.by - P.ty);
-      ell((TX(c.t0) + TX(c.t1)) / 2, (ya + yb) / 2, Math.abs(TX(c.t1) - TX(c.t0)) / 2, Math.abs(yb - ya) / 2); }
-  }
   if (annotPlay) { const px = TX(annotPlay.t), P0 = graphPanels[0], P1 = graphPanels[graphPanels.length - 1]; gx.lineWidth = 2; gx.setLineDash([5, 4]); gx.beginPath(); gx.moveTo(px, P0.ty); gx.lineTo(px, P1.by); gx.stroke(); gx.setLineDash([]); gx.lineWidth = 3.5; }   // replay playhead
-  if (annotDrag) { const d = annotDrag; ell((d.x0 + d.x1) / 2, (d.y0 + d.y1) / 2, Math.abs(d.x1 - d.x0) / 2, Math.abs(d.y1 - d.y0) / 2); }
   for (const arw of annotArrows) {
     const AP = activePuzzle(), xx = TX(arw.t);
     const P = graphPanels.find(q => q.key === arw.key);                 // hidden when that graph isn't showing
@@ -71,22 +64,18 @@ export function drawAnnotations() {
   }
   gx.restore();
 }
-// ─── Annotate replay: loop the run over the circled time span; each arrow pauses it and blinks the two spots ──
-// The loop plays the saved samples back (no physics). The circle's width is the span (no circle = the whole 5 s).
+// ─── Annotate replay: loop the whole run; each arrow pauses it and blinks the two spots ──
+// The loop plays the saved samples back (no physics) over the whole 5 s.
 // At each arrow's time it holds ARROW_PAUSE seconds and blinks a red ring (the student's ball) and a blue ring (where the
 // target graph puts the ball) on the world.
 const ARROW_PAUSE = 1.5, LOOP_GAP = 0.5;
 const BLINK_PHASE = 0.4;   // seconds the rings stay on, then off
-// Velocity puzzles can't be read from a frozen spot, so at a pause both balls run at their velocities for VEL_LOOP seconds from the line, repeating for VEL_PAUSE seconds
+// Speed puzzles can't be read from a frozen spot, so at a pause both balls run at their speeds for VEL_LOOP seconds from the line, repeating for VEL_PAUSE seconds
 const VEL_LOOP = 1, VEL_PAUSE = 3;
 export let annotPlay = null;   // { t, hold, blink, mark, moving, lt, fired, last, restoreX } while looping
 const annotReplayBtn = document.getElementById('annotReplay');
-function annotSpan() {
-  if (!annotCircle) return [0, RUN_TIME_CAP];
-  return [annotCircle.t0, Math.min(RUN_TIME_CAP, Math.max(annotCircle.t1, annotCircle.t0 + 0.5))];
-}
 function runSamples() { return lastTrace && lastTrace[0] ? lastTrace[0].samples : balls[0].samples; }
-// where the target graph puts the ball, as a spot on the track (a distance target counts from the launch spot; a velocity target is added up over time)
+// where the target graph puts the ball, as a spot on the track (a distance target counts from the launch spot; a speed target is added up over time)
 function idealX(tg, tt) {
   const val = u => tg.kind === 'flat' ? tg.value : interpPoly(tg.pts, u);
   if (tg.key === 'x') return val(tt);
@@ -96,7 +85,7 @@ function idealX(tg, tt) {
 }
 function startAnnotPlay() {
   if (!annotating || !balls[0] || balls[0].samples.length < 2) return;
-  annotPlay = { t: annotSpan()[0], hold: 0, blink: 0, mark: null, fired: new Set(), last: performance.now(), restoreX: balls[0].x };
+  annotPlay = { t: 0, hold: 0, blink: 0, mark: null, fired: new Set(), last: performance.now(), restoreX: balls[0].x };
   annotReplayBtn.textContent = '\u25A0 Stop';
 }
 function stopAnnotPlay(redraw) {
@@ -105,7 +94,7 @@ function stopAnnotPlay(redraw) {
   if (redraw) { drawScene(); drawGraph(); }
 }
 export function tickAnnotPlay(now) {
-  const p = annotPlay, [a, b] = annotSpan(), dt = Math.min(0.05, (now - p.last) / 1000); p.last = now;
+  const p = annotPlay, a = 0, b = RUN_TIME_CAP, dt = Math.min(0.05, (now - p.last) / 1000); p.last = now;
   p.blink += dt;
   if (p.hold > 0) {
     p.hold -= dt;
@@ -121,9 +110,9 @@ export function tickAnnotPlay(now) {
   balls[0].x = sampleAt(runSamples(), 'x', p.mark && p.moving ? Math.min(RUN_TIME_CAP, p.mark.t + p.lt) : p.t);
   drawScene(); drawGraph();
 }
-// The spots on the world: while a line is being drawn / dragged (steady), or at a replay pause (blinking; for a velocity puzzle the balls run instead).
+// The spots on the world: while a line is being drawn / dragged (steady), or at a replay pause (blinking; for a speed puzzle the balls run instead).
 // Red ring = the student's ball, blue ring = where the target graph puts it. Where the student matched the target, one purple "nice!" ring instead.
-function velPuzzle() { const AP = activePuzzle(); return !!(AP && AP.target && AP.target.key === 'v'); }
+function velPuzzle() { const AP = activePuzzle(); return !!(AP && AP.target && AP.target.key === 'sp'); }
 function replayMark() {   // { t: moment the rings sit at, at: the line's time (where "matched" is judged) } or null while blinked off
   if (annotDrag && annotDrag.obj) return { t: annotDrag.obj.t, at: annotDrag.obj.t };
   const p = annotPlay; if (!p || !p.mark) return null;
@@ -139,7 +128,7 @@ export function drawReplayMarks() {
   if (tg) {
     const own = sampleAt(runSamples(), tg.key, mk.at), want = tg.kind === 'flat' ? tg.value : interpPoly(tg.pts, mk.at);
     if (Math.abs(own - want) <= (AP.tol || PUZZLE_TOL)) marks = [{ m: mine, col: '#8e44ad', label: 'nice!' }];
-    else marks.push({ m: clamp(idealX(tg, mk.t), 0, TRACK_LEN), col: '#2d8bd4', label: 'goal' });   // (a velocity target starts from the launch spot, even where that is out of reach)
+    else marks.push({ m: clamp(idealX(tg, mk.t), 0, TRACK_LEN), col: '#2d8bd4', label: 'goal' });   // (a speed target starts from the launch spot, even where that is out of reach)
   }
   sx.save(); sx.font = handFont(14, 700); sx.textAlign = 'center'; sx.textBaseline = 'bottom';
   for (const k of marks) {
@@ -162,7 +151,6 @@ function arrowAt(mx, my) {
     return Math.abs(mx - xx) <= 8 && my >= tip - 6 && my <= P.by - 4;
   });
 }
-function panelAt(my) { return graphPanels.find(q => my >= q.ty - 6 && my <= q.by + 6); }
 graphC.addEventListener('pointerdown', e => {
   if (!annotating || !graphGeom) return;
   const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
@@ -175,39 +163,24 @@ graphC.addEventListener('pointerdown', e => {
   const AP = activePuzzle(), only = AP && AP.target ? AP.target.key : null;     // in a puzzle, lines go on the puzzle's own graph only (not the other one in the Both view)
   const strip = graphPanels.find(q => my > q.by - 22 && my <= q.by + 34);       // the time axis → place the time marker
   const ax = strip && (!only || strip.key === only) ? strip : null;
-  if (strip && !ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) return;   // the other graph's axis: no line there (and no stray circle)
-  graphC.setPointerCapture(e.pointerId);
-  if (ax && mx >= graphGeom.x0 - 10 && mx <= graphGeom.x1 + 10) {            // drag up from the time axis → arrow
-    if (annotArrows.length >= 3) annotArrows.shift();                     // a 4th arrow replaces the oldest
-    const arw = { t: snapT(annotTimeAt(mx)), key: ax.key, f: 0 };
-    annotArrows.push(arw); annotDrag = { arrow: ax, obj: arw }; drawGraph(); return;
-  }
-  annotCircle = null;                                                         // the old circle goes the moment a new one starts
-  annotDrag = { x0: mx, y0: my, x1: mx, y1: my };
+  if (!ax || mx < graphGeom.x0 - 10 || mx > graphGeom.x1 + 10) return;       // only the (puzzle's own) time axis starts a line
+  graphC.setPointerCapture(e.pointerId);                                      // drag up from the time axis → arrow
+  if (annotArrows.length >= 3) annotArrows.shift();                           // a 4th arrow replaces the oldest
+  const arw = { t: snapT(annotTimeAt(mx)), key: ax.key, f: 0 };
+  annotArrows.push(arw); annotDrag = { arrow: ax, obj: arw }; drawGraph();
 });
 graphC.addEventListener('pointermove', e => {
   if (!annotating) return;
   const r = graphC.getBoundingClientRect();
   if (!annotDrag) { graphC.style.cursor = arrowAt(e.clientX - r.left, e.clientY - r.top) >= 0 ? 'pointer' : 'crosshair'; return; }
-  if (annotDrag.arrow) {
-    const D = annotDrag, P = D.arrow, mx = e.clientX - r.left, my = e.clientY - r.top;
-    if (D.edit) { if (!D.moved && Math.hypot(mx - D.sx, my - D.sy) < 4) return; D.moved = true; D.obj.t = snapT(annotTimeAt(mx)); }   // dragging an existing arrow also slides it in time
-    D.obj.f = clamp((P.by - my) / (P.by - P.ty), 0, 1); drawScene(); drawGraph(); return;
-  }
-  annotDrag.x1 = e.clientX - r.left; annotDrag.y1 = e.clientY - r.top; drawGraph();
+  const D = annotDrag, P = D.arrow, mx = e.clientX - r.left, my = e.clientY - r.top;
+  if (D.edit) { if (!D.moved && Math.hypot(mx - D.sx, my - D.sy) < 4) return; D.moved = true; D.obj.t = snapT(annotTimeAt(mx)); }   // dragging an existing arrow also slides it in time
+  D.obj.f = clamp((P.by - my) / (P.by - P.ty), 0, 1); drawScene(); drawGraph();
 });
 graphC.addEventListener('pointerup', () => {
   if (!annotating || !annotDrag) return;
   const d = annotDrag; annotDrag = null;
-  if (d.arrow) {
-    const i = annotArrows.indexOf(d.obj);
-    if (i >= 0 && (d.edit && !d.moved || d.obj.f * (d.arrow.by - d.arrow.ty) < 8)) annotArrows.splice(i, 1);   // a plain click on an arrow, or one dragged down to the axis, deletes it; a bare click on the axis makes none
-    drawScene(); drawGraph(); return;
-  }
-  const P = panelAt((d.y0 + d.y1) / 2) || graphPanels[0];
-  if (P && (Math.abs(d.x1 - d.x0) > 8 || Math.abs(d.y1 - d.y0) > 8)) {      // a new circle replaces the old one
-    const f = y => (y - P.ty) / (P.by - P.ty);
-    annotCircle = { key: P.key, t0: annotTimeAt(Math.min(d.x0, d.x1)), t1: annotTimeAt(Math.max(d.x0, d.x1)), f0: f(Math.min(d.y0, d.y1)), f1: f(Math.max(d.y0, d.y1)) };
-  }
-  drawGraph();
+  const i = annotArrows.indexOf(d.obj);
+  if (i >= 0 && (d.edit && !d.moved || d.obj.f * (d.arrow.by - d.arrow.ty) < 8)) annotArrows.splice(i, 1);   // a plain click on an arrow, or one dragged down to the axis, deletes it; a bare click on the axis makes none
+  drawScene(); drawGraph();
 });

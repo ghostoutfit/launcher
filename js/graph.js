@@ -8,15 +8,16 @@ import { drawMarbleAt, fit } from './scene.js';
 import { balls, lastTrace, launchX, replaying, running, t } from './sim.js';
 import { activePuzzle, graphType, mode, secondBalls } from './state.js';
 
-// The position-type axis can show Position / Distance; the velocity-type axis Velocity / Speed (click the axis title in Sandbox).
+// The position-type axis can show Position / Distance; the speed-type axis Speed / Velocity (click the axis title in Sandbox —
+// the only place velocity is graphed).
 // Puzzles and the Create tab force one graph instead: forcedGraph() is that graph's name, or null in the free Sandbox.
-let posMode = 'x', velMode = 'v', createMetric = 'position';   // createMetric: the Create tab's radio choice
+let posMode = 'x', velMode = 'sp', createMetric = 'position';   // createMetric: the Create tab's radio choice
 const POS_SPECS = { x: { key: 'x', label: 'Position', unit: 'm' }, d: { key: 'd', label: 'Distance', unit: 'm' } };
-const VEL_SPECS = { v: { key: 'v', label: 'Velocity', unit: 'm/s' }, sp: { key: 'sp', label: 'Speed', unit: 'm/s' } };
+const VEL_SPECS = { sp: { key: 'sp', label: 'Speed', unit: 'm/s' }, v: { key: 'v', label: 'Velocity', unit: 'm/s' } };
 function forcedGraph() { const P = activePuzzle(); return P ? P.metric : mode === 'create' ? createMetric : null; }
-export const graphTypeFor = metric => metric === 'velocity' ? 'velocity' : 'position';   // which graph tab shows a metric
+export const graphTypeFor = metric => metric === 'speed' ? 'speed' : 'position';   // which graph tab shows a metric
 function posSpec() { const f = forcedGraph(); return POS_SPECS[f ? (f === 'distance' ? 'd' : 'x') : posMode]; }
-function velSpec() { return VEL_SPECS[forcedGraph() ? 'v' : velMode]; }
+function velSpec() { return VEL_SPECS[forcedGraph() ? 'sp' : velMode]; }
 function graphSpec() { return graphType === 'position' ? posSpec() : velSpec(); }
 // value of a graph key for a sample (or live ball) o of trace b — sp is derived from v
 function metricVal(b, o, key) { return key === 'sp' ? Math.abs(o.v) : o[key]; }
@@ -53,7 +54,7 @@ export function drawGraph() {
     // horizontal gridlines + y-axis labels
     gx.font = handFont(13, 400); gx.lineWidth = 1;
     gx.textAlign = 'right'; gx.textBaseline = 'middle';
-    const gridStep = (metric.unit === 'm') ? 5 : 3;   // position: gridlines every 5 m (matches the world's ruler); velocity every 3 m/s
+    const gridStep = (metric.unit === 'm') ? 5 : 3;   // position: gridlines every 5 m (matches the world's ruler); speed every 3 m/s
     for (let vv = 0; vv <= yMax + 1e-9; vv += gridStep) {
       const yy = Y(vv);
       gx.strokeStyle = getCss('--line'); gx.beginPath(); gx.moveTo(x0, yy); gx.lineTo(x1, yy); gx.stroke();
@@ -90,7 +91,7 @@ export function drawGraph() {
     const traces = (replaying && lastTrace) ? lastTrace : balls;
     gx.save(); gx.beginPath(); gx.rect(x0, ty, x1 - x0, by - ty); gx.clip();
     gx.lineWidth = 2.4; gx.lineJoin = 'round'; gx.lineCap = 'round';
-    // The velocity axis starts at 0, so negative speeds can't be drawn: break the line there
+    // The axis starts at 0, so negative velocities (Sandbox's Velocity view) can't be drawn: break the line there
     // and remember where it first went negative so we can flag it below.
     const isNeg = metric.key === 'v';   // axes start at 0, so a negative value can't be drawn
     let negT = null;

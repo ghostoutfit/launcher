@@ -22,8 +22,8 @@ export const PUZZLE_TOL = 0.9;       // max deviation (m or m/s) allowed when ma
 // Fixed graph axes (always from zero). Position is always 0–20 m (the world itself is 21 m long).
 export const AXES = {
   position: { t: 5, y: 20.5 },   // shows a little past 20 m so the line isn't cut off
-  velocity: { t: 5, y: 12 },
-  both: { t: 5, yv: 12, yd: 20.5 },   // velocity (left axis) + distance (right axis)
+  speed: { t: 5, y: 12 },
+  both: { t: 5, yv: 12, yd: 20.5 },   // speed (left axis) + distance (right axis)
 };
 
 export function setFriction(a) { FRICTION_DECEL = a; }   // dev panel's friction slider

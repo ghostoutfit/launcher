@@ -10,7 +10,7 @@
 //   sim.js        live run state (t, x, v, balls), physics, run control, main loop
 //   scene.js      painting the world canvas
 //   graph.js      painting the graph canvas, pinned points, the axis menu
-//   annotate.js   the circle, the time lines and the replay loop
+//   annotate.js   the time lines and the replay loop
 //   input.js      placing / moving / selecting / deleting pieces, keyboard, showing tooltips
 //   puzzles.js    the three puzzle rows: data, menu, grading, result pop-ups
 //   create.js     turning a run into a puzzle code, and playing pasted ones
