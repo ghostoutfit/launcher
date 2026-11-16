@@ -48,7 +48,7 @@ export function drawScene() {
     sx.fillStyle = lighten(fricCol, 0.25);
     roundRect(sx, xa - 3, gY - 3, 6, FD + 6, 3); sx.fill(); ink(2); sx.stroke();
     roundRect(sx, xb - 3, gY - 3, 6, FD + 6, 3); sx.fill(); ink(2); sx.stroke();
-    z._sign = drawPieceSign((xa + xb) / 2, gY, 'friction', fricCol, '#4a2410', Math.round(z.len) + 'm');
+    z._sign = drawPieceSign((xa + xb) / 2, gY, 'friction', fricCol, '#4a2410', Math.round(z.len) + 'm', false);   // no post: the sign floats above the pad
   }
 
   // the surface line itself — bold, the ball rolls along here
@@ -231,7 +231,6 @@ function drawPad(el, col, fgDark, sgn) {
   }
   // sign: three rows — big +/−, the value, then the − / + buttons (own row so the value never covers them)
   const bw = 86, bh = 62, bbot = top - 12, BY = bbot - bh, BX = bx - bw / 2;
-  signPost(bx, bbot, top, col);
   panelShaded(BX, BY, bw, bh, 11, col);
   // Row 1 — a big + or −
   sx.fillStyle = fgDark; sx.textAlign = 'center'; sx.textBaseline = 'middle';

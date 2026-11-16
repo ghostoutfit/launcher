@@ -43,14 +43,14 @@ export function signPost(cx, topY, botY, hex) {
   sx.beginPath(); sx.arc(cx, botY, 3.6, 0, 7); sx.fillStyle = hex; sx.fill(); ink(2); sx.stroke();
 }
 
-// A floating display sign (flat outlined panel on a post) with a hand-lettered label + optional sub-line.
-export function drawPieceSign(cx, elTopY, label, hex, fg, sub) {
+// A floating display sign (flat outlined panel, on a post unless post = false) with a hand-lettered label + optional sub-line.
+export function drawPieceSign(cx, elTopY, label, hex, fg, sub, post = true) {
   sx.font = handFont(17, 700);
   const lines = String(label).split('\n');                  // '\n' in the label = a second line
   const tw = Math.max(...lines.map(l => sx.measureText(l).width));
   let sw = Math.max(54, tw + 26), sh = sub ? 42 : lines.length > 1 ? 48 : 30;
   const syBot = elTopY - 15, syTop = syBot - sh;
-  signPost(cx, syTop + sh, elTopY, hex);
+  if (post) signPost(cx, syTop + sh, elTopY, hex);
   panelShaded(cx - sw / 2, syTop, sw, sh, 10, hex);
   sx.fillStyle = fg; sx.textAlign = 'center'; sx.textBaseline = 'middle';
   sx.font = handFont(17, 700);
