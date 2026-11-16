@@ -131,7 +131,7 @@
     padding: 9px 16px; margin-bottom: 10px;
   }
   .ctrl { display: flex; flex-direction: column; gap: 4px; }
-  .ctrl label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .ctrl label { font-size: 11px; font-weight: 700; color: var(--muted); }
   .ctrl .row { display: flex; align-items: center; gap: 10px; }
   input[type=range] { width: 110px; accent-color: var(--accent); }
   .val { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 52px; white-space: nowrap; }
@@ -146,7 +146,7 @@
   }
   button:hover { border-color: var(--accent); }
   button.primary { background: var(--accent-fill); color: var(--on-accent); text-shadow: var(--on-accent-outline); font-weight: 800; border-color: #175a91; }
-  #launchBtn { background: #d6312a; color: #fff; border-color: #a31f19; }
+  #launchBtn { background: #24823a; color: #fff; border-color: #17602a; }   /* white text at 4.85:1 */
   #launchBtn:disabled { opacity: 0.5; }
   button:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
 
@@ -155,6 +155,8 @@
   .replay .rsym { font-size: 20px; line-height: 1; margin-top: -2px; }
 
   #modeTabs #themeToggle { border-left: 2px solid var(--line); font-size: 22px; padding: 11px 18px; }
+  :root:not([data-theme="dark"]) #modeTabs #themeToggle { background: #1d2a4a; }   /* night-sky navy so the yellow moon stands out on the cream */
+  :root:not([data-theme="dark"]) #modeTabs #themeToggle:hover { background: #2a3b63; }
 
   .toggle { display: inline-flex; border: 2px solid var(--line); border-radius: 11px; overflow: hidden; }
   .toggle button { border: none; border-radius: 0; background: transparent; padding: 7px 12px; color: var(--muted); }
@@ -201,7 +203,7 @@
 
   /* Puzzle menu */
   #puzzlePanel { margin-bottom: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
-  .pzLabel { font-size: 22px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .pzLabel { font-size: 22px; font-weight: 800; color: var(--muted); margin-bottom: 4px; }
   .pzRow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
   .pzBtn {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -252,7 +254,7 @@
   @media (max-width: 720px) { #stage { grid-template-columns: minmax(0, 1fr); } #graphCard, #sidebar { grid-column: 1; margin-top: 0; } #sidebar { flex-direction: row; flex-wrap: wrap; } #sidebar > .panel { flex: 1 1 240px; } }
 
   /* Palette */
-  .ptitle { font-size: 21px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .ptitle { font-size: 21px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
   .chip {
     display: flex; align-items: center; gap: 10px;
     padding: 6px 9px; margin-bottom: 6px;

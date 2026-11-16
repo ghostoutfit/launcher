@@ -47,7 +47,7 @@ export function applyTheme(mode) {
   for (const k in cssCache) delete cssCache[k];
   if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
-  themeBtn.textContent = mode === 'dark' ? '☀️' : '🌙';
+  themeBtn.textContent = mode === 'dark' ? '\u2600\uFE0F' : '\u{1F319}';
   drawScene(); drawGraph();
 }
 export let theme = 'light';
@@ -85,7 +85,7 @@ function showPuzzleGallery() {
     for (const P of list) {
       const cell = document.createElement('div'); cell.style.cssText = 'border:2px solid ' + getCss('--line') + ';border-radius:10px;padding:4px;background:' + getCss('--panel-2');
       const cv = document.createElement('canvas'); cv.width = 400; cv.height = 240; cv.style.cssText = 'width:100%;display:block';
-      const cap = document.createElement('div'); cap.textContent = P.id + (P.target ? '' : ' — no target yet'); cap.style.cssText = 'font-size:12px;font-weight:700;margin-top:2px';
+      const cap = document.createElement('div'); cap.textContent = P.id + (P.target ? '' : ' \u2014 no target yet'); cap.style.cssText = 'font-size:12px;font-weight:700;margin-top:2px';
       cell.append(cv, cap); grid.appendChild(cell);
       const c = cv.getContext('2d'), W = 400, H = 240, L = 34, R = 10, T = 10, B = 26;
       const yMax = P.metric === 'velocity' ? AXES.velocity.y : AXES.position.y, tMax = 5;
@@ -124,7 +124,7 @@ function showPuzzleGallery() {
       const row = (id, label, min, max, step, val, unit) => '<label style="display:flex;gap:8px;align-items:center">' + label +
         ' <input type="range" id="' + id + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '"><span id="' + id + 'V">' + val + '</span>' + unit + '</label>';
       const lw = document.getElementById('logoWrap'), lv = n => parseFloat(getComputedStyle(lw).getPropertyValue(n));
-      box.innerHTML = row('devFric', 'friction a', 0.5, 8, 0.1, FRICTION_DECEL.toFixed(1), ' m/s²')
+      box.innerHTML = row('devFric', 'friction a', 0.5, 8, 0.1, FRICTION_DECEL.toFixed(1), ' m/s\u00B2')
         + row('devLbs', 'logo ball size', 1, 30, 0.1, lv('--lbs'), ' %')
         + row('devLbx', 'logo ball x', -10, 110, 0.1, lv('--lbx'), ' %')
         + row('devLby', 'logo ball y', -10, 110, 0.1, lv('--lby'), ' %');

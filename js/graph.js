@@ -72,11 +72,18 @@ export function drawGraph() {
 
     // y-axis title
     gx.save(); gx.translate(14, (ty + by) / 2); gx.rotate(-Math.PI / 2);
-    gx.textAlign = 'center'; gx.textBaseline = 'bottom';
-    const title = metric.label + ' (' + metric.unit + ')' + (forcedGraph() ? '' : ' ▾');
-    gx.fillStyle = getCss('--muted'); gx.fillText(title, 0, 0);
-    const titleW = gx.measureText(title).width; gx.restore();
-    graphPanels[graphPanels.length - 1].titleHit = forcedGraph() ? null : { x0: 0, x1: 26, y0: (ty + by) / 2 - titleW / 2 - 4, y1: (ty + by) / 2 + titleW / 2 + 4 };
+    // (when the axis can be switched, a big drawn dropdown triangle follows the title — easy to hit)
+    gx.textAlign = 'left'; gx.textBaseline = 'bottom';
+    const title = metric.label + ' (' + metric.unit + ')', menu = !forcedGraph();
+    const TRI_W = 16, TRI_H = 11, GAP = 6;
+    const textW = gx.measureText(title).width, titleW = textW + (menu ? GAP + TRI_W : 0);
+    gx.fillStyle = getCss('--muted'); gx.fillText(title, -titleW / 2, 0);
+    if (menu) {
+      const u0 = -titleW / 2 + textW + GAP, vTop = -6.5 - TRI_H / 2;   // centred on the text's height; points toward the plot
+      gx.beginPath(); gx.moveTo(u0, vTop); gx.lineTo(u0 + TRI_W, vTop); gx.lineTo(u0 + TRI_W / 2, vTop + TRI_H); gx.closePath(); gx.fill();
+    }
+    gx.restore();
+    graphPanels[graphPanels.length - 1].titleHit = menu ? { x0: 0, x1: 30, y0: (ty + by) / 2 - titleW / 2 - 8, y1: (ty + by) / 2 + titleW / 2 + 8 } : null;
 
     // traces (clipped to the plot area). During replay the full completed curve
     // stays on screen (lastTrace) instead of rebuilding as the ball re-runs.
@@ -217,6 +224,12 @@ function drawGraphPoint() {
 }
 // Menu opened by clicking an axis title: pick which quantity that axis graphs.
 const axisMenu = document.getElementById('axisMenu');
+// pointer cursor over a switchable axis title
+graphC.addEventListener('pointermove', e => {
+  if (annotating) return;
+  const r = graphC.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  graphC.style.cursor = graphPanels.some(p => p.titleHit && mx >= p.titleHit.x0 && mx <= p.titleHit.x1 && my >= p.titleHit.y0 && my <= p.titleHit.y1) ? 'pointer' : '';
+});
 function openAxisMenu(panel, cx, cy) {
   const isPos = panel.unit === 'm';
   const opts = isPos ? POS_SPECS : VEL_SPECS, cur = isPos ? posMode : velMode;

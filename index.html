@@ -15,26 +15,26 @@
   <div id="tabRow">
   <div id="logoWrap"><img id="logoImg" src="harmony-ramp.png" alt="Harmony"><canvas id="logoBall" width="100" height="100"></canvas></div>
   <div id="brand">LAUNCHER</div>
-  <button id="pzBack" hidden data-tip="Return to the list of puzzles.">Back to all puzzles</button>
-  <div id="modeTabs" class="toggle" data-tip="Sandbox: build any track. Puzzle: match the graph. Create: turn a run into a puzzle to share, or load one.">
+  <button id="pzBack" hidden data-tip="backToPuzzles">Back to all puzzles</button>
+  <div id="modeTabs" class="toggle" data-tip="modeTabs">
     <button data-mode="sandbox" class="on">Sandbox</button>
     <button data-mode="puzzle">Puzzle</button>
     <button data-mode="create">Create</button>
-    <button id="themeToggle" aria-label="Toggle light/dark" data-tip="Switch between day and night.">🌙</button>
+    <button id="themeToggle" aria-label="Toggle light/dark" data-tip="themeToggle">&#x1F319;</button>
   </div>
   </div>
 
   <div id="stage">
     <div id="main">
       <div id="controls" class="panel">
-        <div class="ctrl" data-tip="Where the marble starts (0–15 m).">
+        <div class="ctrl" data-tip="launchPosition">
           <label>Launch position</label>
           <div class="row">
             <input type="range" id="pos" min="0" max="15" step="1" value="5" autocomplete="off">
             <span class="val" id="posVal">5 m</span>
           </div>
         </div>
-        <div class="ctrl" data-tip="How fast the marble starts, going right (0–10 m/s).">
+        <div class="ctrl" data-tip="launchSpeed">
           <label>Launch speed</label>
           <div class="row">
             <input type="range" id="speed" min="0" max="10" step="1" value="2" autocomplete="off">
@@ -43,11 +43,11 @@
         </div>
         <div class="spacer"></div>
         <div class="action-group">
-          <button id="launchBtn" class="primary" data-tip="Release the marble. The run records for 5 s, or until the marble leaves the screen.">Launch</button>
-          <button id="replayFastBtn" class="replay" data-tip="Replay the last run at the same speed." disabled aria-label="Replay"><span class="rsym">&#8634;</span></button>
-          <button id="resetBtn" data-tip="Clear the run and graph and put the marble back at its start.">Reset</button>
-          <button id="clearBtn" data-tip="Remove every track piece.">Clear</button>
-          <button id="motionMapBtn" aria-pressed="false" data-tip="Draw a dot on the world where the marble is at each whole second (0 s, 1 s, 2 s…).">Position Map</button>
+          <button id="launchBtn" class="primary" data-tip="launch">Launch</button>
+          <button id="replayFastBtn" class="replay" data-tip="replay" disabled aria-label="Replay"><span class="rsym">&#8634;</span></button>
+          <button id="resetBtn" data-tip="reset">Reset</button>
+          <button id="clearBtn" data-tip="clear">Clear</button>
+          <button id="motionMapBtn" aria-pressed="false" data-tip="positionMap">Position Map</button>
         </div>
       </div>
 
@@ -63,15 +63,15 @@
             <label><input type="radio" name="cpMetric" value="position" checked> Position</label>
             <label><input type="radio" name="cpMetric" value="distance"> Distance</label>
             <label><input type="radio" name="cpMetric" value="velocity"> Velocity</label>
-            <button id="cpMake" data-tip="Turn the last run's graph into a shareable puzzle code.">Make puzzle</button>
+            <button id="cpMake" data-tip="makePuzzle">Make puzzle</button>
           </div>
         </div>
-        <div class="pzLabel" style="margin-top:10px">Puzzle code — copy to share, or paste one here to play it</div>
+        <div class="pzLabel" style="margin-top:10px">Puzzle code &#x2014; copy to share, or paste one here to play it</div>
         <textarea id="cpJson" rows="3" spellcheck="false" placeholder='Paste a puzzle code or JSON here, then press "Load &amp; play"'></textarea>
         <div class="cpRow">
-          <button id="cpCopy" data-tip="Copy the puzzle code to the clipboard.">Copy</button>
-          <button id="cpLoad" data-tip="Clear the track and play this puzzle yourself.">Load &amp; play</button>
-          <button id="cpBack" data-tip="Leave the puzzle and return to your own track." hidden>Back to building</button>
+          <button id="cpCopy" data-tip="copyCode">Copy</button>
+          <button id="cpLoad" data-tip="loadAndPlay">Load &amp; play</button>
+          <button id="cpBack" data-tip="backToBuilding" hidden>Back to building</button>
           <span id="cpMsg"></span>
         </div>
       </div>
@@ -92,18 +92,18 @@
       </div>
 
       <div id="graphCard" class="panel">
-        <div id="graphTabs" data-tip="Choose which graph to show.">
-          <button data-g="position" class="active">Position–time</button>
-          <button data-g="velocity">Velocity–time</button>
+        <div id="graphTabs" data-tip="graphTabs">
+          <button data-g="position" class="active">Position&#x2013;time</button>
+          <button data-g="velocity">Velocity&#x2013;time</button>
           <button data-g="both">Both Position and Velocity</button>
-          <div id="annotBtns" data-tip="" hidden><button id="annotReplay" class="primary">▶ Replay</button><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div>
+          <div id="annotBtns" data-tip="" hidden><button id="annotReplay" class="primary">&#x25B6; Replay</button><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div>
         </div>
         <div id="puzzleStatus" hidden></div>
         <div id="annotBar" hidden><div id="annotText">Draw a circle where you need to focus. Click time axis and drag up to annotate differences between graphs.</div></div>
         <div id="graphRow">
           <div id="graphPlot">
             <button id="clearPoints" hidden>Clear All Points</button>
-            <canvas id="graph" data-tip="Motion graph: each marble's position or velocity against time."></canvas>
+            <canvas id="graph" data-tip="graph"></canvas>
           </div>
         </div>
       </div>
@@ -113,23 +113,23 @@
     <div id="sidebar">
       <div id="palette" class="panel">
         <div class="ptitle">Track pieces</div>
-        <div class="chip boost" data-piece="boost">
-          <div class="ico">±</div>
+        <div class="chip boost" data-piece="boost" data-tip="chip-boost">
+          <div class="ico">&#xB1;</div>
           <div class="ctxt"><b>Speed<br>change</b></div>
         </div>
-        <div class="chip target" data-piece="target">
+        <div class="chip target" data-piece="target" data-tip="chip-target">
           <div class="ico"><svg width="28" height="28" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#fff" stroke="#1a2230" stroke-width="1.8"/><path d="M10 10V4.5M10 10l3.5 1" fill="none" stroke="#1a2230" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           <div class="ctxt"><b>Target<br>speed</b></div>
         </div>
-        <div class="chip friction" data-piece="friction">
-          <div class="ico">▦</div>
+        <div class="chip friction" data-piece="friction" data-tip="chip-friction">
+          <div class="ico">&#x25A6;</div>
           <div class="ctxt"><b>Friction<br>pad</b></div>
         </div>
-        <div class="chip wall" data-piece="wall">
-          <div class="ico">█</div>
+        <div class="chip wall" data-piece="wall" data-tip="chip-wall">
+          <div class="ico">&#x2588;</div>
           <div class="ctxt"><b>Wall /<br>Bounce</b></div>
         </div>
-        <div class="chip ball2" data-piece="ball2">
+        <div class="chip ball2" data-piece="ball2" data-tip="chip-ball2">
           <div class="ico"><canvas id="ball2Icon" width="56" height="56"></canvas></div>
           <div class="ctxt"><b>Marble 2<br>(M2)</b></div>
         </div>

@@ -7,6 +7,7 @@ import { getCss } from './draw.js';
 import { drawScene } from './scene.js';
 import { replaying, running, worldChanged, x } from './sim.js';
 import { boosts, fricZones, mode, removePiece, secondBalls, selected, setSelected, targets, walls } from './state.js';
+import { tipText } from './tips.js';
 
 let pieceId = 1;
 let drag = null;             // { kind:'new'|'armed'|'move'|'resize'|'ball', piece, el?, ghost? } — 'armed': a chip was clicked, the next click on the track places it
@@ -97,7 +98,7 @@ function makeGhost(piece) {
   if (piece === 'boost') { g.textContent = '+' + BOOST_DV + ' m/s'; g.style.background = getCss('--boost'); g.style.color = '#063'; }
   else if (piece === 'wall') { g.textContent = 'wall'; g.style.background = getCss('--wall'); g.style.color = '#1c242e'; }
   else if (piece === 'target') { g.textContent = '6 m/s'; g.style.background = getCss('--target'); g.style.color = '#231141'; }
-  else if (piece === 'ball2') { g.textContent = '● marble'; g.style.background = getCss('--ball2'); g.style.color = '#0a1f3a'; }
+  else if (piece === 'ball2') { g.textContent = '\u25CF marble'; g.style.background = getCss('--ball2'); g.style.color = '#0a1f3a'; }
   else { g.textContent = 'friction 2 m'; g.style.background = getCss('--fric'); g.style.color = '#3a1c08'; }
   document.body.appendChild(g); return g;
 }
@@ -247,25 +248,17 @@ sceneC.addEventListener('pointerdown', e => {
   drag = { kind, piece: hit.type, el: hit.el, edge: hit.edge, downX: e.clientX, downY: e.clientY, moved: false };
 });
 
-// ─── Hover tooltips: one brief line per element ───────────────────────────────
-const TIPS = {
-  boost:    'Speed change: adds its value to the marble\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
-  target:   'Target speed: sets the marble to the speed shown (use – to go negative, back toward the start). A timer holds the marble until that time.',
-  friction: 'Friction pad: slows the marble while it\'s on it. Drag its ends to resize.',
-  wall:     'Wall: stops the marble. Click it to make it bouncy.',
-  wallBouncy: 'Bouncy wall: reflects the marble at the same speed. Click it to make it a plain wall.',
-  ball2:    'Marble 2 (M2): waits at rest. When hit, it takes the first marble\'s speed and the first stops.',
-};
+// ─── Hover tooltips (the text itself is all in tips.js) ──────────────────────
 const tipEl = document.getElementById('tip');
-function showTip(text, cx, cy) {
+function showTip(key, cx, cy) {
+  const text = tipText(key);
   if (!text) { tipEl.style.display = 'none'; return; }
   tipEl.textContent = text; tipEl.style.display = 'block';
   const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
   tipEl.style.left = Math.max(6, Math.min(innerWidth - w - 6, cx + 14)) + 'px';
   tipEl.style.top = (cy + 18 + h > innerHeight ? cy - h - 10 : cy + 18) + 'px';
 }
-// palette chips get their text from TIPS; any element with data-tip shows it on hover
-document.querySelectorAll('.chip').forEach(c => { c.dataset.tip = TIPS[c.dataset.piece] + ' Drag it onto the track, or click it and then click the track.'; });
+// any element with data-tip="<key>" shows that tip on hover
 document.addEventListener('pointermove', e => {
   if (drag || e.target === sceneC) return;
   const el = e.target.closest && e.target.closest('[data-tip]');
@@ -278,10 +271,11 @@ sceneC.addEventListener('pointerleave', () => showTip(null));
 sceneC.addEventListener('pointermove', e => {
   if (drag) { showTip(null); if (drag.kind === 'armed') sceneC.style.cursor = 'copy'; return; }
   const r = sceneC.getBoundingClientRect();
-  if (overDelBtn(e.clientX - r.left, e.clientY - r.top)) { sceneC.style.cursor = 'pointer'; showTip('Delete this piece (or press Backspace)', e.clientX, e.clientY); return; }
+  if (overDelBtn(e.clientX - r.left, e.clientY - r.top)) { sceneC.style.cursor = 'pointer'; showTip('deletePiece', e.clientX, e.clientY); return; }
   const hit = hitPiece(e.clientX - r.left, e.clientY - r.top);
-  sceneC.style.cursor = !hit ? (overStartBall(e.clientX - r.left, e.clientY - r.top) ? 'grab' : 'default') : (hit.type === 'friction' && hit.edge) ? 'ew-resize' : 'grab';
-  showTip(hit ? TIPS[hit.type === 'wall' && hit.el.bouncy ? 'wallBouncy' : hit.type] : null, e.clientX, e.clientY);
+  const onButton = hitTargetControl(e.clientX - r.left, e.clientY - r.top) || hitPadControl(e.clientX - r.left, e.clientY - r.top);
+  sceneC.style.cursor = onButton ? 'pointer' : !hit ? (overStartBall(e.clientX - r.left, e.clientY - r.top) ? 'grab' : 'default') : (hit.type === 'friction' && hit.edge) ? 'ew-resize' : 'grab';
+  showTip(hit ? (hit.type === 'wall' && hit.el.bouncy ? 'wallBouncy' : hit.type) : null, e.clientX, e.clientY);
 });
 
 window.addEventListener('pointermove', e => {

@@ -58,7 +58,7 @@ export function interpPoly(pts, tt) {
   }
   return pts[pts.length - 1].x;
 }
-function stars(n) { return '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
+function stars(n) { return '\u2605\u2605\u2605'.slice(0, n) + '\u2606\u2606\u2606'.slice(0, 3 - n); }
 
 export function renderPuzzles() {
   for (const [key, rowId] of [['distance', 'pzRow1'], ['position', 'pzRow2'], ['velocity', 'pzRow3']]) {
@@ -70,8 +70,8 @@ export function renderPuzzles() {
         + (currentPuzzle && currentPuzzle.id === p.id ? ' active' : '');
       btn.disabled = !unlocked;
       btn.innerHTML = unlocked
-        ? '<span class="pzMark">' + (solved ? '✓' : '') + '</span><span class="pzStars">' + stars(p.stars) + '</span>'
-        : '<span class="pzLock">🔒</span>';
+        ? '<span class="pzMark">' + (solved ? '\u2713' : '') + '</span><span class="pzStars">' + stars(p.stars) + '</span>'
+        : '<span class="pzLock">\u{1F512}</span>';
       btn.addEventListener('click', () => selectPuzzle(p));
       row.appendChild(btn);
     });
@@ -84,13 +84,13 @@ export function updatePuzzleStatus() {
   if (!P) { el.hidden = true; return; }
   el.hidden = false;
   if (P === testPuzzle) {
-    el.innerHTML = '<span class="psGoal">Loaded puzzle — match the dashed line.</span>' + (testSolved ? '<span class="psSolved">✓ Solved</span>' : '');
+    el.innerHTML = '<span class="psGoal">Loaded puzzle \u2014 match the dashed line.</span>' + (testSolved ? '<span class="psSolved">\u2713 Solved</span>' : '');
     return;
   }
   if (P.id === 'shared') { el.hidden = true; return; }                                   // linked puzzle: no stars, no Solved
   const solved = solvedPuzzles.has(P.id), playable = !!P.target;
-  el.innerHTML = (playable ? '' : '<span class="psGoal">Coming soon — not built yet.</span>')
-    + (solved ? '<span class="psSolved">✓ Solved</span>' : '');
+  el.innerHTML = (playable ? '' : '<span class="psGoal">Coming soon \u2014 not built yet.</span>')
+    + (solved ? '<span class="psSolved">\u2713 Solved</span>' : '');
 }
 
 // Puzzle tab: with no puzzle chosen only the menu shows; choosing one reveals the world + graph.

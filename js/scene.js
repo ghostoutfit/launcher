@@ -72,7 +72,7 @@ export function drawScene() {
   for (const z of fricZones) { posLabel(z.x, mToPx(z.x)); posLabel(z.x + z.len, mToPx(z.x + z.len)); }
 
   // speed change pads: green when adding speed (+dv), red when removing it (−dv)
-  for (const b of boosts) drawPad(b, getCss(b.dv < 0 ? '--cut' : '--boost'), b.dv < 0 ? '#4a0a0a' : '#06381f', b.dv < 0 ? '−' : '+');
+  for (const b of boosts) drawPad(b, getCss(b.dv < 0 ? '--cut' : '--boost'), b.dv < 0 ? '#4a0a0a' : '#06381f', b.dv < 0 ? '\u2212' : '+');
 
   // target-speed launchers — draw the sign here; the tube is drawn after the balls
   const tCol = getCss('--target');
@@ -90,7 +90,7 @@ export function drawScene() {
 
     // Row B — speed stepper (m/s next to the number)
     const sy = Y + 19;
-    const minus = miniBtn(X + 14, sy, 9, '–', tCol, INK);
+    const minus = miniBtn(X + 14, sy, 9, '\u2013', tCol, INK);
     const plus  = miniBtn(X + sw - 14, sy, 9, '+', tCol, INK);
     sx.fillStyle = '#fff'; sx.textBaseline = 'middle';
     sx.font = handFont(20, 800); const nw = sx.measureText('' + g.mag).width;
@@ -107,7 +107,7 @@ export function drawScene() {
       drawClock(gx2, cy, 8, lighten(tCol, 0.5));
       tToggle = { x: gx2 - 12, y: cy - 12, w: 24, h: 24 };
     } else {
-      tMinus = miniBtn(X + 14, cy, 7, '–', darken(tCol, 0.05), '#fff');
+      tMinus = miniBtn(X + 14, cy, 7, '\u2013', darken(tCol, 0.05), '#fff');
       tPlus  = miniBtn(X + sw - 14, cy, 7, '+', darken(tCol, 0.05), '#fff');
       // clock icon stays beside the whole-second value; tap the pair to clear the timer
       const ts = '@ ' + Math.round(g.time) + 's';
@@ -224,9 +224,10 @@ function drawPad(el, col, fgDark, sgn) {
   const pxc = bx + jx, pyt = top + jy;
   panelShaded(pxc - padW / 2, pyt, padW, padH, 6, col);
   ink(2.6);
+  const d = el.dv < 0 ? -1 : 1;                         // chevrons point the way the change pushes
   for (let k = 0; k < 3; k++) {
     const cxp = pxc - 11 + k * 10;
-    sx.beginPath(); sx.moveTo(cxp - 4, pyt + 4); sx.lineTo(cxp + 4, pyt + padH / 2); sx.lineTo(cxp - 4, pyt + padH - 4); sx.stroke();
+    sx.beginPath(); sx.moveTo(cxp - 4 * d, pyt + 4); sx.lineTo(cxp + 4 * d, pyt + padH / 2); sx.lineTo(cxp - 4 * d, pyt + padH - 4); sx.stroke();
   }
   // sign: three rows — big +/−, the value, then the − / + buttons (own row so the value never covers them)
   const bw = 86, bh = 62, bbot = top - 12, BY = bbot - bh, BX = bx - bw / 2;
@@ -236,10 +237,10 @@ function drawPad(el, col, fgDark, sgn) {
   sx.fillStyle = fgDark; sx.textAlign = 'center'; sx.textBaseline = 'middle';
   sx.font = handFont(24, 800); sx.fillText(sgn, bx, BY + 13);
   // Row 2 — value m/s;  Row 3 — (− button) … (+ button)
-  const minus = miniBtn(BX + 13, BY + 49, 9, '–', col, INK);
+  const minus = miniBtn(BX + 13, BY + 49, 9, '\u2013', col, INK);
   const plus  = miniBtn(BX + bw - 13, BY + 49, 9, '+', col, INK);
   sx.fillStyle = fgDark;
-  const dvTxt = (el.dv < 0 ? '−' : '+') + Math.abs(el.dv);
+  const dvTxt = (el.dv < 0 ? '\u2212' : '+') + Math.abs(el.dv);
   sx.font = handFont(15, 800); const nw = sx.measureText(dvTxt).width;
   sx.font = handFont(10, 700); const uw = sx.measureText(' m/s').width;
   const gx0 = bx - (nw + uw) / 2; sx.textAlign = 'left';

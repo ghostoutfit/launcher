@@ -12,7 +12,7 @@ const METRIC_KEY = { position: 'x', distance: 'd', velocity: 'v' };   // graph t
 export const cpJson = document.getElementById('cpJson'), cpMsg = document.getElementById('cpMsg');
 export function cpSay(text, cls) { cpMsg.textContent = text; cpMsg.className = cls || ''; }
 function makePuzzleJson() {
-  if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first — the puzzle is made from its graph.', 'err'); return; }
+  if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first \u2014 the puzzle is made from its graph.', 'err'); return; }
   const metric = document.querySelector('input[name=cpMetric]:checked').value, key = METRIC_KEY[metric];
   const samples = lastTrace[0].samples, T = AXES.position.t, pts = [];
   for (let i = 0; i <= T * 4; i++) pts.push([i / 4, +clamp(sampleAt(samples, key, i / 4), key === 'v' ? -1e9 : 0, key === 'v' ? 1e9 : Math.floor(AXES.position.y)).toFixed(2)]);
@@ -84,7 +84,7 @@ document.getElementById('cpCopy').addEventListener('click', async () => {
   cpSay('Copied.', 'ok');
 });
 document.getElementById('cpLoad').addEventListener('click', () => {
-  try { startTest(parsePuzzleJson(cpJson.value)); cpSay('Puzzle loaded — build a track that matches the dashed line.', 'ok'); }
+  try { startTest(parsePuzzleJson(cpJson.value)); cpSay('Puzzle loaded \u2014 build a track that matches the dashed line.', 'ok'); }
   catch (e) { cpSay(e.message, 'err'); }
 });
 document.getElementById('cpBack').addEventListener('click', () => { exitTest(); cpSay('Back to your own track.', 'ok'); });

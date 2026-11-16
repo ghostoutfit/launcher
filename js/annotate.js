@@ -97,11 +97,11 @@ function idealX(tg, tt) {
 function startAnnotPlay() {
   if (!annotating || !balls[0] || balls[0].samples.length < 2) return;
   annotPlay = { t: annotSpan()[0], hold: 0, blink: 0, mark: null, fired: new Set(), last: performance.now(), restoreX: balls[0].x };
-  annotReplayBtn.textContent = '■ Stop';
+  annotReplayBtn.textContent = '\u25A0 Stop';
 }
 function stopAnnotPlay(redraw) {
   if (!annotPlay) return;
-  balls[0].x = annotPlay.restoreX; annotPlay = null; annotReplayBtn.textContent = '▶ Replay';
+  balls[0].x = annotPlay.restoreX; annotPlay = null; annotReplayBtn.textContent = '\u25B6 Replay';
   if (redraw) { drawScene(); drawGraph(); }
 }
 export function tickAnnotPlay(now) {

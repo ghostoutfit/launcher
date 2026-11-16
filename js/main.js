@@ -3,6 +3,7 @@
 // The modules, roughly bottom-up (each only imports from the ones above it,
 // apart from the few back-edges noted):
 //   constants.js  track length, run time cap, puzzle tolerance — no imports
+//   tips.js       the text of every hover tooltip — no imports
 //   state.js      what mode we're in, which puzzle, the placed track pieces
 //   dom.js        canvas handles + metres-to-pixels geometry
 //   draw.js       theme colours and the hand-drawn cartoon helpers
@@ -10,7 +11,7 @@
 //   scene.js      painting the world canvas
 //   graph.js      painting the graph canvas, pinned points, the axis menu
 //   annotate.js   the circle, the time lines and the replay loop
-//   input.js      drag & drop, tooltips, delete confirmation
+//   input.js      placing / moving / selecting / deleting pieces, keyboard, showing tooltips
 //   puzzles.js    the three puzzle rows: data, menu, grading, result pop-ups
 //   create.js     turning a run into a puzzle code, and playing pasted ones
 //   ui.js         control wiring, theme toggle, logo, dev panel
@@ -29,8 +30,8 @@ import { drawScene } from './scene.js';
 import { frame } from './sim.js';
 import { applyTheme, drawCartoonBall, theme } from './ui.js';
 
-// Every other module only defines things; all the start-up work happens here, in
-// order, so nothing runs before the module it depends on has finished loading.
+// Modules set up their own listeners as they load; everything that must happen in a
+// particular order at start-up happens here, after every module has finished loading.
 applyTheme(theme);
 drawCartoonBall(document.getElementById('logoBall'), getCss('--ball'));
 drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // palette icon = the second ball as it appears
