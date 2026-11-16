@@ -303,9 +303,12 @@ A puzzle code is `#` followed by URL-encoded JSON:
 - `metric` is `"position"`, `"distance"` or `"speed"`, and it decides which
   graph the puzzle opens in. (Older codes that say `"velocity"` load as speed
   puzzles.)
-- `target` is a list of `[time, value]` points, one every 0.25 s. On the speed
-  graph an instant jump is two points at the same time (before and after), drawn
-  as a vertical step; the grader also checks the run 0.1 s either side of it.
+- `target` is a list of `[time, value]` points, one every 0.25 s, plus the
+  moments the motion changes all at once (a speed change, a wall, a bounce), so
+  the target doesn't cut corners between 0.25 s points. On the position and
+  distance graphs that's one extra point, the corner. On the speed graph an
+  instant jump is two points at the same time (before and after), drawn as a
+  vertical step; the grader also checks the run 0.1 s either side of it.
 
 To play one, add it to the page address after the `#`, or paste it into the
 Create tab's box.

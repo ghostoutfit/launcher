@@ -12,32 +12,39 @@ const METRIC_KEY = { position: 'x', distance: 'd', speed: 'sp' };   // graph typ
 const OLD_METRICS = { velocity: 'speed' };   // codes made before speed replaced velocity still load (their targets were never negative)
 export const cpJson = document.getElementById('cpJson'), cpMsg = document.getElementById('cpMsg');
 export function cpSay(text, cls) { cpMsg.textContent = text; cpMsg.className = cls || ''; }
-// A run's graph as puzzle target points: one every 0.25 s, plus, on the speed graph, each
-// instant jump (a speed change, a wall, a collision) as two points at the same time, before
-// and after, so the target shows it as a vertical step instead of a 0.25 s ramp. The
-// 0.25 s points inside a jump's frame are left out. A bounce (speed dips to 0 and straight
-// back) isn't a jump.
+// A run's graph as puzzle target points: one every 0.25 s, plus the moments the motion
+// changes all at once (a speed change, a wall, a bounce, a collision), so the target follows
+// the run there instead of cutting a corner between two 0.25 s points:
+//  - on the speed graph, each instant jump is two points at the same time, before and after,
+//    drawn as a vertical step (a bounce, where speed dips to 0 and straight back, isn't a jump);
+//  - on the position and distance graphs, each such moment is one point: the corner.
+// The 0.25 s points inside those frames are left out.
 const JUMP_MIN = 0.5;   // m/s in one frame: far more than friction ever changes speed
 export function targetFromRun(samples, key) {
   const T = AXES.position.t, max = key === 'sp' ? 1e9 : Math.floor(AXES.position.y);
   const val = v => +clamp(v, 0, max).toFixed(2), s = samples.filter(q => q.t <= T + 1e-9);
-  const jumps = [];   // { t0, t1, from, to }: frames where the value leapt (neighbouring leaps merged)
-  if (key === 'sp') for (let i = 1; i < s.length; i++) {
-    if (Math.abs(s[i].sp - s[i - 1].sp) <= JUMP_MIN) continue;
-    const last = jumps[jumps.length - 1];
-    if (last && last.t1 === s[i - 1].t) { last.t1 = s[i].t; last.to = s[i].sp; }
-    else jumps.push({ t0: s[i - 1].t, t1: s[i].t, from: s[i - 1].sp, to: s[i].sp });
+  const by = key === 'sp' ? 'sp' : 'v';   // what leaps: speed for the speed graph, velocity (bounces too) for the others
+  const leaps = [];   // { a, b }: sample indexes around frames where it leapt (neighbouring leaps merged)
+  for (let i = 1; i < s.length; i++) {
+    if (Math.abs(s[i][by] - s[i - 1][by]) <= JUMP_MIN) continue;
+    const last = leaps[leaps.length - 1];
+    if (last && last.b === i - 1) last.b = i; else leaps.push({ a: i - 1, b: i });
   }
-  const steps = [];
-  for (const j of jumps) {
-    if (Math.abs(j.to - j.from) <= JUMP_MIN) continue;   // a bounce: back where it started
-    const tj = +((j.t0 + j.t1) / 2).toFixed(2);
-    steps.push([tj, val(j.from)], [tj, val(j.to)]);
+  const extra = [];
+  for (const { a, b } of leaps) {
+    if (key === 'sp') {
+      if (Math.abs(s[b].sp - s[a].sp) <= JUMP_MIN) continue;   // a bounce: back where it started
+      const tj = +((s[a].t + s[b].t) / 2).toFixed(2);
+      extra.push([tj, val(s[a].sp)], [tj, val(s[b].sp)]);
+    } else {
+      let c = a; for (let i = a; i <= b; i++) if (Math.abs(s[i].v) < Math.abs(s[c].v)) c = i;   // the corner: where it was slowest (a bounce's turning point, a wall)
+      extra.push([+s[c].t.toFixed(2), val(s[c][key])]);
+    }
   }
-  const skip = tt => jumps.some(j => tt > j.t0 && tt < j.t1) || steps.some(p => p[0] === tt);
+  const skip = tt => leaps.some(({ a, b }) => tt > s[a].t && tt < s[b].t) || extra.some(p => Math.abs(p[0] - tt) < 0.015);
   const pts = [];
   for (let i = 0; i <= T * 4; i++) if (!skip(i / 4)) pts.push([i / 4, val(sampleAt(s, key, i / 4))]);
-  return [...pts, ...steps].sort((p, q) => p[0] - q[0]);   // (a stable sort keeps each jump's before-point first)
+  return [...pts, ...extra].sort((p, q) => p[0] - q[0]);   // (a stable sort keeps each jump's before-point first)
 }
 function makePuzzleJson() {
   if (!lastTrace || !lastTrace[0] || lastTrace[0].samples.length < 2) { cpSay('Launch a run first \u2014 the puzzle is made from its graph.', 'err'); return; }
