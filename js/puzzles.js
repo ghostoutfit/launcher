@@ -3,7 +3,7 @@
 import { endAnnotate, startAnnotate } from './annotate.js';
 import { AXES, PUZZLE_TOL } from './constants.js';
 import { exitTest } from './create.js';
-import { drawGraph, graphTypeFor } from './graph.js';
+import { clearGraphPoints, drawGraph, graphTypeFor } from './graph.js';
 import { refreshBall2Chip } from './input.js';
 import { balls, resetRun, running, sampleAt } from './sim.js';
 import { activePuzzle, clearPieces, currentPuzzle, graphType, mode, puzzleGraded, setCurrentPuzzle, setGraphType, setModeValue, setPuzzleGraded, setTestSolved, testPuzzle, testSolved } from './state.js';
@@ -30,12 +30,12 @@ export const PUZZLES = {
   position: [
     { id: 'pos6', metric: 'position', stars: 2,   // up to 20 m at 2.5 s and back down to 0 (ping-pong)
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 0.25, x: 2 }, { t: 0.5, x: 4 }, { t: 0.75, x: 6 }, { t: 1, x: 8 }, { t: 1.25, x: 10 }, { t: 1.5, x: 12 }, { t: 1.75, x: 14 }, { t: 2, x: 16 }, { t: 2.25, x: 18 }, { t: 2.5, x: 19.99 }, { t: 2.75, x: 18.02 }, { t: 3, x: 16.02 }, { t: 3.25, x: 14.02 }, { t: 3.5, x: 12.02 }, { t: 3.75, x: 10.02 }, { t: 4, x: 8.02 }, { t: 4.25, x: 6.02 }, { t: 4.5, x: 4.02 }, { t: 4.75, x: 2.02 }, { t: 5, x: 0.02 }] } },
-    { id: 'pos7', metric: 'position', stars: 3,
-      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 1 }, { t: 3, x: 7 }, { t: 5, x: 1 }] } },
-    { id: 'pos8', metric: 'position', stars: 3,   // 2 m/s to 4 m, a 10 m/s burst to 14 m at 3 s, then 2 m/s to 18 m
-      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 0 }, { t: 0.25, x: 0.5 }, { t: 0.5, x: 1 }, { t: 0.75, x: 1.5 }, { t: 1, x: 2 }, { t: 1.25, x: 2.5 }, { t: 1.5, x: 3 }, { t: 1.75, x: 3.5 }, { t: 2, x: 4 }, { t: 2.25, x: 6.5 }, { t: 2.5, x: 9 }, { t: 2.75, x: 11.5 }, { t: 3, x: 14 }, { t: 3.25, x: 14.5 }, { t: 3.5, x: 15 }, { t: 3.75, x: 15.5 }, { t: 4, x: 16 }, { t: 4.25, x: 16.5 }, { t: 4.5, x: 17 }, { t: 4.75, x: 17.5 }, { t: 5, x: 18 }] } },
-    { id: 'pos9', metric: 'position', stars: 3,   // starts at 10 m at 5 m/s and bounces between walls: turns at 15 m (1 s), 5.2 m (2.96 s) and 15 m (4.92 s)
+    { id: 'pos7', metric: 'position', stars: 3,   // starts at 10 m at 5 m/s and bounces between walls: turns at 15 m (1 s), 5.2 m (2.96 s) and 15 m (4.92 s)
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 10 }, { t: 0.25, x: 11.25 }, { t: 0.5, x: 12.5 }, { t: 0.75, x: 13.75 }, { t: 1, x: 15 }, { t: 1.25, x: 13.75 }, { t: 1.5, x: 12.5 }, { t: 1.75, x: 11.25 }, { t: 2, x: 10 }, { t: 2.25, x: 8.75 }, { t: 2.5, x: 7.5 }, { t: 2.75, x: 6.25 }, { t: 2.96, x: 5.2 }, { t: 3, x: 5.4 }, { t: 3.25, x: 6.65 }, { t: 3.5, x: 7.9 }, { t: 3.75, x: 9.15 }, { t: 4, x: 10.4 }, { t: 4.25, x: 11.65 }, { t: 4.5, x: 12.9 }, { t: 4.75, x: 14.15 }, { t: 4.92, x: 15 }, { t: 5, x: 14.6 }] } },
+    { id: 'pos8', metric: 'position', stars: 3,   // 10 m at 6 m/s, off a wall at 16 m (1 s), back at 6 m/s, then slowing from 10 m to a stop at 1 m
+      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 10 }, { t: 0.25, x: 11.5 }, { t: 0.5, x: 13 }, { t: 0.75, x: 14.5 }, { t: 1, x: 16 }, { t: 1.25, x: 14.51 }, { t: 1.5, x: 13.01 }, { t: 1.75, x: 11.51 }, { t: 2, x: 10.01 }, { t: 2.25, x: 8.57 }, { t: 2.5, x: 7.26 }, { t: 2.75, x: 6.07 }, { t: 3, x: 5.01 }, { t: 3.25, x: 4.07 }, { t: 3.5, x: 3.26 }, { t: 3.75, x: 2.57 }, { t: 4, x: 2.01 }, { t: 4.25, x: 1.57 }, { t: 4.5, x: 1.26 }, { t: 4.75, x: 1.07 }, { t: 5, x: 1.01 }] } },
+    { id: 'pos9', metric: 'position', stars: 3,   // from 5 m out to 15 m at 5 m/s (2 s), then back at 1 m/s to 12 m
+      target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 6.25 }, { t: 0.5, x: 7.5 }, { t: 0.75, x: 8.75 }, { t: 1, x: 10 }, { t: 1.25, x: 11.25 }, { t: 1.5, x: 12.5 }, { t: 1.75, x: 13.75 }, { t: 2, x: 15 }, { t: 2.25, x: 14.75 }, { t: 2.5, x: 14.5 }, { t: 2.75, x: 14.25 }, { t: 3, x: 14 }, { t: 3.25, x: 13.75 }, { t: 3.5, x: 13.5 }, { t: 3.75, x: 13.25 }, { t: 4, x: 13 }, { t: 4.25, x: 12.75 }, { t: 4.5, x: 12.5 }, { t: 4.75, x: 12.25 }, { t: 5, x: 12 }] } },
     { id: 'pos10', metric: 'position', stars: 3,   // from 5 m out to 15 m at 5 m/s, waits there, then back at 10 m/s to 5 m
       target: { kind: 'poly', key: 'x', pts: [{ t: 0, x: 5 }, { t: 0.25, x: 6.25 }, { t: 0.5, x: 7.5 }, { t: 0.75, x: 8.75 }, { t: 1, x: 10 }, { t: 1.25, x: 11.25 }, { t: 1.5, x: 12.5 }, { t: 1.75, x: 13.75 }, { t: 2, x: 15 }, { t: 2.25, x: 15 }, { t: 2.5, x: 15 }, { t: 2.75, x: 15 }, { t: 3, x: 15 }, { t: 3.25, x: 15 }, { t: 3.5, x: 15 }, { t: 3.75, x: 15 }, { t: 4, x: 14.83 }, { t: 4.25, x: 12.33 }, { t: 4.5, x: 9.83 }, { t: 4.75, x: 7.33 }, { t: 5, x: 5 }] } },
   ],
@@ -110,7 +110,7 @@ function syncPuzzleView() {
 }
 function clearTrack() { clearPieces(); refreshBall2Chip(); }
 export function selectPuzzle(p) {
-  clearTrack();
+  clearTrack(); clearGraphPoints();   // a new puzzle starts with no points marked on the graph
   setCurrentPuzzle(p); setGraphType(graphTypeFor(p.metric)); setPuzzleGraded(false);
   hideWin(); syncPuzzleView(); renderPuzzles(); updatePuzzleStatus();
   resetRun();   // switching puzzles always starts from a clean track
@@ -160,9 +160,9 @@ function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) setGraphType(g
 document.getElementById('tryAnnotate').addEventListener('click', startAnnotate);
 document.getElementById('tryAgain').addEventListener('click', tryAgain);
 document.getElementById('annotTry').addEventListener('click', tryAgain);
-const revise = () => hideWin();
+const revise = () => { hideWin(); resetRun(); };   // keep the track and settings; the ball goes back to its start (replay still works)
 document.getElementById('tryRevise').addEventListener('click', revise);
-document.getElementById('annotRevise').addEventListener('click', revise);   // keep the track, settings and graph exactly as they were
+document.getElementById('annotRevise').addEventListener('click', revise);
 document.getElementById('winBack').addEventListener('click', backToMenu);
 document.getElementById('winNext').addEventListener('click', () => { const n = nextPuzzle(); if (n) selectPuzzle(n); else backToMenu(); });
 
