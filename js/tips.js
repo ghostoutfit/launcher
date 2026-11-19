@@ -1,4 +1,5 @@
-// Every hover tooltip in the app, in one place for review and copy editing.
+// Every hover tooltip in the app, in one place for review and copy editing. Screen readers read
+// the same text: each control's tip is also its spoken description (see the end of this file).
 //
 // Elements in index.html name their tip with data-tip="<key>" (e.g. data-tip="launch"); track
 // pieces and the × delete button look theirs up from input.js. A key used but missing here
@@ -9,16 +10,13 @@
 //   …  …  ellipsis                         ±  ±  plus-minus
 
 const PIECES = {
-  boost:      'Speed change: adds its value to the marble\'s speed (+ speeds up, − slows down). Use ± to change it in steps of 2.',
-  target:     'Target speed: sets the marble to the speed shown (use – to go negative, back toward the start). A timer holds the marble until that time.',
+  boost:      'Speed change: adds to the marble\'s speed (+) or takes some away (−).',
+  target:     'Target speed: sets the marble to the speed on its sign. Its timer can hold the marble until a set time.',
   friction:   'Friction pad: slows the marble while it\'s on it. Drag its ends to resize.',
   wall:       'Wall: stops the marble. Click it to make it bouncy.',
-  wallBouncy: 'Bouncy wall: reflects the marble at the same speed. Click it to make it a plain wall.',
-  ball2:      'Marble 2 (M2): waits at rest. When hit, it takes the first marble\'s speed and the first stops.',
+  wallBouncy: 'Bouncy wall: sends the marble back at the same speed. Click it for a plain wall.',
+  ball2:      'Marble 2 (M2): sits still until the first marble hits it, then takes its speed.',
 };
-
-// Added after a piece's tip when hovering its chip in the Track pieces palette.
-const CHIP_HINT = 'Drag it onto the track, or click it and then click the track.';
 
 export const TIPS = {
   // ── Top bar ──
@@ -51,12 +49,46 @@ export const TIPS = {
   deletePiece:    'Delete this piece (or press Backspace).',
 };
 
-// Palette chips: the piece's tip + the hint (keys chip-boost, chip-target, …).
-for (const k of Object.keys(PIECES)) TIPS['chip-' + k] = PIECES[k] + ' ' + CHIP_HINT;
+// Palette chips: the same tip as the piece on the track (keys chip-boost, chip-target, …) — what it does,
+// not how to place it (the help covers that).
+for (const k of Object.keys(PIECES)) TIPS['chip-' + k] = PIECES[k];
 
 const warned = new Set();
 export function tipText(key) {
   if (!key) return null;
   if (!(key in TIPS)) { if (!warned.has(key)) { warned.add(key); console.warn('tips.js: no tip named "' + key + '"'); } return null; }
   return TIPS[key];
+}
+
+// ─── Screen readers: the tips above, read aloud ───────────────────────────────
+// A control takes the tip a mouse would show over it: its nearest data-tip, the same rule as on
+// hover. It's linked as the control's description (aria-describedby → a hidden copy of the
+// text), which a screen reader reads after the control's name: "Launch, button. Release the
+// marble…". The palette chips can't take the keyboard focus, so their tip goes inside them as
+// text only screen readers see. A control's own tip that starts with its name ("Target speed:
+// …") leaves the name off, so it isn't read twice. Run once at start-up.
+const nameOf = el => (el.getAttribute('aria-label') || (el.labels && el.labels[0] ? el.labels[0].innerText : el.innerText) || '').replace(/\s+/g, ' ').trim();
+function spokenTip(key, name) {
+  const text = tipText(key);
+  if (!text || !name || !text.startsWith(name + ': ')) return text;
+  const rest = text.slice(name.length + 2);
+  return rest[0].toUpperCase() + rest.slice(1);
+}
+export function describeControlsWithTips() {
+  const store = document.createElement('div'); store.id = 'tipDescriptions'; store.hidden = true;
+  let n = 0;
+  for (const el of document.querySelectorAll('button, input, select, textarea')) {
+    const host = el.closest('[data-tip]');
+    const text = host && spokenTip(host.dataset.tip, host === el ? nameOf(el) : '');   // a shared tip (e.g. the mode tabs') stays whole
+    if (!text) continue;
+    const d = document.createElement('span'); d.id = 'tipFor' + (++n); d.textContent = text;
+    store.appendChild(d); el.setAttribute('aria-describedby', d.id);
+  }
+  for (const chip of document.querySelectorAll('.chip[data-tip]')) {
+    const text = spokenTip(chip.dataset.tip, nameOf(chip.querySelector('.ctxt')));
+    if (!text) continue;
+    const d = document.createElement('span'); d.className = 'srOnly'; d.textContent = text;
+    chip.appendChild(d);
+  }
+  document.body.appendChild(store);
 }

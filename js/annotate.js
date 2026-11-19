@@ -3,11 +3,11 @@
 import { PUZZLE_TOL, RUN_TIME_CAP, TRACK_LEN } from './constants.js';
 import { ballRadius, clamp, graphC, groundY, gx, mToPx, sx } from './dom.js';
 import { getCss, handFont } from './draw.js';
-import { clearGraphPoints, drawGraph, graphGeom, graphPanels, graphTypeFor } from './graph.js';
+import { clearGraphPoints, drawGraph, graphGeom, graphPanels, graphTypeFor, markGraphTab } from './graph.js';
 import { interpPoly } from './puzzles.js';
 import { drawScene } from './scene.js';
 import { balls, lastTrace, launchX, sampleAt, v } from './sim.js';
-import { activePuzzle, graphType, mode, setGraphType, testPuzzle } from './state.js';
+import { activePuzzle, mode, setGraphType, testPuzzle } from './state.js';
 
 // ─── Annotate a missed puzzle: up to 3 time arrows (dots where each hits both lines) ──
 // Stored in time (and panel-relative height), so they stay put when switching graph type.
@@ -21,7 +21,7 @@ export function endAnnotate() {
   if (was) {
     document.getElementById('graphTabs').hidden = (mode === 'puzzle') || (mode === 'create' && !!testPuzzle);
     const P = activePuzzle(); if (P) setGraphType(graphTypeFor(P.metric));
-    [...document.querySelectorAll('#graphTabs button')].forEach(btn => btn.classList.toggle('active', btn.dataset.g === graphType));
+    markGraphTab();
   }
 }
 export function startAnnotate() {
@@ -31,7 +31,7 @@ export function startAnnotate() {
   graphC.dataset.tip = '';                                  // no hover tooltip while annotating
   document.getElementById('annotBar').hidden = false; document.getElementById('annotBtns').hidden = false; graphC.style.cursor = 'crosshair';
   document.getElementById('graphTabs').hidden = false;      // let the student look at the other graph too
-  [...document.querySelectorAll('#graphTabs button')].forEach(btn => btn.classList.toggle('active', btn.dataset.g === graphType));   // highlight the graph actually showing
+  markGraphTab();   // highlight the graph actually showing
   drawGraph();
 }
 const snapT = tt => Math.round(tt * 4) / 4;   // arrows land on the nearest 0.25 s

@@ -345,3 +345,5 @@
   #deleteConfirm .dc-btns { display: flex; gap: 8px; }
   #deleteConfirm .dc-btns button { flex: 1; padding: 7px; font-size: 12px; }
   #deleteConfirm .dc-btns button.danger { background: #c0392b; border-color: #c0392b; color: #fff; }
+  /* Text only screen readers see (the palette chips' tips — tips.js) */
+  .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

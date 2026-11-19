@@ -13,13 +13,13 @@
 <body>
 <div id="app">
   <div id="tabRow">
-  <div id="logoWrap"><img id="logoImg" src="harmony-ramp.png" alt="Harmony"><canvas id="logoBall" width="100" height="100"></canvas></div>
+  <div id="logoWrap"><img id="logoImg" src="harmony-ramp.png" alt="Harmony"><canvas id="logoBall" width="100" height="100" aria-hidden="true"></canvas></div>
   <div id="brand">LAUNCHER</div>
   <button id="pzBack" hidden data-tip="backToPuzzles">Back to all puzzles</button>
   <div id="modeTabs" class="toggle" data-tip="modeTabs">
-    <button data-mode="sandbox" class="on">Sandbox</button>
-    <button data-mode="puzzle">Puzzle</button>
-    <button data-mode="create">Create</button>
+    <button data-mode="sandbox" class="on" aria-pressed="true">Sandbox</button>
+    <button data-mode="puzzle" aria-pressed="false">Puzzle</button>
+    <button data-mode="create" aria-pressed="false">Create</button>
     <button id="helpBtn" aria-label="How to use Launcher" aria-haspopup="dialog" data-tip="help">?</button>
     <button id="themeToggle" aria-label="Toggle light/dark" data-tip="themeToggle">&#x1F319;</button>
   </div>
@@ -29,16 +29,16 @@
     <div id="main">
       <div id="controls" class="panel">
         <div class="ctrl" data-tip="launchPosition">
-          <label>Launch position</label>
+          <label for="pos">Launch position</label>
           <div class="row">
-            <input type="range" id="pos" min="0" max="15" step="1" value="5" autocomplete="off">
+            <input type="range" id="pos" min="0" max="15" step="1" value="5" aria-valuetext="5 m" autocomplete="off">
             <span class="val" id="posVal">5 m</span>
           </div>
         </div>
         <div class="ctrl" data-tip="launchSpeed">
-          <label>Launch speed</label>
+          <label for="speed">Launch speed</label>
           <div class="row">
-            <input type="range" id="speed" min="0" max="10" step="1" value="2" autocomplete="off">
+            <input type="range" id="speed" min="0" max="10" step="1" value="2" aria-valuetext="2 m/s" autocomplete="off">
             <span class="val" id="speedVal">2 m/s</span>
           </div>
         </div>
@@ -94,10 +94,10 @@
 
       <div id="graphCard" class="panel">
         <div id="graphTabs" data-tip="graphTabs">
-          <button data-g="position" class="active">Position&#x2013;time</button>
-          <button data-g="speed">Speed&#x2013;time</button>
-          <button data-g="both">Both Position and Speed</button>
-          <div id="annotBtns" data-tip="" hidden><button id="annotReplay" class="primary">&#x25B6; Replay</button><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div>
+          <button data-g="position" class="active" aria-pressed="true">Position&#x2013;time</button>
+          <button data-g="speed" aria-pressed="false">Speed&#x2013;time</button>
+          <button data-g="both" aria-pressed="false">Both Position and Speed</button>
+          <div id="annotBtns" data-tip="" hidden><button id="annotReplay" class="primary"><span aria-hidden="true">&#x25B6;</span> Replay</button><button id="annotRevise" class="primary">Revise my solution</button><button id="annotTry" class="primary">Start fresh</button></div>
         </div>
         <div id="puzzleStatus" hidden></div>
         <div id="annotBar" hidden><div id="annotText">Click the time axis and drag up to annotate differences between graphs.</div></div>
@@ -115,23 +115,23 @@
       <div id="palette" class="panel">
         <div class="ptitle">Track pieces</div>
         <div class="chip boost" data-piece="boost" data-tip="chip-boost">
-          <div class="ico">&#xB1;</div>
+          <div class="ico" aria-hidden="true">&#xB1;</div>
           <div class="ctxt"><b>Speed<br>change</b></div>
         </div>
         <div class="chip target" data-piece="target" data-tip="chip-target">
-          <div class="ico"><svg width="28" height="28" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#fff" stroke="#1a2230" stroke-width="1.8"/><path d="M10 10V4.5M10 10l3.5 1" fill="none" stroke="#1a2230" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="ico" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#fff" stroke="#1a2230" stroke-width="1.8"/><path d="M10 10V4.5M10 10l3.5 1" fill="none" stroke="#1a2230" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           <div class="ctxt"><b>Target<br>speed</b></div>
         </div>
         <div class="chip friction" data-piece="friction" data-tip="chip-friction">
-          <div class="ico">&#x25A6;</div>
+          <div class="ico" aria-hidden="true">&#x25A6;</div>
           <div class="ctxt"><b>Friction<br>pad</b></div>
         </div>
         <div class="chip wall" data-piece="wall" data-tip="chip-wall">
-          <div class="ico">&#x2588;</div>
+          <div class="ico" aria-hidden="true">&#x2588;</div>
           <div class="ctxt"><b>Wall /<br>Bounce</b></div>
         </div>
         <div class="chip ball2" data-piece="ball2" data-tip="chip-ball2">
-          <div class="ico"><canvas id="ball2Icon" width="56" height="56"></canvas></div>
+          <div class="ico" aria-hidden="true"><canvas id="ball2Icon" width="56" height="56"></canvas></div>
           <div class="ctxt"><b>Marble 2<br>(M2)</b></div>
         </div>
       </div>
@@ -148,11 +148,11 @@
 </div>
 
 <div id="axisMenu" hidden></div>
-<div id="tip"></div>
+<div id="tip" aria-hidden="true"></div>   <!-- screen readers get the tips as descriptions instead (tips.js) -->
 <div id="tryOverlay" hidden>
-  <div id="tryCard">
-    <h2>Not quite yet</h2>
-    <p>Take a moment: how is your graph different from the one you needed to match?</p>
+  <div id="tryCard" role="dialog" aria-modal="true" aria-labelledby="tryTitle" aria-describedby="tryText">
+    <h2 id="tryTitle">Not quite yet</h2>
+    <p id="tryText">Take a moment: how is your graph different from the one you needed to match?</p>
     <div class="winBtns">
       <button id="tryAnnotate" class="primary">Annotate my graph</button>
       <button id="tryRevise" class="primary">Revise my solution</button>
@@ -161,9 +161,9 @@
   </div>
 </div>
 <div id="winOverlay" hidden>
-  <canvas id="confetti"></canvas>
-  <div id="winCard">
-    <h2>Puzzle solved!</h2>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div id="winCard" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <h2 id="winTitle">Puzzle solved!</h2>
     <div class="winBtns">
       <button id="winBack" class="primary">Back to all puzzles</button>
       <button id="winNext" class="primary">Try the next puzzle</button>

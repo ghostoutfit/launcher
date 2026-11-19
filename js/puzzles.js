@@ -3,10 +3,11 @@
 import { endAnnotate, startAnnotate } from './annotate.js';
 import { AXES, PUZZLE_TOL } from './constants.js';
 import { exitTest } from './create.js';
-import { clearGraphPoints, drawGraph, graphTypeFor } from './graph.js';
+import { launchBtn } from './dom.js';
+import { clearGraphPoints, drawGraph, graphTypeFor, markGraphTab } from './graph.js';
 import { refreshBall2Chip } from './input.js';
 import { balls, resetRun, running, sampleAt } from './sim.js';
-import { activePuzzle, clearPieces, currentPuzzle, graphType, mode, puzzleGraded, setCurrentPuzzle, setGraphType, setModeValue, setPuzzleGraded, setTestSolved, testPuzzle, testSolved } from './state.js';
+import { activePuzzle, clearPieces, currentPuzzle, mode, puzzleGraded, setCurrentPuzzle, setGraphType, setModeValue, setPuzzleGraded, setTestSolved, testPuzzle, testSolved } from './state.js';
 import { fitStage } from './ui.js';
 
 // 5 distance + 5 position + 5 speed challenges (three menu rows of five, keyed by graph type). No names or hints — the player just
@@ -67,6 +68,12 @@ export function interpPoly(pts, tt) {
   return pts[pts.length - 1].x;
 }
 function stars(n) { return '\u2605\u2605\u2605'.slice(0, n) + '\u2606\u2606\u2606'.slice(0, 3 - n); }
+// What a screen reader says for a menu button (the button itself shows only stars or a lock)
+function puzzleLabel(key, i, p, unlocked, solved) {
+  const name = key[0].toUpperCase() + key.slice(1) + ' puzzle ' + (i + 1);
+  if (!unlocked) return name + ', locked';
+  return name + ', ' + p.stars + (p.stars === 1 ? ' star' : ' stars') + (solved ? ', solved' : '');
+}
 
 export function renderPuzzles() {
   for (const [key, rowId] of [['distance', 'pzRow1'], ['position', 'pzRow2'], ['speed', 'pzRow3']]) {
@@ -77,6 +84,7 @@ export function renderPuzzles() {
       btn.className = 'pzBtn' + (unlocked ? '' : ' locked') + (solved ? ' solved' : '')
         + (currentPuzzle && currentPuzzle.id === p.id ? ' active' : '');
       btn.disabled = !unlocked;
+      btn.setAttribute('aria-label', puzzleLabel(key, i, p, unlocked, solved));
       btn.innerHTML = unlocked
         ? '<span class="pzMark">' + (solved ? '\u2713' : '') + '</span><span class="pzStars">' + stars(p.stars) + '</span>'
         : '<span class="pzLock">\u{1F512}</span>';
@@ -133,12 +141,21 @@ function nextPuzzle() {
   return puzzleUnlocked(list, list.indexOf(n)) ? n : null;
 }
 const tryEl = document.getElementById('tryOverlay');
-function hideWin() { tryEl.hidden = true; endAnnotate(); winEl.hidden = true; cancelAnimationFrame(confRaf); confetti = []; }
+// A result pop-up takes the keyboard focus, so a screen reader announces it. Closing it puts the
+// focus on Launch, where the next try starts (if Launch is on screen).
+function showPopup(el) { el.hidden = false; el.querySelector('button:not([hidden])').focus(); }
+function hideWin() {
+  const hadFocus = winEl.contains(document.activeElement) || tryEl.contains(document.activeElement);
+  tryEl.hidden = true; endAnnotate(); winEl.hidden = true; cancelAnimationFrame(confRaf); confetti = [];
+  if (hadFocus) queueMicrotask(() => { if (launchBtn.offsetParent && !launchBtn.disabled) launchBtn.focus(); });   // after the button's own action
+}
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');   // the device asks for less animation: no confetti
 function showWin() {
   const nx = nextPuzzle();
   document.getElementById('winNext').hidden = !nx;
-  winEl.hidden = false;
-  const W = confC.width = window.innerWidth, H = confC.height = window.innerHeight, cx = confC.getContext('2d');
+  showPopup(winEl);
+  const W = confC.width = window.innerWidth, H = confC.height = window.innerHeight, cx = confC.getContext('2d');   // (resizing also wipes the last confetti)
+  if (reduceMotion.matches) return;
   const cols = ['#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#ff9f43'];
   confetti = Array.from({ length: 160 }, () => ({
     x: Math.random() * W, y: -Math.random() * H * 0.8 - 10, w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
@@ -157,7 +174,7 @@ function showWin() {
   })(last);
 }
 function tryAgain() { hideWin(); clearTrack(); if (currentPuzzle) setGraphType(graphTypeFor(currentPuzzle.metric)); resetRun(); }   // fresh graph with the goal showing, empty world
-document.getElementById('tryAnnotate').addEventListener('click', startAnnotate);
+document.getElementById('tryAnnotate').addEventListener('click', () => { startAnnotate(); document.getElementById('annotReplay').focus(); });   // the pop-up's gone: focus its replacement buttons
 document.getElementById('tryAgain').addEventListener('click', tryAgain);
 document.getElementById('annotTry').addEventListener('click', tryAgain);
 const revise = () => { hideWin(); resetRun(); };   // keep the track and settings; the ball goes back to its start (replay still works)
@@ -212,7 +229,7 @@ export function gradePuzzle(runEnded) {   // runEnded: the run stopped early (e.
     else if (P.id !== 'shared') { solvedPuzzles.add(P.id); savePuzzles(); renderPuzzles(); }   // a linked puzzle isn't part of saved progress
     updatePuzzleStatus();
     if (!isTest && mode === 'puzzle') showWin();
-  } else if (!isTest && mode === 'puzzle') tryEl.hidden = false;   // a beat to think before revising
+  } else if (!isTest && mode === 'puzzle') showPopup(tryEl);   // a beat to think before revising
 }
 export function setMode(m) {
   if (mode === 'create' && m !== 'create' && testPuzzle) exitTest();      // leaving Create ends a loaded puzzle
@@ -220,7 +237,7 @@ export function setMode(m) {
   setModeValue(m);
   if (m === 'puzzle' && prevMode !== 'puzzle') { setCurrentPuzzle(null); clearTrack(); }   // entering Puzzle starts at the menu with an empty track
   hideWin();
-  [...document.querySelectorAll('#modeTabs button')].forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  for (const b of document.querySelectorAll('#modeTabs button[data-mode]')) { b.classList.toggle('on', b.dataset.mode === m); b.setAttribute('aria-pressed', b.dataset.mode === m); }
   const puzzle = m === 'puzzle', create = m === 'create';
   refreshBall2Chip();
   syncPuzzleView();
@@ -233,7 +250,7 @@ export function setMode(m) {
     updatePuzzleStatus(); if (!running) resetRun(); else drawGraph();
   } else {
     updatePuzzleStatus();
-    [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType));
+    markGraphTab();
     if (!running) resetRun(); else drawGraph();
   }
 }

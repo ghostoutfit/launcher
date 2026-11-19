@@ -16,6 +16,12 @@ const POS_SPECS = { x: { key: 'x', label: 'Position', unit: 'm' }, d: { key: 'd'
 const VEL_SPECS = { sp: { key: 'sp', label: 'Speed', unit: 'm/s' }, v: { key: 'v', label: 'Velocity', unit: 'm/s' } };
 function forcedGraph() { const P = activePuzzle(); return P ? P.metric : mode === 'create' ? createMetric : null; }
 export const graphTypeFor = metric => metric === 'speed' ? 'speed' : 'position';   // which graph tab shows a metric
+// Highlight the tab of the graph that's showing (aria-pressed says which, for a screen reader)
+export function markGraphTab() {
+  for (const b of document.querySelectorAll('#graphTabs button[data-g]')) {
+    b.classList.toggle('active', b.dataset.g === graphType); b.setAttribute('aria-pressed', b.dataset.g === graphType);
+  }
+}
 function posSpec() { const f = forcedGraph(); return POS_SPECS[f ? (f === 'distance' ? 'd' : 'x') : posMode]; }
 function velSpec() { return VEL_SPECS[forcedGraph() ? 'sp' : velMode]; }
 function graphSpec() { return graphType === 'position' ? posSpec() : velSpec(); }

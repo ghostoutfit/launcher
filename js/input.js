@@ -267,6 +267,15 @@ document.addEventListener('pointermove', e => {
 });
 document.addEventListener('pointerleave', () => showTip(null));
 sceneC.addEventListener('pointerleave', () => showTip(null));
+// …and when it gets the keyboard focus (Tab), just below it — not when it's clicked
+let tipByFocus = false;
+document.addEventListener('focusin', e => {
+  const el = e.target.closest && e.target.closest('[data-tip]');
+  if (!el || !e.target.matches(':focus-visible')) return;
+  const r = e.target.getBoundingClientRect();
+  showTip(el.dataset.tip, r.left, r.bottom - 8); tipByFocus = true;
+});
+document.addEventListener('focusout', () => { if (tipByFocus) { tipByFocus = false; showTip(null); } });
 
 // Cursor hint when hovering placed pieces (resize vs grab) + tooltip
 sceneC.addEventListener('pointermove', e => {

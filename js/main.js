@@ -3,7 +3,7 @@
 // The modules, roughly bottom-up (each only imports from the ones above it,
 // apart from the few back-edges noted):
 //   constants.js  track length, run time cap, puzzle tolerance — no imports
-//   tips.js       the text of every hover tooltip — no imports
+//   tips.js       the text of every hover tooltip (also read by screen readers) — no imports
 //   state.js      what mode we're in, which puzzle, the placed track pieces
 //   dom.js        canvas handles + metres-to-pixels geometry
 //   draw.js       theme colours and the hand-drawn cartoon helpers
@@ -21,14 +21,15 @@
 // owning module may assign to it — hence the setters at the foot of state.js.
 
 import { cpJson, cpSay, parsePuzzleJson, puzzleTextFromInput } from './create.js';
-import { posEl, posVal, speedEl, speedVal } from './dom.js';
+import { posEl, speedEl } from './dom.js';
 import { getCss } from './draw.js';
 import { drawGraph } from './graph.js';
 import { refreshBall2Chip } from './input.js';
 import { selectPuzzle, setMode } from './puzzles.js';
 import { drawScene } from './scene.js';
 import { frame } from './sim.js';
-import { applyTheme, drawCartoonBall, theme } from './ui.js';
+import { describeControlsWithTips } from './tips.js';
+import { applyTheme, drawCartoonBall, showSliderValues, theme } from './ui.js';
 
 // Modules set up their own listeners as they load; everything that must happen in a
 // particular order at start-up happens here, after every module has finished loading.
@@ -37,9 +38,10 @@ drawCartoonBall(document.getElementById('logoBall'), getCss('--ball'));
 drawCartoonBall(document.getElementById('ball2Icon'), getCss('--ball2'));   // palette icon = the second ball as it appears
 drawCartoonBall(document.getElementById('helpBall2Icon'), getCss('--ball2')); // …and the same in the help
 refreshBall2Chip();
+describeControlsWithTips();   // screen readers read each control's tooltip as its description
 
 // Always start at the defaults (a browser reload would otherwise restore the last slider positions)
-posEl.value = 5; speedEl.value = 2; posVal.textContent = '5 m'; speedVal.textContent = '2 m/s';
+posEl.value = 5; speedEl.value = 2; showSliderValues();
 setMode('sandbox');   // open on Sandbox (also resets the run)
 // A puzzle code after the URL (…/#%7B…, raw JSON, or …/?puzzle=…) opens that puzzle on its own, in Puzzle mode
 // (also when the code is pasted into the address bar of an already-open page → hashchange).

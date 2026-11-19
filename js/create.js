@@ -2,11 +2,11 @@
 
 import { AXES, PUZZLE_TOL } from './constants.js';
 import { clamp, posEl, speedEl } from './dom.js';
-import { clearGraphPoints, drawGraph, graphTypeFor, setCreateMetric } from './graph.js';
+import { clearGraphPoints, drawGraph, graphTypeFor, markGraphTab, setCreateMetric } from './graph.js';
 import { refreshBall2Chip } from './input.js';
 import { setMode, updatePuzzleStatus } from './puzzles.js';
 import { lastTrace, resetRun, sampleAt, t } from './sim.js';
-import { authorState, boosts, clearPieces, fricZones, graphType, loadPieces, mode, secondBalls, setAuthorState, setGraphType, setPuzzleGraded, setTestPuzzle, setTestSolved, targets, testPuzzle, walls } from './state.js';
+import { authorState, boosts, clearPieces, fricZones, loadPieces, mode, secondBalls, setAuthorState, setGraphType, setPuzzleGraded, setTestPuzzle, setTestSolved, targets, testPuzzle, walls } from './state.js';
 
 const METRIC_KEY = { position: 'x', distance: 'd', speed: 'sp' };   // graph type → sample field
 const OLD_METRICS = { velocity: 'speed' };   // codes made before speed replaced velocity still load (their targets were never negative)
@@ -104,13 +104,13 @@ export function exitTest() {
   document.getElementById('graphTabs').hidden = (mode === 'puzzle');
   document.getElementById('cpBuild').hidden = false; document.getElementById('cpBack').hidden = true;
   updatePuzzleStatus();
-  if (mode === 'create') { [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType)); resetRun(); }
+  if (mode === 'create') { markGraphTab(); resetRun(); }
 }
 document.getElementById('cpMake').addEventListener('click', makePuzzleJson);
 // The radio also decides which graph the Create tab shows (no axis menu there)
 document.querySelectorAll('input[name=cpMetric]').forEach(r => r.addEventListener('change', () => {
   setCreateMetric(r.value); setGraphType(graphTypeFor(r.value)); clearGraphPoints();
-  [...document.querySelectorAll('#graphTabs button')].forEach(b => b.classList.toggle('active', b.dataset.g === graphType));
+  markGraphTab();
   drawGraph();
 }));
 document.getElementById('cpCopy').addEventListener('click', async () => {

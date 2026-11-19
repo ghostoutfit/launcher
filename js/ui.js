@@ -3,25 +3,22 @@
 import { AXES, FRICTION_DECEL, setFriction } from './constants.js';
 import { launchBtn, posEl, posVal, replayFastBtn, speedEl, speedVal } from './dom.js';
 import { INK, cssCache, darken, getCss } from './draw.js';
-import { drawGraph } from './graph.js';
+import { drawGraph, markGraphTab } from './graph.js';
 import { closeDeleteConfirm, refreshBall2Chip } from './input.js';
 import { PUZZLES, renderPuzzles, savePuzzles, setDevUnlockAll, solvedPuzzles } from './puzzles.js';
 import { drawScene } from './scene.js';
 import { clearReplay, launch, replay, resetRun, step, v, worldChanged } from './sim.js';
 import { clearPieces, mode, setGraphType } from './state.js';
 
-speedEl.addEventListener('input', () => {
-  speedVal.textContent = parseInt(speedEl.value, 10) + ' m/s';
-  worldChanged();
-});
-posEl.addEventListener('input', () => {
-  posVal.textContent = parseInt(posEl.value, 10) + ' m';
-  worldChanged();
-});
+// The readout beside each slider; a screen reader reads the same text (aria-valuetext), units and all.
+function showValue(el, out, unit) { const text = parseInt(el.value, 10) + unit; out.textContent = text; el.setAttribute('aria-valuetext', text); }
+export function showSliderValues() { showValue(posEl, posVal, ' m'); showValue(speedEl, speedVal, ' m/s'); }
+speedEl.addEventListener('input', () => { showSliderValues(); worldChanged(); });
+posEl.addEventListener('input', () => { showSliderValues(); worldChanged(); });
 document.getElementById('graphTabs').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn || !btn.dataset.g) return;   // (the annotate buttons live in this row too)
   setGraphType(btn.dataset.g);
-  [...e.currentTarget.children].forEach(b => b.classList.toggle('active', b === btn));
+  markGraphTab();
   drawGraph();
 });
 launchBtn.addEventListener('click', launch);
